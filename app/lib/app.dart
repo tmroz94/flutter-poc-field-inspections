@@ -4,17 +4,29 @@ import 'package:material_ui/material_ui.dart';
 import 'core/router/router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_settings.dart';
+import 'data/sync/sync_service.dart';
+import 'features/auth/auth_controller.dart';
+import 'features/auth/auth_models.dart';
+import 'features/auth/auth_screens.dart';
 
 class FieldInspectionsApp extends ConsumerWidget {
   const FieldInspectionsApp({super.key});
 
-  static const supportedLocales = [Locale('en'), Locale('pl')];
+  /// en-GB: 24-hour time, day-month dates and Monday-first calendars, as on the boards.
+  static const supportedLocales = [Locale('en', 'GB'), Locale('pl')];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(themeSettingsProvider);
     final router = ref.watch(routerProvider);
+    // Keep the outbox sync running for the app's lifetime.
+    ref.listen(syncServiceProvider, (_, _) {});
     final contrast = settings.contrast ?? AppContrast.standard;
+    // While the stored session loads, the router isn't built at all: the
+    // splash shows at the current URL, and the first route parse happens with
+    // the session known (cold-start deep links keep their target, and the
+    // browser history gets no intermediate entry).
+    final restoring = ref.watch(authControllerProvider.select((s) => s.status == AuthStatus.restoring));
 
     ThemeData theme(Brightness b, AppContrast c) => buildTheme(colorSchemeFor(b, c), reduceMotion: settings.reduceMotion);
 
@@ -38,7 +50,7 @@ class FieldInspectionsApp extends ConsumerWidget {
             textScaler: settings.textScale == null ? media.textScaler : TextScaler.linear(settings.textScale!),
             disableAnimations: media.disableAnimations || settings.reduceMotion,
           ),
-          child: child!,
+          child: restoring ? const SplashScreen() : child!,
         );
       },
     );

@@ -15,7 +15,8 @@ class GuardInput {
 
 /// The app's single redirect. Returns the new location, or null to stay.
 ///
-/// 1. Session still restoring → `/splash?from=` so a cold-start deep link isn't lost.
+/// 1. Session still restoring → stay; the app shows a splash in place of the
+///    router (no URL change, so no extra browser history entry).
 /// 2. Signed out on a guarded path → `/sign-in?from=`.
 /// 3. Signed in but locked → `/unlock?from=`.
 /// 4. Signed in on sign-in/up/forgot or unlock → back to `from`, else home.
@@ -32,9 +33,7 @@ String? resolveRedirect(Uri uri, GuardInput input) {
   if (!RouteTable.isKnown(path)) return null;
   final here = uri.toString();
 
-  if (input.auth == AuthStatus.restoring) {
-    return path == Routes.splash ? null : _withFrom(Routes.splash, here);
-  }
+  if (input.auth == AuthStatus.restoring) return null;
 
   if (path == Routes.splash || path == Routes.root) {
     final target = DeepLinks.sanitizeFrom(uri.queryParameters['from']) ?? Routes.home;

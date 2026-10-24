@@ -7,14 +7,11 @@ void main() {
       resolveRedirect(Uri.parse(location), GuardInput(auth: auth, locked: locked));
 
   group('while the session is restoring', () {
-    test('any known path waits on splash and keeps the target', () {
-      expect(redirect('/inspections/INS-1042?tab=photos', AuthStatus.restoring), '/splash?from=%2Finspections%2FINS-1042%3Ftab%3Dphotos');
+    test('stays put: the app shows a splash without changing the URL', () {
+      expect(redirect('/inspections/INS-1042?tab=photos', AuthStatus.restoring), isNull);
+      expect(redirect('/home', AuthStatus.restoring), isNull);
+      expect(redirect('/sign-in', AuthStatus.restoring), isNull);
     });
-    test('home and root wait on splash without a from', () {
-      expect(redirect('/home', AuthStatus.restoring), '/splash');
-      expect(redirect('/', AuthStatus.restoring), '/splash');
-    });
-    test('splash itself stays', () => expect(redirect('/splash', AuthStatus.restoring), isNull));
   });
 
   group('signed out', () {
@@ -82,7 +79,7 @@ void main() {
         redirect('fieldinspections://app/inspections/INS-1042?tab=photos', AuthStatus.signedOut),
         '/sign-in?from=%2Finspections%2FINS-1042%3Ftab%3Dphotos',
       );
-      expect(redirect('fieldinspections://app/map', AuthStatus.restoring), '/splash?from=%2Fmap');
+      expect(redirect('fieldinspections://app/map', AuthStatus.restoring), '/map');
     });
     test('universal/app links on the web host work the same way', () {
       expect(redirect('https://fieldinspections.example/notifications', AuthStatus.signedIn), '/notifications');

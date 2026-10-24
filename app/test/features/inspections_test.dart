@@ -24,6 +24,12 @@ class _OfflineRepository implements InspectionsRepository {
   Future<List<ChecklistItem>> checklist(String templateId) async => _fail();
   @override
   Future<List<AppNotification>> notifications() async => _fail();
+  @override
+  Future<List<SiteOption>> searchSites(String query) async => _fail();
+  @override
+  Future<List<String>> inspectionTypes() async => _fail();
+  @override
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async => _fail();
 }
 
 Finder _selectable(String text) => find.byWidgetPredicate((w) => w is SelectableText && w.data == text);

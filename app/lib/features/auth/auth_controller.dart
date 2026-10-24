@@ -35,8 +35,10 @@ class AuthController extends Notifier<AuthState> {
     }
     try {
       final user = await ref.read(authRepositoryProvider).me(saved.token);
+      if (!ref.mounted) return;
       state = AuthState.signedIn(Session(token: saved.token, user: user));
     } on ApiException catch (e) {
+      if (!ref.mounted) return;
       // Offline-first: a network failure keeps the cached session.
       if (e.code == 'network') {
         state = AuthState.signedIn(saved);
@@ -62,6 +64,7 @@ class AuthController extends Notifier<AuthState> {
     } else {
       await store.remove(_key);
     }
+    if (!ref.mounted) return;
     state = AuthState.signedIn(session);
   }
 

@@ -4,8 +4,10 @@ import 'package:field_inspections/app.dart';
 import 'package:field_inspections/core/platform/capabilities.dart';
 import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
+import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/providers.dart';
 import 'package:field_inspections/data/repositories/inspections_repository.dart';
+import 'package:field_inspections/data/sync/sync_service.dart';
 import 'package:field_inspections/features/auth/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,6 +58,10 @@ Future<TestApp> pumpApp(
   Capabilities capabilities = android,
   InspectionsRepository Function(MockDatabase db)? inspections,
   double? textScale,
+  LocalStore? localStore,
+  bool online = true,
+  Duration authLatency = Duration.zero,
+  bool settle = true,
 }) async {
   tester.view
     ..physicalSize = size
@@ -69,17 +75,19 @@ Future<TestApp> pumpApp(
   final container = ProviderContainer(
     overrides: [
       keyValueStoreProvider.overrideWithValue(MemoryStore(store)),
-      authRepositoryProvider.overrideWith((ref) => FakeAuthRepository(ref.watch(mockDatabaseProvider), latency: Duration.zero)),
+      authRepositoryProvider.overrideWith((ref) => FakeAuthRepository(ref.watch(mockDatabaseProvider), latency: authLatency)),
       inspectionsRepositoryProvider.overrideWith(
         (ref) => (inspections ?? (db) => FakeInspectionsRepository(db, latency: Duration.zero))(ref.watch(mockDatabaseProvider)),
       ),
       capabilitiesProvider.overrideWithValue(capabilities),
       initialLocationProvider.overrideWithValue(initialLocation),
+      localStoreProvider.overrideWithValue(localStore ?? MemoryLocalStore()),
+      connectivityProvider.overrideWith((ref) => Stream.value(online)),
     ],
   );
   addTearDown(container.dispose);
 
   await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const FieldInspectionsApp()));
-  await tester.pumpAndSettle();
+  if (settle) await tester.pumpAndSettle();
   return TestApp(tester, container);
 }

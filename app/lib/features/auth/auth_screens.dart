@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart' show demoEmail, demoPassword;
 
+import '../../core/router/deep_links.dart';
 import '../../core/router/routes.dart';
 import '../../core/validation/form_support.dart';
 import '../../core/validation/validators.dart';
@@ -24,6 +25,15 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) => const Scaffold(
     body: Center(child: CircularProgressIndicator(semanticsLabel: 'Loading')),
   );
+}
+
+/// After sign-in, sign-up or unlock: go to the original target *replacing*
+/// the sign-in/unlock history entry, so browser back doesn't land on a page
+/// that immediately redirects forward again (a back-button trap).
+void continueToTarget(BuildContext context) {
+  if (!context.mounted) return;
+  final target = DeepLinks.sanitizeFrom(GoRouterState.of(context).uri.queryParameters['from']) ?? Routes.home;
+  Router.neglect(context, () => context.go(target));
 }
 
 String _apiMessage(ApiException e) => switch (e.code) {
@@ -162,7 +172,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       await ref.read(authControllerProvider.notifier).signIn(email ?? _email.text, password ?? _password.text, remember: _remember);
       // Lets the platform password manager offer to save the credentials.
       TextInput.finishAutofillContext();
-      // The router redirect moves on once the session is set.
+      if (mounted) continueToTarget(context);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -364,6 +374,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     try {
       await ref.read(authControllerProvider.notifier).signUp(name: _name.text, email: _email.text, password: _password.text);
       TextInput.finishAutofillContext();
+      if (mounted) continueToTarget(context);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -607,7 +618,10 @@ class UnlockScreen extends ConsumerWidget {
                 FloatingActionButton.large(
                   tooltip: 'Unlock with biometrics',
                   // M3 calls local_auth here; until then it unlocks directly.
-                  onPressed: () => ref.read(lockControllerProvider.notifier).unlock(),
+                  onPressed: () {
+                    ref.read(lockControllerProvider.notifier).unlock();
+                    continueToTarget(context);
+                  },
                   child: const Icon(Symbols.fingerprint),
                 ),
                 const SizedBox(height: 16),

@@ -10,7 +10,9 @@ import 'package:field_inspections/features/not_found/not_found_screen.dart';
 import 'package:field_inspections/features/notifications/notifications_screen.dart';
 import 'package:field_inspections/features/poc/poc_screens.dart';
 import 'package:field_inspections/features/settings/settings_screens.dart';
+import 'package:field_inspections/features/wizard/submitted_screen.dart';
 import 'package:field_inspections/features/wizard/wizard_screen.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -23,7 +25,7 @@ void main() {
       '/notifications': NotificationsScreen,
       '/inspections?status=overdue': InspectionsScreen,
       '/inspections/filter?status=draft': FilterSheet,
-      '/inspections/new?step=3': WizardScreen,
+      '/inspections/new?step=1': WizardScreen,
       '/inspections/INS-1042?tab=photos': InspectionDetailScreen,
       '/inspections/INS-1040/edit?step=2': WizardScreen,
       '/inspections/INS-1042/photos/p3': PhotoViewerScreen,
@@ -126,6 +128,46 @@ void main() {
       expect(find.byType(SignUpScreen), findsOneWidget);
       await app.go('/forgot-password');
       expect(find.byType(ForgotPasswordScreen), findsOneWidget);
+    });
+  });
+
+  group('browser history (web)', () {
+    testWidgets('sign-in replaces its own history entry: no back-button trap', (tester) async {
+      final reports = <Map<Object?, Object?>>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.navigation, (call) async {
+        if (call.method == 'routeInformationUpdated') reports.add(call.arguments as Map<Object?, Object?>);
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.navigation, null));
+
+      await pumpApp(tester, initialLocation: '/map?site=s-1');
+      expect(reports.last['uri'], '/sign-in?from=%2Fmap%3Fsite%3Ds-1');
+      await tester.tap(find.text('Use demo account'));
+      await tester.pumpAndSettle();
+      expect(reports.last['uri'], '/map?site=s-1');
+      expect(reports.last['replace'], isTrue, reason: 'the /sign-in entry is replaced, not stacked under the target');
+    });
+
+    testWidgets('a platform link that arrives during the splash is not lost (Android cold start)', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore(), authLatency: const Duration(milliseconds: 500), settle: false);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byType(SplashScreen), findsOneWidget);
+      await tester.binding.handlePushRoute('fieldinspections://app/inspections/INS-1038?tab=history');
+      await tester.pumpAndSettle();
+      expect(app.location, '/inspections/INS-1038?tab=history');
+      expect(find.byType(InspectionDetailScreen), findsOneWidget);
+    });
+
+    testWidgets('a cold start never reports the splash URL', (tester) async {
+      final uris = <Object?>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.navigation, (call) async {
+        if (call.method == 'routeInformationUpdated') uris.add((call.arguments as Map<Object?, Object?>)['uri']);
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.navigation, null));
+      await pumpApp(tester, initialLocation: '/inspections/new?step=1', store: signedInStore());
+      expect(uris.where((u) => '$u'.startsWith('/splash')), isEmpty);
+      expect(uris.last, '/inspections/new?step=1');
     });
   });
 

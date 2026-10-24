@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -7,7 +10,10 @@ import '../../core/layout/window_size.dart';
 import '../../core/router/routes.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/api/api_exception.dart';
+import '../../data/local/local_store.dart';
+import '../../data/models/draft.dart';
 import '../../data/models/inspection.dart';
+import '../../data/sync/sync_service.dart';
 import '../auth/auth_controller.dart';
 import '../inspections/inspections_controller.dart';
 import '../notifications/notification_bell.dart';
@@ -30,7 +36,10 @@ class HomeScreen extends ConsumerWidget {
     final now = ref.watch(clockProvider)();
     final size = context.windowSize;
     final theme = Theme.of(context);
-    final offline = data.error is ApiException && (data.error! as ApiException).isNetwork;
+    final drafts = ref.watch(draftsProvider).value ?? const <String, InspectionDraft>{};
+    final outbox = ref.watch(outboxProvider).value ?? const <OutboxEntry>[];
+    final waiting = outbox.where((e) => e.lastError == null).length;
+    final offline = (data.error is ApiException && (data.error! as ApiException).isNetwork) || ref.watch(syncServiceProvider).offline;
 
     Future<void> refresh() => ref.refresh(homeProvider.future).then((_) {}, onError: (_) {});
 
@@ -60,7 +69,22 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.only(top: 8, bottom: 96),
           children: [
-            if (offline) ...[OfflineBanner(onRetry: refresh, message: 'Connect to load your inspections.'), const SizedBox(height: 16)],
+            if (offline) ...[
+              OfflineBanner(
+                onRetry: () {
+                  unawaited(ref.read(syncServiceProvider.notifier).run());
+                  unawaited(refresh());
+                },
+                message: waiting == 0
+                    ? 'Connect to load your inspections.'
+                    : "$waiting ${waiting == 1 ? 'report' : 'reports'} will sync when you're back online",
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (drafts.isNotEmpty || outbox.isNotEmpty) ...[
+              _LocalWork(drafts: drafts, outbox: outbox, onRetry: () => ref.read(syncServiceProvider.notifier).run()),
+              const SizedBox(height: 16),
+            ],
             _SectionHeader(
               title: 'Today',
               action: TextButton(onPressed: () => context.go(Routes.inspections), child: const Text('See all')),
@@ -245,6 +269,54 @@ class _DueTile extends StatelessWidget {
         InspectionStatus.draft => Symbols.cloud_upload,
         _ => Symbols.chevron_right,
       }, color: overdue ? scheme.error : null),
+    );
+  }
+}
+
+/// Drafts saved on this device and reports waiting in the outbox.
+class _LocalWork extends StatelessWidget {
+  const _LocalWork({required this.drafts, required this.outbox, required this.onRetry});
+
+  final Map<String, InspectionDraft> drafts;
+  final List<OutboxEntry> outbox;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final time = DateFormat.Hm();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (drafts.isNotEmpty) ...[
+          const _SectionHeader(title: 'Drafts on this device'),
+          for (final MapEntry(key: key, value: d) in drafts.entries)
+            ListTile(
+              leading: Icon(Symbols.edit_note, color: scheme.tertiary),
+              title: Text(d.siteName.isEmpty ? (key == 'new' ? 'New inspection' : key) : d.siteName),
+              subtitle: Text(['Step ${d.lastStep} of 5', if (d.updatedAt != null) 'saved ${time.format(d.updatedAt!)}'].join(' · ')),
+              trailing: const Icon(Symbols.chevron_right),
+              onTap: () => context.push(key == 'new' ? Routes.newInspectionStep(d.lastStep) : Routes.editInspection(key, step: d.lastStep)),
+            ),
+        ],
+        if (outbox.isNotEmpty) ...[
+          _SectionHeader(
+            title: 'Waiting to send',
+            action: TextButton(onPressed: onRetry, child: const Text('Sync now')),
+          ),
+          for (final e in outbox)
+            ListTile(
+              leading: Icon(
+                e.lastError == null ? Symbols.cloud_upload : Symbols.sync_problem,
+                color: e.lastError == null ? null : scheme.error,
+              ),
+              title: Text(e.site.isEmpty ? (e.inspectionId ?? 'New inspection') : e.site),
+              subtitle: Text(
+                e.lastError == null ? 'Queued ${time.format(e.createdAt)} · sends when online' : 'Rejected by the server: ${e.lastError}',
+              ),
+            ),
+        ],
+      ],
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:mock_data/mock_data.dart';
+import 'package:mock_data/mock_data.dart' as mock show inspectionTypes;
 
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
@@ -12,6 +13,31 @@ abstract interface class InspectionsRepository {
   Future<void> setArchived(String id, {required bool archived});
   Future<List<ChecklistItem>> checklist(String templateId);
   Future<List<AppNotification>> notifications();
+  Future<List<SiteOption>> searchSites(String query);
+  Future<List<String>> inspectionTypes();
+
+  /// Creates (no [id]) or updates an inspection; [submit] marks it submitted.
+  /// Throws [ApiException] `validation` with field codes, or `network`.
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false});
+}
+
+/// A site suggestion for the wizard's autocomplete (P09).
+class SiteOption {
+  const SiteOption({required this.id, required this.name, required this.address, required this.city, required this.icon});
+
+  factory SiteOption.fromJson(Map<String, Object?> j) => SiteOption(
+    id: j['id']! as String,
+    name: j['name']! as String,
+    address: j['address'] as String? ?? '',
+    city: j['city'] as String? ?? '',
+    icon: j['icon'] as String? ?? 'location_on',
+  );
+
+  final String id;
+  final String name;
+  final String address;
+  final String city;
+  final String icon;
 }
 
 Map<String, Object?> _listParams(ListQuery q, int page, int pageSize) => {
@@ -61,6 +87,23 @@ class HttpInspectionsRepository implements InspectionsRepository {
   Future<List<AppNotification>> notifications() async => [
     for (final n in (await _api.get('/notifications'))! as List) AppNotification.fromJson((n as Map).cast<String, Object?>()),
   ];
+
+  @override
+  Future<List<SiteOption>> searchSites(String query) async => [
+    for (final s in (await _api.get('/sites', query: {'q': query}))! as List) SiteOption.fromJson((s as Map).cast<String, Object?>()),
+  ];
+
+  @override
+  Future<List<String>> inspectionTypes() async => [for (final t in (await _api.get('/inspection-types'))! as List) t as String];
+
+  @override
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async {
+    final query = {'submit': '$submit'};
+    final json = id == null
+        ? await _api.post('/inspections', body: body, query: query)
+        : await _api.put('/inspections/${Uri.encodeComponent(id)}', body: body, query: query);
+    return InspectionDetail.fromJson(_map(json));
+  }
 }
 
 /// Offline fake over [MockDatabase] with simulated latency.
@@ -109,4 +152,16 @@ class FakeInspectionsRepository implements InspectionsRepository {
 
   @override
   Future<List<AppNotification>> notifications() => _run(() => [for (final n in _db.notifications()) AppNotification.fromJson(n)]);
+
+  @override
+  Future<List<SiteOption>> searchSites(String query) => _run(() => [for (final s in _db.searchSites(query)) SiteOption.fromJson(s)]);
+
+  @override
+  Future<List<String>> inspectionTypes() => _run(() => List.of(mock.inspectionTypes));
+
+  @override
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) => _run(
+    () =>
+        InspectionDetail.fromJson(id == null ? _db.createInspection(body, submit: submit) : _db.updateInspection(id, body, submit: submit)),
+  );
 }

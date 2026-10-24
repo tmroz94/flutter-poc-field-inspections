@@ -1,0 +1,133 @@
+import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../../core/router/routes.dart';
+
+/// P16: shown after submit. Sent → "Report submitted"; offline → "saved and
+/// queued". The badge pops and the text rises (explicit animation), unless
+/// the OS or the app asks for reduced motion.
+class SubmittedScreen extends StatefulWidget {
+  const SubmittedScreen({required this.id, this.queued = false, this.site = '', super.key});
+
+  /// Inspection id, or `queued` for a new inspection still in the outbox.
+  final String id;
+  final bool queued;
+  final String site;
+
+  @override
+  State<SubmittedScreen> createState() => _SubmittedScreenState();
+}
+
+class _SubmittedScreenState extends State<SubmittedScreen> with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+
+  // M3 emphasized decelerate; badge 0–500 ms, text 200–600 ms.
+  late final _pop =
+      TweenSequence([
+        TweenSequenceItem(tween: Tween(begin: 0.4, end: 1.08), weight: 60),
+        TweenSequenceItem(tween: Tween(begin: 1.08, end: 1.0), weight: 40),
+      ]).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0, 0.71, curve: Easing.emphasizedDecelerate),
+        ),
+      );
+  late final _fade = CurvedAnimation(parent: _controller, curve: const Interval(0, 0.5));
+  late final _rise = CurvedAnimation(
+    parent: _controller,
+    curve: const Interval(0.29, 0.86, curve: Easing.emphasizedDecelerate),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = 1;
+    } else if (!_controller.isAnimating && _controller.value == 0) {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final known = widget.id != 'queued';
+    final title = widget.queued ? 'Report saved and queued' : 'Report submitted';
+    final detail = [if (known) widget.id, if (widget.site.isNotEmpty) widget.site].join(' · ');
+    final body = widget.queued ? "It sends automatically when you're back online." : 'The site manager gets the report now.';
+
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                children: [
+                  const Spacer(),
+                  FadeTransition(
+                    opacity: _fade,
+                    child: ScaleTransition(
+                      scale: _pop,
+                      child: Container(
+                        width: 112,
+                        height: 112,
+                        decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
+                        child: Icon(widget.queued ? Symbols.cloud_upload : Symbols.task_alt, size: 56, color: scheme.onPrimaryContainer),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  AnimatedBuilder(
+                    animation: _rise,
+                    builder: (context, child) => Opacity(
+                      opacity: _rise.value,
+                      child: Transform.translate(offset: Offset(0, 16 * (1 - _rise.value)), child: child),
+                    ),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Column(
+                        children: [
+                          Text(title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+                          const SizedBox(height: 8),
+                          Text('$detail${detail.isEmpty ? '' : '. '}$body', textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (known) ...[
+                    FilledButton(
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                      onPressed: () => context.go(Routes.inspection(widget.id)),
+                      child: const Text('View inspection'),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                    onPressed: () =>
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF sharing arrives in M3.'))),
+                    icon: const Icon(Symbols.picture_as_pdf),
+                    label: const Text('Share PDF report'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(onPressed: () => context.go(Routes.inspections), child: const Text('Back to inspections')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

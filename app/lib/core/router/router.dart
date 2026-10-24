@@ -13,6 +13,8 @@ import '../../features/notifications/notifications_screen.dart';
 import '../../features/poc/poc_screens.dart';
 import '../../features/settings/settings_screens.dart';
 import '../../features/shell/app_shell.dart';
+import '../../features/wizard/submitted_screen.dart';
+import '../../features/wizard/wizard_controller.dart';
 import '../../features/wizard/wizard_screen.dart';
 import '../layout/window_size.dart';
 import 'guards.dart';
@@ -55,6 +57,19 @@ String? _cleanListQuery(BuildContext context, GoRouterState state) {
   return Uri(path: uri.path, queryParameters: kept.isEmpty ? null : kept).toString();
 }
 
+/// Browser back, links or code leaving the wizard: ask first unless the user
+/// already chose to leave (or submitted), or there is nothing to lose.
+Future<bool> _confirmWizardExit(BuildContext context, GoRouterState state) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+  if (container.read(wizardExitApprovedProvider)) return true;
+  final key = wizardKey(state.pathParameters['id']);
+  if (container.read(wizardControllerProvider(key)).draft.isEmpty) return true;
+  final choice = await showLeaveDialog(context);
+  if (choice == LeaveChoice.discard) await container.read(wizardControllerProvider(key).notifier).discard();
+  if (choice == LeaveChoice.leave) await container.read(wizardControllerProvider(key).notifier).saveNow();
+  return choice != LeaveChoice.stay;
+}
+
 int _step(GoRouterState state) => int.parse(state.uri.queryParameters['step']!);
 
 DetailTab _tab(GoRouterState state) => DetailTab.values.asNameMap()[state.uri.queryParameters['tab']] ?? DetailTab.overview;
@@ -79,6 +94,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.forgotPassword, builder: (_, _) => const ForgotPasswordScreen()),
       GoRoute(path: Routes.unlock, builder: (_, _) => const UnlockScreen()),
       GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen()),
+      // Outside the shell: it replaces the wizard and must not push pages into a
+      // branch navigator that may never have been laid out (cold-start deep
+      // link straight into the wizard). Listed before the shell so it matches first.
+      GoRoute(
+        path: '/inspections/:id/submitted',
+        builder: (_, state) => SubmittedScreen(
+          id: state.pathParameters['id']!,
+          queued: state.uri.queryParameters['queued'] == '1',
+          site: state.uri.queryParameters['site'] ?? '',
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [
@@ -106,6 +132,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'new',
                     parentNavigatorKey: rootNavigatorKey,
                     redirect: _normalizeStep,
+                    onExit: _confirmWizardExit,
                     pageBuilder: (_, state) => MaterialPage<void>(
                       key: state.pageKey,
                       fullscreenDialog: true,
@@ -126,6 +153,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'edit',
                         parentNavigatorKey: rootNavigatorKey,
                         redirect: _normalizeStep,
+                        onExit: _confirmWizardExit,
                         pageBuilder: (_, state) => MaterialPage<void>(
                           key: state.pageKey,
                           fullscreenDialog: true,
@@ -137,11 +165,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                         parentNavigatorKey: rootNavigatorKey,
                         builder: (_, state) =>
                             PhotoViewerScreen(inspectionId: state.pathParameters['id']!, photoId: state.pathParameters['photoId']!),
-                      ),
-                      GoRoute(
-                        path: 'submitted',
-                        parentNavigatorKey: rootNavigatorKey,
-                        builder: (_, state) => SubmittedScreen(id: state.pathParameters['id']!),
                       ),
                     ],
                   ),
@@ -190,7 +213,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  // The router widget isn't mounted while the session restores (splash), and
+  // go_router only listens for platform links (Android intents, iOS URLs)
+  // while something listens to it. Listen for the router's whole lifetime so
+  // a link that arrives during the splash isn't dropped.
+  void keepPlatformLinks() {}
+  router.routeInformationProvider.addListener(keepPlatformLinks);
   ref.onDispose(() {
+    router.routeInformationProvider.removeListener(keepPlatformLinks);
     router.dispose();
     refresh.dispose();
   });

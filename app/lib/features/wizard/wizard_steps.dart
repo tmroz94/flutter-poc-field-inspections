@@ -1,0 +1,948 @@
+import 'dart:async';
+
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../../core/theme/app_theme.dart';
+import '../../core/validation/form_support.dart';
+import '../../core/validation/validators.dart';
+import '../../core/widgets/inspection_widgets.dart';
+import '../../data/api/api_exception.dart';
+import '../../data/models/draft.dart';
+import '../../data/models/inspection.dart';
+import '../../data/providers.dart';
+import '../../data/repositories/inspections_repository.dart';
+import '../../data/sync/sync_service.dart';
+import '../inspections/inspection_detail_screen.dart' show PhotoPlaceholder;
+import '../inspections/inspections_controller.dart';
+import 'wizard_controller.dart';
+import 'wizard_screen.dart';
+import 'wizard_validation.dart';
+
+final inspectionTypesProvider = FutureProvider<List<String>>((ref) => ref.watch(inspectionsRepositoryProvider).inspectionTypes());
+
+/// Body of one wizard step. [errors] is empty until Next was tried on it.
+class WizardStepView extends ConsumerWidget {
+  const WizardStepView({
+    required this.step,
+    required this.wizardKey,
+    required this.errors,
+    required this.onEditStep,
+    required this.onSubmit,
+    super.key,
+  });
+
+  final WizardStep step;
+  final String wizardKey;
+  final Map<String, String> errors;
+  final ValueChanged<int> onEditStep;
+  final Future<void> Function() onSubmit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => switch (step) {
+    WizardStep.site => _SiteStep(wizardKey: wizardKey, errors: errors),
+    WizardStep.details => _DetailsStep(wizardKey: wizardKey, errors: errors),
+    WizardStep.checklist => _ChecklistStep(wizardKey: wizardKey, errors: errors),
+    WizardStep.photos => _PhotosStep(wizardKey: wizardKey, errors: errors),
+    WizardStep.review => _ReviewStep(wizardKey: wizardKey, onEditStep: onEditStep, onSubmit: onSubmit),
+  };
+}
+
+// ---------------------------------------------------------------- Step 1: Site
+
+sealed class _SiteChoice {}
+
+class _Existing extends _SiteChoice {
+  _Existing(this.site);
+  final SiteOption site;
+}
+
+class _AddNew extends _SiteChoice {
+  _AddNew(this.name);
+  final String name;
+}
+
+class _SiteStep extends ConsumerStatefulWidget {
+  const _SiteStep({required this.wizardKey, required this.errors});
+
+  final String wizardKey;
+  final Map<String, String> errors;
+
+  @override
+  ConsumerState<_SiteStep> createState() => _SiteStepState();
+}
+
+class _SiteStepState extends ConsumerState<_SiteStep> {
+  late final _controller = TextEditingController(text: ref.read(wizardControllerProvider(widget.wizardKey)).draft.siteName);
+  final _focus = FocusNode();
+  Timer? _debounce;
+  Completer<List<_SiteChoice>>? _pending;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  /// Debounced lookup (250 ms): only the last keystroke hits the API.
+  Future<List<_SiteChoice>> _options(String text) {
+    final q = text.trim();
+    _debounce?.cancel();
+    if (_pending != null && !_pending!.isCompleted) _pending!.complete(const []);
+    if (q.isEmpty) return Future.value(const []);
+    final completer = _pending = Completer();
+    _debounce = Timer(const Duration(milliseconds: 250), () async {
+      try {
+        final sites = await ref.read(inspectionsRepositoryProvider).searchSites(q);
+        final exact = sites.any((s) => s.name.toLowerCase() == q.toLowerCase());
+        if (!completer.isCompleted) completer.complete([for (final s in sites) _Existing(s), if (!exact && q.length >= 3) _AddNew(q)]);
+      } on ApiException {
+        if (!completer.isCompleted) completer.complete([if (q.length >= 3) _AddNew(q)]);
+      }
+    });
+    return completer.future;
+  }
+
+  void _select(_SiteChoice c) {
+    final wizard = ref.read(wizardControllerProvider(widget.wizardKey).notifier);
+    switch (c) {
+      case _Existing(:final site):
+        _controller.text = site.name;
+        wizard.update((d) => d.copyWith(siteId: () => site.id, siteName: site.name, siteAddress: '${site.address}, ${site.city}'));
+      case _AddNew(:final name):
+        _controller.text = name;
+        wizard.update((d) => d.copyWith(siteId: () => null, siteName: name, siteAddress: ''));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final draft = ref.watch(wizardControllerProvider(widget.wizardKey)).draft;
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        RawAutocomplete<_SiteChoice>(
+          textEditingController: _controller,
+          focusNode: _focus,
+          optionsBuilder: (v) => _options(v.text),
+          displayStringForOption: (c) => switch (c) {
+            _Existing(:final site) => site.name,
+            _AddNew(:final name) => name,
+          },
+          onSelected: _select,
+          fieldViewBuilder: (context, controller, focus, onSubmit) => TextFormField(
+            controller: controller,
+            focusNode: focus,
+            textInputAction: TextInputAction.search,
+            onFieldSubmitted: (_) => onSubmit(),
+            onChanged: (text) => ref
+                .read(wizardControllerProvider(widget.wizardKey).notifier)
+                .update((d) => d.copyWith(siteId: () => null, siteName: text, siteAddress: '')),
+            decoration: InputDecoration(
+              labelText: 'Site',
+              prefixIcon: const Icon(Symbols.search),
+              helperText: 'Search by name or address',
+              errorText: widget.errors['site'],
+              suffixIcon: ListenableBuilder(
+                listenable: controller,
+                builder: (_, _) => controller.text.isEmpty
+                    ? const SizedBox.shrink()
+                    : IconButton(
+                        tooltip: 'Clear',
+                        icon: const Icon(Symbols.cancel),
+                        onPressed: () {
+                          controller.clear();
+                          ref
+                              .read(wizardControllerProvider(widget.wizardKey).notifier)
+                              .update((d) => d.copyWith(siteId: () => null, siteName: '', siteAddress: ''));
+                        },
+                      ),
+              ),
+            ),
+          ),
+          optionsViewBuilder: (context, onSelected, options) =>
+              _SiteOptions(query: _controller.text, options: options.toList(), onSelected: onSelected),
+        ),
+        const SizedBox(height: 16),
+        if (draft.siteId != null)
+          Card.outlined(
+            child: ListTile(
+              leading: Icon(Symbols.check_circle, fill: 1, color: theme.colorScheme.primary),
+              title: Text(draft.siteName),
+              subtitle: Text(draft.siteAddress),
+            ),
+          )
+        else if (draft.hasSite)
+          Card.outlined(
+            child: ListTile(
+              leading: Icon(Symbols.add_location_alt, color: theme.colorScheme.primary),
+              title: Text('New site: ${draft.siteName.trim()}'),
+              subtitle: const Text('It will be created when you submit'),
+            ),
+          ),
+        const SizedBox(height: 24),
+        Text('Your location', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 8),
+        Card.outlined(
+          child: ListTile(
+            leading: Icon(Symbols.my_location, color: theme.colorScheme.primary),
+            title: const Text('Location check'),
+            subtitle: const Text('Confirms you are on site. Arrives with geolocation in M3; optional.'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SiteOptions extends StatelessWidget {
+  const _SiteOptions({required this.query, required this.options, required this.onSelected});
+
+  final String query;
+  final List<_SiteChoice> options;
+  final AutocompleteOnSelected<_SiteChoice> onSelected;
+
+  /// Bold the typed text inside a suggestion, as on P09.
+  Widget _highlight(BuildContext context, String text) {
+    final q = query.trim().toLowerCase();
+    final i = text.toLowerCase().indexOf(q);
+    if (q.isEmpty || i < 0) return Text(text);
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: text.substring(0, i)),
+          TextSpan(
+            text: text.substring(i, i + q.length),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          TextSpan(text: text.substring(i + q.length)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final highlighted = AutocompleteHighlightedOption.of(context);
+    return Align(
+      alignment: AlignmentDirectional.topStart,
+      child: Material(
+        elevation: 3,
+        borderRadius: BorderRadius.circular(AppRadii.extraSmall),
+        color: theme.colorScheme.surfaceContainer,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 320, maxWidth: 560),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            shrinkWrap: true,
+            itemCount: options.length,
+            itemBuilder: (context, i) {
+              final o = options[i];
+              return ListTile(
+                selected: i == highlighted,
+                selectedTileColor: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                onTap: () => onSelected(o),
+                leading: switch (o) {
+                  _Existing(:final site) => Icon(siteIcon(site.icon)),
+                  _AddNew() => Icon(Symbols.add_location_alt, color: theme.colorScheme.primary),
+                },
+                title: switch (o) {
+                  _Existing(:final site) => _highlight(context, site.name),
+                  _AddNew(:final name) => Text('Add “$name” as a new site', style: TextStyle(color: theme.colorScheme.primary)),
+                },
+                subtitle: switch (o) {
+                  _Existing(:final site) => Text('${site.address}, ${site.city}'),
+                  _AddNew() => null,
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- Step 2: Details
+
+class _DetailsStep extends ConsumerStatefulWidget {
+  const _DetailsStep({required this.wizardKey, required this.errors});
+
+  final String wizardKey;
+  final Map<String, String> errors;
+
+  @override
+  ConsumerState<_DetailsStep> createState() => _DetailsStepState();
+}
+
+class _DetailsStepState extends ConsumerState<_DetailsStep> {
+  late final InspectionDraft _initial = ref.read(wizardControllerProvider(widget.wizardKey)).draft;
+  late final _duration = TextEditingController(text: _initial.duration);
+  late final _notes = TextEditingController(text: _initial.notes);
+  final _durationFocus = FocusNode();
+  final _notesFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _duration.dispose();
+    _notes.dispose();
+    _durationFocus.dispose();
+    _notesFocus.dispose();
+    super.dispose();
+  }
+
+  WizardController get _wizard => ref.read(wizardControllerProvider(widget.wizardKey).notifier);
+
+  Future<void> _pickDate(InspectionDraft d) async {
+    final today = ref.read(clockProvider)();
+    final first = d.inspectionId == null ? DateTime(today.year, today.month, today.day) : DateTime(today.year - 1);
+    final initial = d.date != null && !d.date!.isBefore(first) ? d.date! : first;
+    final picked = await showDatePicker(
+      context: context,
+      firstDate: first,
+      lastDate: DateTime(today.year + 1, 12, 31),
+      initialDate: initial,
+    );
+    if (picked != null) _wizard.update((x) => x.copyWith(date: () => picked));
+  }
+
+  Future<void> _pickTime(InspectionDraft d) async {
+    final m = d.startMinutes ?? 9 * 60;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60),
+    );
+    if (picked != null) _wizard.update((x) => x.copyWith(startMinutes: () => picked.hour * 60 + picked.minute));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = ref.watch(wizardControllerProvider(widget.wizardKey)).draft;
+    final types = ref.watch(inspectionTypesProvider).value ?? const <String>[];
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final dateText = d.date == null ? '' : DateFormat.yMMMEd(locale).format(d.date!);
+    final timeText = d.startMinutes == null
+        ? ''
+        : '${(d.startMinutes! ~/ 60).toString().padLeft(2, '0')}:${(d.startMinutes! % 60).toString().padLeft(2, '0')}';
+    final e = widget.errors;
+
+    Widget pair(Widget a, Widget b) => LayoutBuilder(
+      builder: (context, c) => c.maxWidth >= 520
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: a),
+                const SizedBox(width: 12),
+                Expanded(child: b),
+              ],
+            )
+          : Column(children: [a, const SizedBox(height: 20), b]),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, c) => DropdownMenu<String>(
+            width: c.maxWidth,
+            initialSelection: d.type,
+            label: const Text('Inspection type'),
+            errorText: e['type'],
+            dropdownMenuEntries: [for (final t in types) DropdownMenuEntry(value: t, label: t)],
+            onSelected: (t) => _wizard.update((x) => x.copyWith(type: () => t)),
+          ),
+        ),
+        const SizedBox(height: 20),
+        pair(
+          _PickerField(
+            label: 'Date',
+            value: dateText,
+            error: e['date'],
+            icon: Symbols.calendar_today,
+            tooltip: 'Open calendar',
+            onTap: () => _pickDate(d),
+          ),
+          _PickerField(
+            label: 'Start time',
+            value: timeText,
+            error: e['time'],
+            icon: Symbols.schedule,
+            tooltip: 'Open time picker',
+            onTap: () => _pickTime(d),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text('Priority', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 8),
+        SegmentedButton<Priority>(
+          segments: const [
+            ButtonSegment(value: Priority.low, label: Text('Low')),
+            ButtonSegment(value: Priority.normal, label: Text('Normal')),
+            ButtonSegment(value: Priority.high, label: Text('High')),
+          ],
+          selected: {d.priority},
+          onSelectionChanged: (s) => _wizard.update((x) => x.copyWith(priority: s.first)),
+        ),
+        const SizedBox(height: 20),
+        TextField(
+          controller: _duration,
+          focusNode: _durationFocus,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
+          // iOS number pads have no Next key; Done closes the keyboard (docs/decisions.md).
+          textInputAction: TextInputAction.next,
+          onSubmitted: (_) => _notesFocus.requestFocus(),
+          onChanged: (v) => _wizard.update((x) => x.copyWith(duration: v)),
+          decoration: InputDecoration(labelText: 'Estimated duration (minutes)', helperText: 'From 15 to 480', errorText: e['duration']),
+        ),
+        const SizedBox(height: 20),
+        TextField(
+          controller: _notes,
+          focusNode: _notesFocus,
+          minLines: 3,
+          maxLines: 6,
+          maxLength: 500,
+          maxLengthEnforcement: MaxLengthEnforcement.enforced,
+          textInputAction: TextInputAction.newline,
+          onChanged: (v) => _wizard.update((x) => x.copyWith(notes: v)),
+          decoration: InputDecoration(
+            labelText: 'Notes for the site manager',
+            helperText: 'Optional',
+            errorText: e['notes'],
+            alignLabelWithHint: true,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Read-only field that opens a picker (date, time).
+class _PickerField extends StatelessWidget {
+  const _PickerField({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.error,
+  });
+
+  final String label;
+  final String value;
+  final String? error;
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: '$label${value.isEmpty ? '' : ', $value'}',
+    excludeSemantics: true,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadii.extraSmall),
+      child: InputDecorator(
+        isEmpty: value.isEmpty,
+        decoration: InputDecoration(
+          labelText: label,
+          errorText: error,
+          suffixIcon: IconButton(tooltip: tooltip, onPressed: onTap, icon: Icon(icon)),
+        ),
+        child: Text(value),
+      ),
+    ),
+  );
+}
+
+// ----------------------------------------------------------- Step 3: Checklist
+
+class _ChecklistStep extends ConsumerStatefulWidget {
+  const _ChecklistStep({required this.wizardKey, required this.errors});
+
+  final String wizardKey;
+  final Map<String, String> errors;
+
+  @override
+  ConsumerState<_ChecklistStep> createState() => _ChecklistStepState();
+}
+
+class _ChecklistStepState extends ConsumerState<_ChecklistStep> {
+  final Map<String, GlobalKey> _keys = {};
+
+  GlobalKey _keyFor(String id) => _keys.putIfAbsent(id, GlobalKey.new);
+
+  void _jumpToFirstError() {
+    final first = widget.errors.keys.firstOrNull;
+    final ctx = first == null ? null : _keys[first]?.currentContext;
+    if (ctx != null) Scrollable.ensureVisible(ctx, duration: Durations.medium2, alignment: 0.1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = ref.watch(wizardControllerProvider(widget.wizardKey)).draft;
+    final items = ref.watch(checklistProvider(fireSafetyTemplateId));
+    final wizard = ref.read(wizardControllerProvider(widget.wizardKey).notifier);
+    final theme = Theme.of(context);
+    final list = items.value;
+    if (list == null) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('${d.type ?? 'Fire safety, annual'} · ${d.answers.length} of ${list.length} answered', style: theme.textTheme.bodyMedium),
+        if (widget.errors.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          FormErrorBanner('${widget.errors.length} ${widget.errors.length == 1 ? 'item needs' : 'items need'} attention'),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(onPressed: _jumpToFirstError, child: const Text('Jump to the first one')),
+          ),
+        ],
+        const SizedBox(height: 12),
+        for (final item in list) ...[
+          _ChecklistCard(
+            key: _keyFor(item.id),
+            item: item,
+            answer: d.answers[item.id],
+            failure: d.failures[item.id] ?? const FailDetail(),
+            photoCount: d.attachments.where((a) => a.forItem == item.id).length,
+            error: widget.errors[item.id],
+            onAnswer: (a) => wizard.update((x) {
+              final answers = {...x.answers};
+              a == null ? answers.remove(item.id) : answers[item.id] = a;
+              return x.copyWith(answers: answers);
+            }),
+            onFailure: (f) => wizard.update((x) => x.copyWith(failures: {...x.failures, item.id: f})),
+            onAddPhoto: () => wizard.update(
+              (x) => x.copyWith(
+                attachments: [
+                  ...x.attachments,
+                  DraftAttachment(
+                    id: 'ph-${DateTime.now().microsecondsSinceEpoch}',
+                    name: '${item.id}-photo.jpg',
+                    sizeBytes: 2400000,
+                    forItem: item.id,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+}
+
+class _ChecklistCard extends StatefulWidget {
+  const _ChecklistCard({
+    required this.item,
+    required this.answer,
+    required this.failure,
+    required this.photoCount,
+    required this.error,
+    required this.onAnswer,
+    required this.onFailure,
+    required this.onAddPhoto,
+    super.key,
+  });
+
+  final ChecklistItem item;
+  final Answer? answer;
+  final FailDetail failure;
+  final int photoCount;
+  final String? error;
+  final ValueChanged<Answer?> onAnswer;
+  final ValueChanged<FailDetail> onFailure;
+  final VoidCallback onAddPhoto;
+
+  @override
+  State<_ChecklistCard> createState() => _ChecklistCardState();
+}
+
+class _ChecklistCardState extends State<_ChecklistCard> {
+  late final _note = TextEditingController(text: widget.failure.note);
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final failed = widget.answer == Answer.fail;
+    final f = widget.failure;
+    return Card.outlined(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.medium),
+        side: BorderSide(color: widget.error != null ? theme.colorScheme.error : theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(widget.item.title, style: theme.textTheme.bodyLarge),
+            const SizedBox(height: 8),
+            SegmentedButton<Answer>(
+              emptySelectionAllowed: true,
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: Answer.pass, label: Text('Pass')),
+                ButtonSegment(value: Answer.fail, label: Text('Fail')),
+                ButtonSegment(value: Answer.na, label: Text('N/A')),
+              ],
+              selected: {?widget.answer},
+              onSelectionChanged: (s) => widget.onAnswer(s.firstOrNull),
+            ),
+            // Implicit animation: the failure details grow in and out (P11).
+            AnimatedSize(
+              duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : Durations.medium2,
+              curve: Easing.emphasizedDecelerate,
+              alignment: Alignment.topCenter,
+              child: !failed
+                  ? const SizedBox(width: double.infinity)
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Expanded(child: Text('Severity')),
+                            Text(f.severityLabel, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.error)),
+                          ],
+                        ),
+                        Slider(
+                          value: f.severity.toDouble(),
+                          min: 1,
+                          max: 5,
+                          divisions: 4,
+                          label: f.severityLabel,
+                          semanticFormatterCallback: (v) => 'Severity ${FailDetail(severity: v.round()).severityLabel}',
+                          onChanged: (v) => widget.onFailure(f.copyWith(severity: v.round())),
+                        ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Requires follow-up visit'),
+                          value: f.followUp,
+                          onChanged: (v) => widget.onFailure(f.copyWith(followUp: v)),
+                        ),
+                        TextField(
+                          controller: _note,
+                          minLines: 1,
+                          maxLines: 4,
+                          onChanged: (v) => widget.onFailure(f.copyWith(note: v)),
+                          decoration: const InputDecoration(labelText: 'What is wrong?'),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            ActionChip(
+                              avatar: const Icon(Symbols.add_a_photo),
+                              label: Text(widget.photoCount == 0 ? 'Add photo' : 'Add photo (${widget.photoCount})'),
+                              onPressed: widget.onAddPhoto,
+                            ),
+                            const ActionChip(avatar: Icon(Symbols.mic), label: Text('Dictate note (M3)')),
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
+            if (widget.error != null) ...[
+              const SizedBox(height: 8),
+              Text(widget.error!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------- Step 4: Photos, files
+
+class _PhotosStep extends ConsumerStatefulWidget {
+  const _PhotosStep({required this.wizardKey, required this.errors});
+
+  final String wizardKey;
+  final Map<String, String> errors;
+
+  @override
+  ConsumerState<_PhotosStep> createState() => _PhotosStepState();
+}
+
+class _PhotosStepState extends ConsumerState<_PhotosStep> {
+  final _grid = GlobalKey<SliverAnimatedGridState>();
+  late List<DraftAttachment> _shown = ref.read(wizardControllerProvider(widget.wizardKey)).draft.photos;
+
+  Duration get _duration => MediaQuery.disableAnimationsOf(context) ? Duration.zero : Durations.medium2;
+
+  /// Placeholder capture until the camera arrives (M3).
+  void _addPhoto(String source) {
+    final n = _shown.length + 1;
+    final photo = DraftAttachment(
+      id: 'ph-${DateTime.now().microsecondsSinceEpoch}',
+      name: '${source}_${n.toString().padLeft(3, '0')}.jpg',
+      sizeBytes: 2400000,
+    );
+    ref.read(wizardControllerProvider(widget.wizardKey).notifier).update((d) => d.copyWith(attachments: [...d.attachments, photo]));
+    _shown = [..._shown, photo];
+    _grid.currentState?.insertItem(_shown.length - 1, duration: _duration);
+  }
+
+  void _remove(DraftAttachment photo) {
+    final index = _shown.indexWhere((p) => p.id == photo.id);
+    if (index < 0) return;
+    ref
+        .read(wizardControllerProvider(widget.wizardKey).notifier)
+        .update((d) => d.copyWith(attachments: d.attachments.where((a) => a.id != photo.id).toList()));
+    _shown = [..._shown]..removeAt(index);
+    _grid.currentState?.removeItem(index, (context, animation) => _tile(photo, index, animation), duration: _duration);
+  }
+
+  void _addFile() => ref
+      .read(wizardControllerProvider(widget.wizardKey).notifier)
+      .update(
+        (d) => d.copyWith(
+          attachments: [
+            ...d.attachments,
+            DraftAttachment(
+              id: 'f-${DateTime.now().microsecondsSinceEpoch}',
+              name: 'site-document-${d.files.length + 1}.pdf',
+              sizeBytes: 240000,
+              isPhoto: false,
+            ),
+          ],
+        ),
+      );
+
+  Widget _tile(DraftAttachment p, int index, Animation<double> animation) => ScaleTransition(
+    scale: CurvedAnimation(parent: animation, curve: Easing.emphasizedDecelerate),
+    child: Stack(
+      clipBehavior: Clip.none,
+      fit: StackFit.expand,
+      children: [
+        Semantics(
+          label: 'Photo ${index + 1}${p.forItem != null ? ', for a failed item' : ''}',
+          child: PhotoPlaceholder(index: index),
+        ),
+        Positioned(
+          top: -6,
+          right: -6,
+          child: IconButton.filled(
+            tooltip: 'Remove photo ${index + 1}',
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+              foregroundColor: Theme.of(context).colorScheme.onInverseSurface,
+              minimumSize: const Size(28, 28),
+              iconSize: 18,
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.padded,
+            ),
+            onPressed: () => _remove(p),
+            icon: const Icon(Symbols.close),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final d = ref.watch(wizardControllerProvider(widget.wizardKey)).draft;
+    final theme = Theme.of(context);
+    final e = widget.errors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Add photos of the findings and any documents the site gave you.', style: theme.textTheme.bodyMedium),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.tonalIcon(
+                onPressed: () => _addPhoto('camera'),
+                icon: const Icon(Symbols.photo_camera),
+                label: const Text('Take photo'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _addPhoto('gallery'),
+                icon: const Icon(Symbols.photo_library),
+                label: const Text('Gallery'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Camera and gallery are simulated until M3.',
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 16),
+        Text('Photos · ${d.photos.length}', style: theme.textTheme.titleSmall),
+        if (e['photos'] != null) Text(e['photos']!, style: TextStyle(color: theme.colorScheme.error)),
+        const SizedBox(height: 8),
+        CustomScrollView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(6),
+              sliver: SliverAnimatedGrid(
+                key: _grid,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 120,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                ),
+                initialItemCount: _shown.length,
+                itemBuilder: (context, i, animation) => _tile(_shown[i], i, animation),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: Text('Files · ${d.files.length}', style: theme.textTheme.titleSmall)),
+            TextButton.icon(onPressed: _addFile, icon: const Icon(Symbols.attach_file), label: const Text('Attach file')),
+          ],
+        ),
+        for (final f in d.files)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Symbols.picture_as_pdf),
+            title: Text(f.name),
+            subtitle: Text('${(f.sizeBytes / 1000).round()} KB · saved on this device'),
+            trailing: IconButton(
+              tooltip: 'Remove ${f.name}',
+              onPressed: () => ref
+                  .read(wizardControllerProvider(widget.wizardKey).notifier)
+                  .update((x) => x.copyWith(attachments: x.attachments.where((a) => a.id != f.id).toList())),
+              icon: const Icon(Symbols.close),
+            ),
+          ),
+        for (final key in ['size', 'type'])
+          if (e[key] != null) Text(e[key]!, style: TextStyle(color: theme.colorScheme.error)),
+      ],
+    );
+  }
+}
+
+// -------------------------------------------------------------- Step 5: Review
+
+class _ReviewStep extends ConsumerWidget {
+  const _ReviewStep({required this.wizardKey, required this.onEditStep, required this.onSubmit});
+
+  final String wizardKey;
+  final ValueChanged<int> onEditStep;
+  final Future<void> Function() onSubmit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(wizardControllerProvider(wizardKey));
+    final d = state.draft;
+    final items = ref.watch(checklistProvider(fireSafetyTemplateId)).value ?? const [];
+    final v = WizardValidator(ValidationText.of(context), today: ref.watch(clockProvider)(), checklist: items);
+    final online = ref.watch(connectivityProvider).value ?? true;
+    final theme = Theme.of(context);
+    final fails = d.answers.values.where((a) => a == Answer.fail).length;
+    final followUp = d.failures.entries.any((e) => d.answers[e.key] == Answer.fail && e.value.followUp);
+    final when = d.scheduledAt == null ? 'No date' : DateFormat.yMMMEd().add_Hm().format(d.scheduledAt!);
+
+    Widget card(WizardStep s, IconData icon, String text) {
+      final errors = v.step(s, d);
+      return Card.filled(
+        child: ListTile(
+          leading: Icon(icon, color: errors.isEmpty ? null : theme.colorScheme.error),
+          title: Text(s.title),
+          subtitle: Text(
+            errors.isEmpty ? text : errors.values.join(' · '),
+            style: errors.isEmpty ? null : TextStyle(color: theme.colorScheme.error),
+          ),
+          trailing: TextButton(onPressed: () => onEditStep(s.number), child: const Text('Edit')),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        card(WizardStep.site, Symbols.location_on, [d.siteName, if (d.siteAddress.isNotEmpty) d.siteAddress].join(' · ')),
+        card(WizardStep.details, Symbols.event, '${d.type ?? '—'} · $when · ${d.priority.name} priority · ${d.duration} min'),
+        card(
+          WizardStep.checklist,
+          Symbols.rule,
+          '${d.answers.length} of ${items.length} answered · $fails failed${followUp ? ' · follow-up visit needed' : ''}',
+        ),
+        card(WizardStep.photos, Symbols.photo_library, '${d.photos.length} photos · ${d.files.length} files'),
+        if (!online) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: theme.colorScheme.tertiaryContainer, borderRadius: BorderRadius.circular(AppRadii.medium)),
+            child: Row(
+              children: [
+                Icon(Symbols.cloud_off, color: theme.colorScheme.onTertiaryContainer),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "You're offline. The report is saved on this device and sends automatically when you're back online.",
+                    style: TextStyle(color: theme.colorScheme.onTertiaryContainer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        CheckboxListTile(
+          value: d.confirmed,
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('I confirm the findings are accurate'),
+          onChanged: (c) => ref.read(wizardControllerProvider(wizardKey).notifier).update((x) => x.copyWith(confirmed: c ?? false)),
+        ),
+        if (state.submitError != null) ...[
+          FormErrorBanner(
+            state.submitError!.fields.isEmpty
+                ? "Couldn't submit (${state.submitError!.code}). Try again."
+                : 'The server rejected: ${state.submitError!.fields.entries.map((e) => '${e.key} (${ValidationText.of(context).server(e.value)})').join(', ')}',
+          ),
+          const SizedBox(height: 8),
+        ],
+        const SizedBox(height: 8),
+        BusyButton(label: 'Submit', busy: state.submitting, onPressed: v.canSubmit(d) ? onSubmit : null),
+        if (!v.canSubmit(d))
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Fix the steps marked in red and confirm the findings to submit.',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
+    );
+  }
+}

@@ -48,7 +48,8 @@ On the Mac: `cd app && fvm flutter run -d ios`.
 Demo account: `anna.nowak@example.com` / `inspect123` (mock backend only), or
 tap **Use demo account**.
 
-Web like production (SPA rewrite, so deep-link refresh works):
+Web like production (SPA rewrite, so deep-link refresh works; serves `.wasm` as
+`application/wasm` for SQLite on the web):
 
 ```bash
 cd app && fvm flutter build web && cd .. && python tool/serve_web.py
@@ -69,6 +70,6 @@ Runs format check, analyze and tests for all three packages. On macOS/Linux:
 |---|---|---|
 | M0 | Toolchain, mock API, theme, router with every route and guard, tests | done |
 | M1 | Shell, auth screens, lists, detail, list-detail, photo viewer | done |
-| M2 | Wizard, validators, drafts, outbox | next |
-| M3 | Camera, files, maps, notifications, biometrics, permissions | |
+| M2 | Wizard, validators, drafts, outbox | done |
+| M3 | Camera, files, maps, notifications, biometrics, permissions | next |
 | M4 | Settings, l10n, a11y, adaptive widgets, diagnostics, results tracker | |
