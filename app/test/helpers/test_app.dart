@@ -5,6 +5,7 @@ import 'package:field_inspections/core/platform/capabilities.dart';
 import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
 import 'package:field_inspections/data/providers.dart';
+import 'package:field_inspections/data/repositories/inspections_repository.dart';
 import 'package:field_inspections/features/auth/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,7 +38,8 @@ class TestApp {
 
   GoRouter get router => container.read(routerProvider);
 
-  String get location => router.routerDelegate.currentConfiguration.uri.toString();
+  /// Current location including imperative push/replace (what the browser shows).
+  String get location => router.state.uri.toString();
 
   Future<void> go(String location) async {
     router.go(location);
@@ -52,16 +54,25 @@ Future<TestApp> pumpApp(
   Map<String, String>? store,
   Size size = phoneSize,
   Capabilities capabilities = android,
+  InspectionsRepository Function(MockDatabase db)? inspections,
+  double? textScale,
 }) async {
   tester.view
     ..physicalSize = size
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  if (textScale != null) {
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+  }
 
   final container = ProviderContainer(
     overrides: [
       keyValueStoreProvider.overrideWithValue(MemoryStore(store)),
       authRepositoryProvider.overrideWith((ref) => FakeAuthRepository(ref.watch(mockDatabaseProvider), latency: Duration.zero)),
+      inspectionsRepositoryProvider.overrideWith(
+        (ref) => (inspections ?? (db) => FakeInspectionsRepository(db, latency: Duration.zero))(ref.watch(mockDatabaseProvider)),
+      ),
       capabilitiesProvider.overrideWithValue(capabilities),
       initialLocationProvider.overrideWithValue(initialLocation),
     ],

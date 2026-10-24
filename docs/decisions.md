@@ -31,4 +31,10 @@ M3 says nothing.
 | 21 | Web browser back skips the unsaved-changes dialog | `PopScope` + go_router `onExit`, plus `beforeunload` for tab close/reload (M2) | D05 sample note |
 | 22 | Web has no pull-to-refresh, swipe actions | Refresh button; row menu (D03 pattern) | Coverage board |
 | 23 | No dedicated tablet home board | Phone layout inside the rail shell, cards in a responsive grid | T01 / D02 |
-| 24 | After a deep link straight to a detail, Back keeps the detail's `?tab=` on the list URL (go_router does not re-run redirects on pop) | Direct links are cleaned by a redirect; the list ignores unknown keys. M1: the detail's back action goes to the list location explicitly | Found on the Android emulator |
+| 24 | After a deep link straight to a detail, Back keeps the detail's `?tab=` on the list URL (go_router does not re-run redirects on pop) | Direct links are cleaned by a redirect; the detail's back button goes to the list location explicitly (keeps filters, drops `tab`). System back still pops; the list ignores unknown keys | Found on the Android emulator |
+| 25 | go_router does not put `push`/`replace` locations in the browser URL by default | `GoRouter.optionURLReflectsImperativeAPIs = true`: photo viewer, tabs and sheets always show their real URL | Found in Chrome (M1) |
+| 26 | Detail tabs and photo paging change the URL; should browser back step through them? | No: they `replace` the URL, so back leaves the inspection / viewer (one history entry per screen) | Common web practice (Gmail, GitHub tabs) |
+| 27 | Opening a row on tablet/desktop lost the list filters | The detail URL carries the list filters (`/inspections/INS-1038?status=overdue`), so the list pane and Back keep them | Found in Chrome (M1) |
+| 28 | Table (D03) vs list (T01) on wide screens | Data table from 1200 px, list pane 840–1199; "Load more" button in the table instead of infinite scroll | D03 / T01 boards |
+| 29 | "Keep me signed in" in P01 has no defined behaviour | Unchecked: session kept in memory only and ends when the app or tab closes | Common web practice |
+| 30 | Swipe-to-archive has no confirmation in the mocks | Archive at once with an Undo snackbar (optimistic; restored if the server refuses) | M3 snackbar guidance: offer undo instead of confirming |

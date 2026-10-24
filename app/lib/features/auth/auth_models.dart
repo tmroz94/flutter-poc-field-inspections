@@ -34,19 +34,6 @@ class Session {
   Map<String, Object?> toJson() => {'token': token, 'user': user.toJson()};
 }
 
-/// Auth failure with a machine-readable [code] and optional per-field error
-/// codes from the server (HTTP 422), which forms map back onto their fields.
-class AuthException implements Exception {
-  const AuthException(this.code, {this.fields = const {}});
-
-  /// invalidCredentials | validation | network | unauthorized | unknown
-  final String code;
-  final Map<String, String> fields;
-
-  @override
-  String toString() => 'AuthException($code, $fields)';
-}
-
 enum AuthStatus { restoring, signedOut, signedIn }
 
 @immutable

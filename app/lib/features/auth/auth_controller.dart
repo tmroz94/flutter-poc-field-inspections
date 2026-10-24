@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/key_value_store.dart';
+import '../../data/api/api_exception.dart';
 import '../../data/providers.dart';
 import 'auth_models.dart';
 
@@ -35,7 +36,7 @@ class AuthController extends Notifier<AuthState> {
     try {
       final user = await ref.read(authRepositoryProvider).me(saved.token);
       state = AuthState.signedIn(Session(token: saved.token, user: user));
-    } on AuthException catch (e) {
+    } on ApiException catch (e) {
       // Offline-first: a network failure keeps the cached session.
       if (e.code == 'network') {
         state = AuthState.signedIn(saved);
@@ -46,13 +47,21 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> signIn(String email, String password) async => _save(await ref.read(authRepositoryProvider).signIn(email, password));
+  /// With [remember] off ("Keep me signed in" unchecked) the session lives
+  /// only in memory and ends when the app or tab closes.
+  Future<void> signIn(String email, String password, {bool remember = true}) async =>
+      _save(await ref.read(authRepositoryProvider).signIn(email, password), persist: remember);
 
   Future<void> signUp({required String name, required String email, required String password}) async =>
       _save(await ref.read(authRepositoryProvider).signUp(name: name, email: email, password: password));
 
-  Future<void> _save(Session session) async {
-    await ref.read(keyValueStoreProvider).setString(_key, jsonEncode(session.toJson()));
+  Future<void> _save(Session session, {bool persist = true}) async {
+    final store = ref.read(keyValueStoreProvider);
+    if (persist) {
+      await store.setString(_key, jsonEncode(session.toJson()));
+    } else {
+      await store.remove(_key);
+    }
     state = AuthState.signedIn(session);
   }
 

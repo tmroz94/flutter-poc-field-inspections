@@ -68,7 +68,7 @@ Runs format check, analyze and tests for all three packages. On macOS/Linux:
 | Milestone | Scope | State |
 |---|---|---|
 | M0 | Toolchain, mock API, theme, router with every route and guard, tests | done |
-| M1 | Shell, auth screens, lists, detail, list-detail, photo viewer | next |
-| M2 | Wizard, validators, drafts, outbox | |
+| M1 | Shell, auth screens, lists, detail, list-detail, photo viewer | done |
+| M2 | Wizard, validators, drafts, outbox | next |
 | M3 | Camera, files, maps, notifications, biometrics, permissions | |
 | M4 | Settings, l10n, a11y, adaptive widgets, diagnostics, results tracker | |

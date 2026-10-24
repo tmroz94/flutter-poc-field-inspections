@@ -1,5 +1,7 @@
 import 'package:mock_data/mock_data.dart';
 
+import '../../data/api/api_client.dart';
+import '../../data/api/api_exception.dart';
 import 'auth_models.dart';
 
 abstract interface class AuthRepository {
@@ -8,9 +10,35 @@ abstract interface class AuthRepository {
   Future<void> requestPasswordReset(String email);
   Future<bool> isEmailAvailable(String email);
 
-  /// Validates a stored token. Throws [AuthException] `unauthorized` when the
+  /// Validates a stored token. Throws [ApiException] `unauthorized` when the
   /// server rejects it, or `network` when the server can't be reached.
   Future<AppUser> me(String token);
+}
+
+class HttpAuthRepository implements AuthRepository {
+  HttpAuthRepository(this._api);
+
+  final ApiClient _api;
+
+  Map<String, Object?> _map(Object? data) => (data! as Map).cast<String, Object?>();
+
+  @override
+  Future<Session> signIn(String email, String password) async =>
+      Session.fromJson(_map(await _api.post('/auth/sign-in', body: {'email': email.trim(), 'password': password})));
+
+  @override
+  Future<Session> signUp({required String name, required String email, required String password}) async =>
+      Session.fromJson(_map(await _api.post('/auth/sign-up', body: {'name': name.trim(), 'email': email.trim(), 'password': password})));
+
+  @override
+  Future<void> requestPasswordReset(String email) => _api.post('/auth/forgot-password', body: {'email': email.trim()});
+
+  @override
+  Future<bool> isEmailAvailable(String email) async =>
+      _map(await _api.get('/auth/email-available', query: {'email': email.trim()}))['available'] == true;
+
+  @override
+  Future<AppUser> me(String token) async => AppUser.fromJson(_map(await _api.get('/me', bearer: token)));
 }
 
 /// Offline fake over the shared [MockDatabase], used when the mock server is
@@ -26,7 +54,7 @@ class FakeAuthRepository implements AuthRepository {
     try {
       return body();
     } on MockError catch (e) {
-      throw AuthException(e.code, fields: e.fields);
+      throw ApiException(e.code, status: e.status, fields: e.fields);
     }
   }
 

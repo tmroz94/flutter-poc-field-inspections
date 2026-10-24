@@ -154,7 +154,7 @@ class MockDatabase {
   }
 
   Map<String, Object?> _summary(Map<String, Object?> i) => {
-    for (final k in ['id', 'site', 'address', 'city', 'icon', 'status', 'scheduledAt', 'lat', 'lng', 'priority', 'type']) k: i[k],
+    for (final k in ['id', 'siteId', 'site', 'address', 'city', 'icon', 'status', 'scheduledAt', 'lat', 'lng', 'priority', 'type']) k: i[k],
   };
 
   Map<String, Object?> getInspection(String id) {

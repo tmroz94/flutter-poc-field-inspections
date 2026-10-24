@@ -14,6 +14,7 @@ import '../../features/poc/poc_screens.dart';
 import '../../features/settings/settings_screens.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/wizard/wizard_screen.dart';
+import '../layout/window_size.dart';
 import 'guards.dart';
 import 'routes.dart';
 import 'sheet_page.dart';
@@ -113,7 +114,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: ':id',
-                    builder: (_, state) => InspectionDetailScreen(id: state.pathParameters['id']!, tab: _tab(state)),
+                    // From 840 the detail is a pane beside the list: swap it in without a page transition.
+                    pageBuilder: (context, state) {
+                      final child = InspectionDetailScreen(id: state.pathParameters['id']!, tab: _tab(state));
+                      return WindowSize.fromWidth(MediaQuery.sizeOf(context).width).isTwoPane
+                          ? NoTransitionPage<void>(key: state.pageKey, child: child)
+                          : MaterialPage<void>(key: state.pageKey, child: child);
+                    },
                     routes: [
                       GoRoute(
                         path: 'edit',

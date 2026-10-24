@@ -31,8 +31,12 @@ Deep entry builds the back stack from the URL nesting: opening
 Android emulator (app installed, any state: running, background, killed):
 
 ```bash
-adb shell am start -a android.intent.action.VIEW -d "fieldinspections://app/inspections/INS-1042?tab=photos"
+adb shell am start -a android.intent.action.VIEW -d "'fieldinspections://app/inspections?status=overdue,scheduled'"
 ```
+
+Keep the inner single quotes: the URI goes through the device shell, which
+would otherwise split or glob `?`, `&` and `,`. From PowerShell the same
+double-then-single quoting works.
 
 iOS simulator (on the Mac):
 

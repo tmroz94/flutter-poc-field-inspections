@@ -135,14 +135,14 @@ void main() {
       expect(find.byType(UnlockScreen), findsOneWidget);
       expect(app.location, '/unlock?from=%2Fnotifications');
 
-      await tester.tap(find.text('Unlock'));
+      await tester.tap(find.byTooltip('Unlock with biometrics'));
       await tester.pumpAndSettle();
       expect(find.byType(NotificationsScreen), findsOneWidget);
     });
 
     testWidgets('locks after 5 minutes in the background', (tester) async {
       final app = await pumpApp(tester, store: signedInStore(biometricLock: true));
-      await tester.tap(find.text('Unlock'));
+      await tester.tap(find.byTooltip('Unlock with biometrics'));
       await tester.pumpAndSettle();
       await app.go('/map');
 
