@@ -1,0 +1,18 @@
+name: mock_server
+description: Local REST mock API for the Field Inspections PoC (CORS, latency and failure injection).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  args: ^2.7.0
+  mock_data:
+    path: ../packages/mock_data
+  shelf: ^1.4.3
+  shelf_router: ^1.1.5
+dev_dependencies:
+  http: ^1.6.0
+  lints: ^6.1.0
+  test: ^1.33.0

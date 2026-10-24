@@ -1,0 +1,11 @@
+name: mock_data
+description: Pure-Dart fixtures shared by the mock server and the app's offline fake.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.0

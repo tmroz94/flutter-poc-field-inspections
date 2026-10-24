@@ -1,0 +1,23 @@
+# FVM
+.fvm/
+
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+coverage/
+*.iml
+.idea/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec_overrides.yaml
+
+# Golden test failures
+**/failures/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local Claude Code preview config (machine-specific paths)
+.claude/

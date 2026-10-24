@@ -1,0 +1,24 @@
+# One-command quality gate: format, analyze and test every package.
+# Usage: pwsh tool/check.ps1   (add -Coverage for lcov output in app/coverage)
+param([switch]$Coverage)
+$ErrorActionPreference = 'Stop'
+$root = Split-Path $PSScriptRoot -Parent
+$fvm = if (Get-Command fvm -ErrorAction SilentlyContinue) { 'fvm' } else { 'D:\tools\fvm\fvm.exe' }
+$failed = @()
+
+function Step([string]$name, [string]$dir, [scriptblock]$cmd) {
+  Write-Host "`n== $name ==" -ForegroundColor Cyan
+  Push-Location (Join-Path $root $dir)
+  try { & $cmd; if ($LASTEXITCODE -ne 0) { $script:failed += $name } } finally { Pop-Location }
+}
+
+Step 'format' '.' { & $fvm dart format --output=none --set-exit-if-changed app/lib app/test packages/mock_data/lib packages/mock_data/test mock_server/lib mock_server/bin mock_server/test }
+Step 'mock_data: analyze' 'packages/mock_data' { & $fvm dart analyze --fatal-infos }
+Step 'mock_data: test' 'packages/mock_data' { & $fvm dart test }
+Step 'mock_server: analyze' 'mock_server' { & $fvm dart analyze --fatal-infos }
+Step 'mock_server: test' 'mock_server' { & $fvm dart test }
+Step 'app: analyze' 'app' { & $fvm flutter analyze --fatal-infos }
+Step 'app: test' 'app' { if ($Coverage) { & $fvm flutter test --coverage } else { & $fvm flutter test } }
+
+if ($failed.Count) { Write-Host "`nFAILED: $($failed -join ', ')" -ForegroundColor Red; exit 1 }
+Write-Host "`nAll checks passed." -ForegroundColor Green
