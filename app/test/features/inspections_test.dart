@@ -59,7 +59,7 @@ void main() {
 
     testWidgets('search is debounced into ?q=', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/inspections', store: signedInStore());
-      await tester.enterText(find.byType(SearchBar), 'cold');
+      await tester.enterText(find.byType(TextField).first, 'cold');
       await tester.pump(const Duration(milliseconds: 100));
       expect(app.location, '/inspections');
       await tester.pumpAndSettle(const Duration(milliseconds: 400));

@@ -12,6 +12,7 @@ import '../../core/router/routes.dart';
 import '../../core/validation/validators.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/models/draft.dart';
+import '../../l10n/l10n.dart';
 import '../inspections/inspections_controller.dart';
 import 'wizard_controller.dart';
 import 'wizard_steps.dart';
@@ -40,20 +41,20 @@ Future<LeaveChoice> showLeaveDialog(BuildContext context) async =>
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Symbols.edit_note),
-        title: const Text('Leave without submitting?'),
-        content: const Text('Your answers are saved as a draft on this device. You can finish it later from Home.'),
+        title: Text(context.l10n.leaveTitle),
+        content: Text(context.l10n.leaveBody),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             onPressed: () => Navigator.pop(context, LeaveChoice.discard),
-            child: const Text('Discard draft'),
+            child: Text(context.l10n.discardDraft),
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextButton(onPressed: () => Navigator.pop(context, LeaveChoice.stay), child: const Text('Stay')),
-              TextButton(onPressed: () => Navigator.pop(context, LeaveChoice.leave), child: const Text('Leave')),
+              TextButton(onPressed: () => Navigator.pop(context, LeaveChoice.stay), child: Text(context.l10n.stay)),
+              TextButton(onPressed: () => Navigator.pop(context, LeaveChoice.leave), child: Text(context.l10n.leave)),
             ],
           ),
         ],
@@ -83,6 +84,10 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
 
   /// Guard redirect scheduled; avoids one replace per rebuild.
   bool _redirecting = false;
+
+  /// Why the step guard sent the user back; shown above the step, cleared on
+  /// the next move. Inline rather than a snackbar, which would cover the footer.
+  String? _notice;
 
   String get _key => wizardKey(widget.inspectionId);
   WizardStep get _step => WizardStep.fromNumber(widget.step);
@@ -115,6 +120,7 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
 
   /// Each step adds a history entry, so browser back returns to the previous step.
   void _goTo(int step) {
+    if (_notice != null) setState(() => _notice = null);
     ref.read(wizardControllerProvider(_key).notifier).reachStep(step);
     context.go(_location(step));
   }
@@ -178,7 +184,7 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
     // Load the checklist early: steps 3–5 validate against it.
     ref.watch(checklistProvider(fireSafetyTemplateId));
     final size = context.windowSize;
-    final title = widget.inspectionId == null ? 'New inspection' : 'Edit ${widget.inspectionId}';
+    final title = widget.inspectionId == null ? context.l10n.newInspection : context.l10n.editInspection(widget.inspectionId!);
 
     if (state.loading) {
       return Scaffold(
@@ -193,18 +199,25 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
       _redirecting = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        setState(() => _attempted.add(blockedAt));
+        final notice = context.l10n.completeStepFirst(stepTitle(context, blockedAt));
+        setState(() {
+          _attempted.add(blockedAt);
+          _notice = notice;
+        });
         context.go(_location(blockedAt.number));
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Complete “${blockedAt.title}” first')));
+        SemanticsService.sendAnnouncement(View.of(context), notice, Directionality.of(context), assertiveness: Assertiveness.assertive);
       });
     } else if (blockedAt == null) {
       _redirecting = false;
     }
 
     final errors = _attempted.contains(_step) ? _validator().step(_step, state.draft) : const <String, String>{};
-    final content = WizardStepView(step: _step, wizardKey: _key, errors: errors, onEditStep: _goTo, onSubmit: _submit);
+    final stepView = WizardStepView(step: _step, wizardKey: _key, errors: errors, onEditStep: _goTo, onSubmit: _submit);
+    final content = _notice == null
+        ? stepView
+        : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [_Notice(_notice!), const SizedBox(height: 16), stepView]);
     final savedAt = state.savedAt;
-    final savedText = savedAt == null ? null : 'Draft saved on this device · ${DateFormat.Hm().format(savedAt)}';
+    final savedText = savedAt == null ? null : context.l10n.draftSavedAt(DateFormat.Hm().format(savedAt));
 
     final appBar = AppBar(
       leading: IconButton(tooltip: 'Close', onPressed: _close, icon: const Icon(Symbols.close)),
@@ -221,7 +234,7 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
               ],
             ),
           ),
-        TextButton(onPressed: _saveDraft, child: const Text('Save draft')),
+        TextButton(onPressed: _saveDraft, child: Text(context.l10n.saveDraft)),
       ],
     );
 
@@ -230,7 +243,9 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
       savedText: size.isTwoPane || isLast ? null : savedText,
       onBack: widget.step > 1 ? _back : null,
       onNext: isLast ? null : _next,
-      nextLabel: size.isTwoPane && !isLast ? 'Next: ${WizardStep.fromNumber(widget.step + 1).title}' : 'Next',
+      nextLabel: size.isTwoPane && !isLast
+          ? context.l10n.nextStep(stepTitle(context, WizardStep.fromNumber(widget.step + 1)))
+          : context.l10n.next,
       alignEnd: size.isTwoPane,
     );
 
@@ -316,10 +331,10 @@ class _PhoneStepHeader extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Expanded(
-                child: Semantics(header: true, child: Text(step.title, style: theme.textTheme.titleMedium)),
+                child: Semantics(header: true, child: Text(stepTitle(context, step), style: theme.textTheme.titleMedium)),
               ),
               Text(
-                'Step ${step.number} of ${WizardScreen.stepCount}',
+                context.l10n.stepOf(step.number, WizardScreen.stepCount),
                 style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
@@ -351,10 +366,10 @@ class _MainHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Step ${step.number} of ${WizardScreen.stepCount}',
+          context.l10n.stepOf(step.number, WizardScreen.stepCount),
           style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-        Semantics(header: true, child: Text(step.title, style: theme.textTheme.headlineSmall)),
+        Semantics(header: true, child: Text(stepTitle(context, step), style: theme.textTheme.headlineSmall)),
         const SizedBox(height: 24),
         child,
       ],
@@ -447,7 +462,7 @@ class _VerticalSteps extends StatelessWidget {
                   enabled: s.number <= draft.lastStep || s == current,
                   onTap: () => onTap(s.number),
                   leading: _StepDot(step: s, state: _stateOf(s, current, draft, validator)),
-                  title: Text(s.title, style: theme.textTheme.titleSmall),
+                  title: Text(stepTitle(context, s), style: theme.textTheme.titleSmall),
                   subtitle: Text(_hint(s), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ),
@@ -493,7 +508,7 @@ class _HorizontalSteps extends StatelessWidget {
                       _StepDot(step: s, state: _stateOf(s, current, draft, validator), size: 28),
                       const SizedBox(width: 8),
                       Text(
-                        s.title,
+                        stepTitle(context, s),
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: s == current ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
                         ),
@@ -511,6 +526,30 @@ class _HorizontalSteps extends StatelessWidget {
   }
 }
 
+class _Notice extends StatelessWidget {
+  const _Notice(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: c.secondaryContainer, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Icon(Symbols.info, color: c.onSecondaryContainer),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(text, style: TextStyle(color: c.onSecondaryContainer)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Footer extends StatelessWidget {
   const _Footer({required this.savedText, required this.onBack, required this.onNext, required this.nextLabel, required this.alignEnd});
 
@@ -523,7 +562,7 @@ class _Footer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final back = OutlinedButton(onPressed: onBack, child: const Text('Back'));
+    final back = OutlinedButton(onPressed: onBack, child: Text(context.l10n.back));
     final next = onNext == null ? null : FilledButton(onPressed: onNext, child: Text(nextLabel));
     return Material(
       color: theme.colorScheme.surfaceContainer,
@@ -569,3 +608,12 @@ class _Footer extends StatelessWidget {
     );
   }
 }
+
+/// Localized step names.
+String stepTitle(BuildContext context, WizardStep s) => switch (s) {
+  WizardStep.site => context.l10n.stepSite,
+  WizardStep.details => context.l10n.stepDetails,
+  WizardStep.checklist => context.l10n.stepChecklist,
+  WizardStep.photos => context.l10n.stepPhotos,
+  WizardStep.review => context.l10n.stepReview,
+};

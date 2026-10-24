@@ -1,0 +1,352 @@
+{
+  "@@locale": "en",
+  "appName": "Field Inspections",
+  "navHome": "Home",
+  "navInspections": "Inspections",
+  "navMap": "Map",
+  "navSettings": "Settings",
+  "navPocResults": "PoC results",
+  "newInspection": "New inspection",
+  "newShort": "New",
+  "cancel": "Cancel",
+  "save": "Save",
+  "back": "Back",
+  "next": "Next",
+  "retry": "Retry",
+  "tryAgain": "Try again",
+  "close": "Close",
+  "seeAll": "See all",
+  "openSettings": "Open settings",
+  "syncNow": "Sync now",
+  "signOut": "Sign out",
+  "undo": "Undo",
+  "edit": "Edit",
+  "statusAll": "All",
+  "statusScheduled": "Scheduled",
+  "statusInProgress": "In progress",
+  "statusDraft": "Draft",
+  "statusOverdue": "Overdue",
+  "statusSubmitted": "Submitted",
+  "todayAt": "Today {time}",
+  "@todayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "yesterdayAt": "Yesterday {time}",
+  "@yesterdayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tomorrowAt": "Tomorrow {time}",
+  "@tomorrowAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingMorning": "Good morning, {name}",
+  "@greetingMorning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingAfternoon": "Good afternoon, {name}",
+  "@greetingAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingEvening": "Good evening, {name}",
+  "@greetingEvening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeToday": "Today",
+  "homeDueThisWeek": "Due this week",
+  "homeNothingToday": "Nothing scheduled for today.",
+  "homeNothingWeek": "Nothing else due this week.",
+  "overdueByDays": "{count, plural, =1{Overdue by 1 day} other{Overdue by {count} days}}",
+  "@overdueByDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "draftNotSynced": "Draft · not synced",
+  "homeDraftsOnDevice": "Drafts on this device",
+  "homeWaitingToSend": "Waiting to send",
+  "stepOf": "Step {step} of {total}",
+  "@stepOf": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "savedAt": "saved {time}",
+  "@savedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineTitle": "You're offline",
+  "offlineConnect": "Connect to load your inspections.",
+  "offlineReportsWaiting": "{count, plural, =1{1 report will sync when you're back online} other{{count} reports will sync when you're back online}}",
+  "@offlineReportsWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountAndSettings": "Account and settings",
+  "notificationsUnread": "{count, plural, =0{Notifications} =1{Notifications, 1 unread} other{Notifications, {count} unread}}",
+  "@notificationsUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inspectionsTitle": "Inspections",
+  "searchSiteOrId": "Search site or ID",
+  "clearSearch": "Clear search",
+  "filterAndSort": "Filter and sort",
+  "filterAndSortActive": "Filter and sort, {count} active",
+  "@filterAndSortActive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "refreshList": "Refresh list",
+  "noMatchTitle": "No inspections match",
+  "clearFilters": "Clear filters",
+  "loadErrorTitle": "Couldn't load inspections",
+  "loadErrorOffline": "You're offline and nothing is saved on this device yet. Connect and try again.",
+  "loadErrorServer": "The server had a problem. Try again in a moment.",
+  "loadingMore": "Loading more",
+  "archived": "{id} archived",
+  "@archived": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "archive": "Archive",
+  "copyLink": "Copy link",
+  "showOnMap": "Show on map",
+  "selectInspection": "Select an inspection",
+  "selectInspectionHint": "Pick one from the list to see its details here.",
+  "loadMore": "Load more",
+  "showResults": "{count, plural, =1{Show 1 result} other{Show {count} results}}",
+  "@showResults": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reset": "Reset",
+  "sortBy": "Sort by",
+  "due": "Due",
+  "status": "Status",
+  "tabOverview": "Overview",
+  "tabChecklist": "Checklist",
+  "tabPhotos": "Photos",
+  "tabHistory": "History",
+  "directions": "Directions",
+  "callSite": "Call site",
+  "exportPdf": "Export PDF",
+  "shareReport": "Share report",
+  "continueAction": "Continue",
+  "checkedOf": "{answered} of {total} checked",
+  "@checkedOf": {
+    "placeholders": {
+      "answered": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "failedCount": "{count, plural, =1{1 failed} other{{count} failed}}",
+  "@failedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inspectionNotFound": "Inspection not found",
+  "backToInspections": "Back to inspections",
+  "notificationsTitle": "Notifications",
+  "markAllRead": "Mark all as read",
+  "remindersOff": "Reminders are off on this device",
+  "remindersOffBody": "Turn them on to get an alert 30 minutes before each inspection.",
+  "remindersOffWeb": "Browsers show notifications only while the app is open and can’t schedule them.",
+  "turnOn": "Turn on",
+  "notificationDismissed": "Notification dismissed",
+  "earlier": "Earlier",
+  "settingsTitle": "Settings",
+  "appearanceAndLanguage": "Appearance and language",
+  "appearanceSubtitle": "Theme, contrast, text size, language",
+  "inspectionReminders": "Inspection reminders",
+  "remindersSubtitle": "30 minutes before start",
+  "remindersWebSubtitle": "Not available in the browser",
+  "biometricUnlock": "Biometric unlock",
+  "biometricSubtitle": "Lock after 5 minutes in the background",
+  "offlineData": "Offline data",
+  "offlineDataSubtitle": "{drafts, plural, =1{1 draft} other{{drafts} drafts}} · {waiting} waiting to send",
+  "@offlineDataSubtitle": {
+    "placeholders": {
+      "drafts": {
+        "type": "int"
+      },
+      "waiting": {
+        "type": "int"
+      }
+    }
+  },
+  "pocTools": "PoC tools",
+  "resultsTracker": "Results tracker",
+  "resultsTrackerSubtitle": "Pass, fail and notes per platform",
+  "adaptiveWidgets": "Adaptive widgets",
+  "diagnostics": "Diagnostics",
+  "deepLinkTester": "Deep-link tester",
+  "theme": "Theme",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "contrast": "Contrast",
+  "contrastStandard": "Standard",
+  "contrastMedium": "Medium",
+  "contrastHigh": "High",
+  "textSize": "Text size",
+  "textSizeHint": "Follows the system setting until you change it here",
+  "useSystemSize": "Use system size",
+  "reduceMotion": "Reduce motion",
+  "reduceMotionHint": "Fewer animations; page changes without movement",
+  "language": "Language",
+  "languageSystem": "Device language",
+  "preview": "Preview",
+  "previewSite": "Warehouse A – loading dock",
+  "inspectionsCount": "{count, plural, =1{1 inspection} other{{count} inspections}}",
+  "@inspectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveDraft": "Save draft",
+  "editInspection": "Edit {id}",
+  "@editInspection": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "stepSite": "Site",
+  "stepDetails": "Details",
+  "stepChecklist": "Checklist",
+  "stepPhotos": "Photos and files",
+  "stepReview": "Review and submit",
+  "nextStep": "Next: {step}",
+  "@nextStep": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "draftSavedAt": "Draft saved on this device · {time}",
+  "@draftSavedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveTitle": "Leave without submitting?",
+  "leaveBody": "Your answers are saved as a draft on this device. You can finish it later from Home.",
+  "discardDraft": "Discard draft",
+  "stay": "Stay",
+  "leave": "Leave",
+  "submit": "Submit",
+  "confirmFindings": "I confirm the findings are accurate",
+  "signIn": "Sign in",
+  "email": "Email",
+  "password": "Password",
+  "keepSignedIn": "Keep me signed in",
+  "forgotPassword": "Forgot password?",
+  "useDemoAccount": "Use demo account",
+  "createAnAccount": "Create an account",
+  "resultsTitle": "PoC results",
+  "sampleData": "Sample data",
+  "filterAll": "All",
+  "filterFailing": "Failing",
+  "filterNotTested": "Not tested",
+  "resultPass": "Pass",
+  "resultPartial": "Partial",
+  "resultFail": "Fail",
+  "resultNotTested": "Not tested",
+  "resultNa": "N/A",
+  "testedOf": "{tested} of {total} tested",
+  "@testedOf": {
+    "placeholders": {
+      "tested": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "exportResults": "Export results",
+  "importResults": "Import",
+  "device": "Device and version",
+  "notes": "Notes",
+  "platform": "Platform",
+  "dueAny": "Any",
+  "dueToday": "Today",
+  "dueWeek": "Week",
+  "dueCustom": "Custom",
+  "sortDueAsc": "Due date, soonest first",
+  "sortDueDesc": "Due date, latest first",
+  "sortSiteAsc": "Site name, A to Z",
+  "selectAtLeastOneStatus": "Select at least one status",
+  "completeStepFirst": "Complete “{step}” first",
+  "@completeStepFirst": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "showResultsPlain": "Show results"
+}

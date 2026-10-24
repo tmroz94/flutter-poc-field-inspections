@@ -10,9 +10,11 @@ import '../../core/platform/platform_services.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/inspection_widgets.dart';
+import '../../core/widgets/search_field.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
 import '../../data/providers.dart';
+import '../../l10n/l10n.dart';
 import '../inspections/inspection_actions.dart';
 import '../inspections/inspections_controller.dart';
 
@@ -147,7 +149,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         alignment: Alignment.topCenter,
                         child: Semantics(
                           button: true,
-                          label: '${i.site}, ${i.status.label}',
+                          label: '${i.site}, ${i.status.localized(context.l10n)}',
                           child: GestureDetector(
                             onTap: () => _select(i),
                             child: Icon(Symbols.location_on, fill: 1, size: i == selected ? 48 : 36, color: pinColor(i)),
@@ -198,14 +200,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
-                  child: SearchBar(
-                    controller: _search,
-                    hintText: 'Search sites',
-                    elevation: const WidgetStatePropertyAll(2),
-                    leading: const Padding(padding: EdgeInsetsDirectional.only(start: 4), child: Icon(Symbols.search)),
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (q) => _onSearch(q, items),
-                  ),
+                  child: SearchField(controller: _search, hintText: 'Search sites', elevation: 2, onSubmitted: (q) => _onSearch(q, items)),
                 ),
               ),
             ),
@@ -280,7 +275,7 @@ class _PeekSheet extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(item.site, style: theme.textTheme.titleLarge),
-              Text([item.address, ?away, relativeWhen(item.scheduledAt, now)].join(' · '), style: theme.textTheme.bodyMedium),
+              Text([item.address, ?away, localizedWhen(context, item.scheduledAt, now)].join(' · '), style: theme.textTheme.bodyMedium),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,

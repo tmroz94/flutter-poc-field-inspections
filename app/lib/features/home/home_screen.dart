@@ -14,6 +14,7 @@ import '../../data/local/local_store.dart';
 import '../../data/models/draft.dart';
 import '../../data/models/inspection.dart';
 import '../../data/sync/sync_service.dart';
+import '../../l10n/l10n.dart';
 import '../auth/auth_controller.dart';
 import '../inspections/inspections_controller.dart';
 import '../notifications/notification_bell.dart';
@@ -23,10 +24,10 @@ import '../notifications/notification_bell.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  String _greeting(DateTime now) => switch (now.hour) {
-    < 12 => 'Good morning',
-    < 18 => 'Good afternoon',
-    _ => 'Good evening',
+  String _greeting(BuildContext context, DateTime now, String name) => switch (now.hour) {
+    < 12 => context.l10n.greetingMorning(name),
+    < 18 => context.l10n.greetingAfternoon(name),
+    _ => context.l10n.greetingEvening(name),
   };
 
   @override
@@ -45,11 +46,11 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${_greeting(now)}, ${user?.firstName ?? ''}'),
+        title: Text(_greeting(context, now, user?.firstName ?? '')),
         actions: [
           const NotificationBell(),
           IconButton(
-            tooltip: 'Account and settings',
+            tooltip: context.l10n.accountAndSettings,
             icon: CircleAvatar(radius: 16, child: Text(user?.initials ?? '', style: theme.textTheme.labelMedium)),
             onPressed: () => context.go(Routes.settings),
           ),
@@ -62,7 +63,7 @@ class HomeScreen extends ConsumerWidget {
               heroTag: 'home-fab',
               onPressed: () => context.push(Routes.newInspectionStep(1)),
               icon: const Icon(Symbols.add),
-              label: const Text('New inspection'),
+              label: Text(context.l10n.newInspection),
             ),
       body: RefreshIndicator(
         onRefresh: refresh,
@@ -75,9 +76,7 @@ class HomeScreen extends ConsumerWidget {
                   unawaited(ref.read(syncServiceProvider.notifier).run());
                   unawaited(refresh());
                 },
-                message: waiting == 0
-                    ? 'Connect to load your inspections.'
-                    : "$waiting ${waiting == 1 ? 'report' : 'reports'} will sync when you're back online",
+                message: waiting == 0 ? context.l10n.offlineConnect : context.l10n.offlineReportsWaiting(waiting),
               ),
               const SizedBox(height: 16),
             ],
@@ -86,23 +85,23 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
             _SectionHeader(
-              title: 'Today',
-              action: TextButton(onPressed: () => context.go(Routes.inspections), child: const Text('See all')),
+              title: context.l10n.homeToday,
+              action: TextButton(onPressed: () => context.go(Routes.inspections), child: Text(context.l10n.seeAll)),
             ),
             switch (data) {
-              AsyncData(:final value) when value.today.isEmpty => const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text('Nothing scheduled for today.'),
+              AsyncData(:final value) when value.today.isEmpty => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(context.l10n.homeNothingToday),
               ),
               AsyncData(:final value) => _TodayCards(items: value.today, now: now),
               AsyncError() => const SizedBox.shrink(),
               _ => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
             },
             const SizedBox(height: 24),
-            const _SectionHeader(title: 'Due this week'),
+            _SectionHeader(title: context.l10n.homeDueThisWeek),
             if (data case AsyncData(:final value))
               if (value.week.isEmpty)
-                const Padding(padding: EdgeInsets.all(16), child: Text('Nothing else due this week.'))
+                Padding(padding: const EdgeInsets.all(16), child: Text(context.l10n.homeNothingWeek))
               else
                 for (final i in value.week) _DueTile(item: i, now: now),
           ],
@@ -193,7 +192,7 @@ class _TodayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final time = relativeWhen(item.scheduledAt, now).replaceFirst('Today ', '');
+    final time = DateFormat.Hm().format(item.scheduledAt);
     return Card(
       elevation: 1,
       clipBehavior: Clip.antiAlias,
@@ -250,9 +249,9 @@ class _DueTile extends StatelessWidget {
       now.day,
     ).difference(DateTime(item.scheduledAt.year, item.scheduledAt.month, item.scheduledAt.day)).inDays;
     final subtitle = switch (item.status) {
-      InspectionStatus.overdue => 'Overdue by $days ${days == 1 ? 'day' : 'days'}',
-      InspectionStatus.draft => 'Draft · not synced',
-      _ => '${item.status.label} · ${relativeWhen(item.scheduledAt, now).split(' ').last}',
+      InspectionStatus.overdue => context.l10n.overdueByDays(days),
+      InspectionStatus.draft => context.l10n.draftNotSynced,
+      _ => '${item.status.localized(context.l10n)} · ${DateFormat.Hm().format(item.scheduledAt)}',
     };
     final weekday = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][item.scheduledAt.weekday - 1];
     return ListTile(
@@ -289,20 +288,22 @@ class _LocalWork extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (drafts.isNotEmpty) ...[
-          const _SectionHeader(title: 'Drafts on this device'),
+          _SectionHeader(title: context.l10n.homeDraftsOnDevice),
           for (final MapEntry(key: key, value: d) in drafts.entries)
             ListTile(
               leading: Icon(Symbols.edit_note, color: scheme.tertiary),
               title: Text(d.siteName.isEmpty ? (key == 'new' ? 'New inspection' : key) : d.siteName),
-              subtitle: Text(['Step ${d.lastStep} of 5', if (d.updatedAt != null) 'saved ${time.format(d.updatedAt!)}'].join(' · ')),
+              subtitle: Text(
+                [context.l10n.stepOf(d.lastStep, 5), if (d.updatedAt != null) context.l10n.savedAt(time.format(d.updatedAt!))].join(' · '),
+              ),
               trailing: const Icon(Symbols.chevron_right),
               onTap: () => context.push(key == 'new' ? Routes.newInspectionStep(d.lastStep) : Routes.editInspection(key, step: d.lastStep)),
             ),
         ],
         if (outbox.isNotEmpty) ...[
           _SectionHeader(
-            title: 'Waiting to send',
-            action: TextButton(onPressed: onRetry, child: const Text('Sync now')),
+            title: context.l10n.homeWaitingToSend,
+            action: TextButton(onPressed: onRetry, child: Text(context.l10n.syncNow)),
           ),
           for (final e in outbox)
             ListTile(

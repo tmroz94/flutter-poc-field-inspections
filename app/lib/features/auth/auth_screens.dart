@@ -14,6 +14,7 @@ import '../../core/validation/form_support.dart';
 import '../../core/validation/validators.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/providers.dart';
+import '../../l10n/l10n.dart';
 import 'auth_controller.dart';
 import 'auth_layout.dart';
 import 'lock_controller.dart';
@@ -210,7 +211,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 autovalidateMode: AutovalidateMode.onUnfocus,
                 validator: _emailValidator(t),
                 decoration: InputDecoration(
-                  labelText: 'Email',
+                  labelText: context.l10n.email,
                   prefixIcon: const Icon(Symbols.mail),
                   errorText: _serverFields['email'] == null ? null : t.server(_serverFields['email']!),
                 ),
@@ -230,8 +231,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  _CheckRow(label: 'Keep me signed in', value: _remember, onChanged: (v) => setState(() => _remember = v)),
-                  TextButton(onPressed: () => context.go(Routes.forgotPassword), child: const Text('Forgot password?')),
+                  _CheckRow(label: context.l10n.keepSignedIn, value: _remember, onChanged: (v) => setState(() => _remember = v)),
+                  TextButton(onPressed: () => context.go(Routes.forgotPassword), child: Text(context.l10n.forgotPassword)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -239,7 +240,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               BusyButton(label: 'Sign in', busy: _busy, onPressed: _submit),
               const SizedBox(height: 12),
               BusyButton(
-                label: 'Use demo account',
+                label: context.l10n.useDemoAccount,
                 outlined: true,
                 busy: false,
                 onPressed: _busy ? null : () => _submit(email: demoEmail, password: demoPassword),
@@ -248,7 +249,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               TextButton(
                 onPressed: () =>
                     context.go(from == null ? Routes.signUp : Uri(path: Routes.signUp, queryParameters: {'from': from}).toString()),
-                child: const Text('Create an account'),
+                child: Text(context.l10n.createAnAccount),
               ),
               const _BackendNote(),
             ],
@@ -425,7 +426,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   autovalidateMode: AutovalidateMode.onUnfocus,
                   validator: _emailV(t),
                   onChanged: (_) => _emailTaken == null ? null : setState(() => _emailTaken = null),
-                  decoration: InputDecoration(labelText: 'Email', prefixIcon: const Icon(Symbols.mail), errorText: _emailTaken),
+                  decoration: InputDecoration(labelText: context.l10n.email, prefixIcon: const Icon(Symbols.mail), errorText: _emailTaken),
                 ),
               ),
               const SizedBox(height: 16),
@@ -577,7 +578,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     autovalidateMode: AutovalidateMode.onUnfocus,
                     validator: _v(t),
                     onFieldSubmitted: (_) => _submit(),
-                    decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Symbols.mail)),
+                    decoration: InputDecoration(labelText: context.l10n.email, prefixIcon: const Icon(Symbols.mail)),
                   ),
                   const SizedBox(height: 16),
                   if (_error != null) ...[FormErrorBanner(_error!), const SizedBox(height: 16)],

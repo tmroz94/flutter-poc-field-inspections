@@ -54,6 +54,11 @@ class FakeMedia extends MediaService {
   @override
   Future<List<PickedFile>> files() async => nextFiles;
 
+  String? nextJson;
+
+  @override
+  Future<String?> jsonText() async => nextJson;
+
   @override
   void Function() onPaste(void Function(PickedFile file) onFile) => () {};
 }
@@ -61,6 +66,7 @@ class FakeMedia extends MediaService {
 class FakeShare extends ShareService {
   final links = <Uri>[];
   final files = <String>[];
+  final contents = <String, Uint8List>{};
 
   @override
   Future<ShareOutcome> shareLink({required String text, required Uri link, String? subject}) async {
@@ -71,6 +77,7 @@ class FakeShare extends ShareService {
   @override
   Future<ShareOutcome> shareFile({required Uint8List bytes, required String fileName, required String mime, required bool isWeb}) async {
     files.add(fileName);
+    contents[fileName] = bytes;
     return ShareOutcome.shared;
   }
 }

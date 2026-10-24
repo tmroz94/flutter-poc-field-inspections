@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app.dart';
+import 'core/platform/frame_stats.dart';
 import 'core/platform/notification_service.dart';
 import 'core/router/router.dart';
 import 'core/router/routes.dart';
@@ -12,6 +13,7 @@ import 'data/api/backend_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FrameStats.instance.start();
   // Clean web URLs (/inspections/INS-1042) instead of /#/inspections/INS-1042.
   // Hosting must rewrite unknown paths to index.html (docs/deep-links.md).
   usePathUrlStrategy();

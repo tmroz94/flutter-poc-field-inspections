@@ -14,6 +14,7 @@ import '../../core/widgets/inspection_widgets.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
+import '../../l10n/l10n.dart';
 import 'inspection_actions.dart';
 import 'inspection_list_screen.dart';
 import 'inspections_controller.dart';
@@ -90,9 +91,9 @@ class InspectionDetailView extends ConsumerWidget {
         body: error is ApiException && error.code == 'notFound'
             ? MessageState(
                 icon: Symbols.search_off,
-                title: 'Inspection not found',
+                title: context.l10n.inspectionNotFound,
                 message: 'There is no inspection $id. It may have been deleted or the link is wrong.',
-                action: FilledButton.tonal(onPressed: () => context.go(Routes.inspections), child: const Text('Back to inspections')),
+                action: FilledButton.tonal(onPressed: () => context.go(Routes.inspections), child: Text(context.l10n.backToInspections)),
               )
             : MessageState(
                 icon: Symbols.sync_problem,
@@ -102,7 +103,7 @@ class InspectionDetailView extends ConsumerWidget {
                 action: FilledButton.icon(
                   onPressed: () => ref.invalidate(inspectionDetailProvider(id)),
                   icon: const Icon(Symbols.refresh),
-                  label: const Text('Try again'),
+                  label: Text(context.l10n.tryAgain),
                 ),
               ),
       ),
@@ -158,7 +159,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
     final scheme = theme.colorScheme;
     final timeFmt = DateFormat.Hm();
     final now = ref.watch(clockProvider)();
-    final when = '${relativeWhen(s.scheduledAt, now)}–${timeFmt.format(d.endsAt)}';
+    final when = '${localizedWhen(context, s.scheduledAt, now)}–${timeFmt.format(d.endsAt)}';
     final wideTablet = context.windowSize.usesRail;
     final actions = InspectionActions(ref, context);
 
@@ -177,9 +178,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
     );
 
     final iconActions = [
-      IconButton(tooltip: 'Copy link', onPressed: _copyLink, icon: const Icon(Symbols.link)),
+      IconButton(tooltip: context.l10n.copyLink, onPressed: _copyLink, icon: const Icon(Symbols.link)),
       IconButton(
-        tooltip: 'Share report',
+        tooltip: context.l10n.shareReport,
         onPressed: () => actions.share(s, path: detailLocation(context, s.id, widget.tab)),
         icon: const Icon(Symbols.share),
       ),
@@ -193,7 +194,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
           MenuItemButton(
             leadingIcon: const Icon(Symbols.map),
             onPressed: () => context.go(Routes.mapSite(s.siteId)),
-            child: const Text('Show on map'),
+            child: Text(context.l10n.showOnMap),
           ),
         ],
         builder: (context, c, _) =>
@@ -222,11 +223,19 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
             spacing: 8,
             runSpacing: 8,
             children: [
-              ActionChip(avatar: const Icon(Symbols.directions), label: const Text('Directions'), onPressed: () => actions.directions(s)),
-              ActionChip(avatar: const Icon(Symbols.call), label: const Text('Call site'), onPressed: () => actions.call(d.siteManager)),
+              ActionChip(
+                avatar: const Icon(Symbols.directions),
+                label: Text(context.l10n.directions),
+                onPressed: () => actions.directions(s),
+              ),
+              ActionChip(
+                avatar: const Icon(Symbols.call),
+                label: Text(context.l10n.callSite),
+                onPressed: () => actions.call(d.siteManager),
+              ),
               ActionChip(
                 avatar: const Icon(Symbols.picture_as_pdf),
-                label: const Text('Export PDF'),
+                label: Text(context.l10n.exportPdf),
                 onPressed: () => actions.exportPdf(d),
               ),
             ],
@@ -283,7 +292,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
                     padding: const EdgeInsets.all(8),
                     child: Row(
                       children: [
-                        IconButton.filledTonal(tooltip: 'Back', onPressed: widget.onBack, icon: const Icon(Symbols.arrow_back)),
+                        IconButton.filledTonal(tooltip: context.l10n.back, onPressed: widget.onBack, icon: const Icon(Symbols.arrow_back)),
                         const Spacer(),
                         for (final a in iconActions) a,
                       ],
@@ -302,7 +311,12 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
               isScrollable: widget.pane,
               tabAlignment: widget.pane ? TabAlignment.start : TabAlignment.fill,
               onTap: _selectTab,
-              tabs: [for (final t in DetailTab.values) Tab(text: t.label)],
+              tabs: [
+                Tab(text: context.l10n.tabOverview),
+                Tab(text: context.l10n.tabChecklist),
+                Tab(text: context.l10n.tabPhotos),
+                Tab(text: context.l10n.tabHistory),
+              ],
             ),
             scheme.surface,
           ),
@@ -319,7 +333,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
               heroTag: 'detail-fab-${s.id}',
               onPressed: () => context.push(Routes.editInspection(s.id, step: 3)),
               icon: const Icon(Symbols.edit),
-              label: const Text('Continue'),
+              label: Text(context.l10n.continueAction),
             )
           : null,
     );
@@ -388,10 +402,10 @@ class _Checklist extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Row(
             children: [
-              Text('${detail.answered} of ${detail.total} checked', style: theme.textTheme.titleSmall),
+              Text(context.l10n.checkedOf(detail.answered, detail.total), style: theme.textTheme.titleSmall),
               const Spacer(),
               if (detail.failed > 0)
-                Text('${detail.failed} failed', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+                Text(context.l10n.failedCount(detail.failed), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
             ],
           ),
         ),

@@ -103,7 +103,7 @@ void main() {
 
     testWidgets('search moves to a matching site', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/map', store: signedInStore());
-      await tester.enterText(find.byType(SearchBar), 'parking');
+      await tester.enterText(find.byType(TextField).first, 'parking');
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
       expect(app.location, '/map?site=s-parking-garage');

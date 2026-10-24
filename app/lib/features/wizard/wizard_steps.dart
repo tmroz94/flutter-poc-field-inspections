@@ -20,6 +20,7 @@ import '../../data/models/inspection.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/inspections_repository.dart';
 import '../../data/sync/sync_service.dart';
+import '../../l10n/l10n.dart';
 import '../inspections/inspection_detail_screen.dart' show PhotoPlaceholder;
 import '../inspections/inspections_controller.dart';
 import 'wizard_controller.dart';
@@ -290,7 +291,7 @@ class _LocationCheckState extends ConsumerState<_LocationCheck> {
                   label: Text(fix == null ? 'Check location' : 'Update location'),
                 ),
                 if (_canOpenSettings)
-                  TextButton(onPressed: () => ref.read(permissionServiceProvider).openSettings(), child: const Text('Open settings')),
+                  TextButton(onPressed: () => ref.read(permissionServiceProvider).openSettings(), child: Text(context.l10n.openSettings)),
               ],
             ),
           ],
@@ -1011,7 +1012,7 @@ class _PhotosStepState extends ConsumerState<_PhotosStep> {
                   ),
                 ),
                 if (caps.openSystemSettings)
-                  TextButton(onPressed: () => ref.read(permissionServiceProvider).openSettings(), child: const Text('Open settings')),
+                  TextButton(onPressed: () => ref.read(permissionServiceProvider).openSettings(), child: Text(context.l10n.openSettings)),
               ],
             ),
           ),
@@ -1143,7 +1144,7 @@ class _ReviewStep extends ConsumerWidget {
           value: d.confirmed,
           controlAffinity: ListTileControlAffinity.leading,
           contentPadding: EdgeInsets.zero,
-          title: const Text('I confirm the findings are accurate'),
+          title: Text(context.l10n.confirmFindings),
           onChanged: (c) => ref.read(wizardControllerProvider(wizardKey).notifier).update((x) => x.copyWith(confirmed: c ?? false)),
         ),
         if (state.submitError != null) ...[
@@ -1155,7 +1156,7 @@ class _ReviewStep extends ConsumerWidget {
           const SizedBox(height: 8),
         ],
         const SizedBox(height: 8),
-        BusyButton(label: 'Submit', busy: state.submitting, onPressed: v.canSubmit(d) ? onSubmit : null),
+        BusyButton(label: context.l10n.submit, busy: state.submitting, onPressed: v.canSubmit(d) ? onSubmit : null),
         if (!v.canSubmit(d))
           Padding(
             padding: const EdgeInsets.only(top: 8),

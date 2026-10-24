@@ -15,6 +15,9 @@ enum WindowSize {
     _ => large,
   };
 
+  /// "Compact", "Medium", … as on the boards.
+  String get label => '${name[0].toUpperCase()}${name.substring(1)}';
+
   /// Two panes (list-detail) from 840 up.
   bool get isTwoPane => index >= expanded.index;
 

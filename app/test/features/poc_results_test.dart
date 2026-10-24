@@ -1,0 +1,191 @@
+import 'dart:convert';
+
+import 'package:field_inspections/core/storage/key_value_store.dart';
+import 'package:field_inspections/features/poc/results_model.dart';
+import 'package:field_inspections/features/poc/results_screens.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:mock_data/mock_data.dart';
+
+import '../helpers/test_app.dart';
+
+ProviderContainer _container([MemoryStore? store]) {
+  final c = ProviderContainer(overrides: [keyValueStoreProvider.overrideWithValue(store ?? MemoryStore())]);
+  addTearDown(c.dispose);
+  return c;
+}
+
+void main() {
+  group('ResultsController', () {
+    test('starts with our findings: iOS untested, Android and Web filled in', () {
+      final s = _container().read(resultsProvider);
+      expect(s.dataset, ResultsDataset.findings);
+      expect(s.results, hasLength(scenarioSeed.length));
+      expect(s.tested(PocPlatform.ios), 0);
+      expect(s.tested(PocPlatform.android), greaterThan(10));
+      expect(s.tested(PocPlatform.web), greaterThan(10));
+    });
+
+    test('every findings id exists in the scenario seed', () {
+      final ids = {for (final s in scenarioSeed) s.id};
+      expect(findings.keys.where((id) => !ids.contains(id)), isEmpty);
+    });
+
+    test('sample dataset matches the D05 codes', () {
+      final c = _container();
+      final s = c.read(resultsProvider.notifier).load(ResultsDataset.sample);
+      final back = s.results.firstWhere((r) => r.id == 'back-navigation');
+      expect(back.of(PocPlatform.web).status, ResultStatus.fail);
+      expect(back.of(PocPlatform.ios).status, ResultStatus.pass);
+    });
+
+    test('edits persist and survive a new container', () {
+      final store = MemoryStore();
+      final c = _container(store);
+      c
+          .read(resultsProvider.notifier)
+          .setResult('hero', PocPlatform.ios, const PlatformResult(status: ResultStatus.pass, device: 'iPhone 16, iOS 26'));
+      expect(c.read(resultsProvider).dataset, ResultsDataset.custom);
+
+      final again = _container(store).read(resultsProvider);
+      expect(again.results.firstWhere((r) => r.id == 'hero').of(PocPlatform.ios).device, 'iPhone 16, iOS 26');
+    });
+
+    test('JSON export round-trips through import', () {
+      final c = _container();
+      c
+          .read(resultsProvider.notifier)
+          .setResult('maps', PocPlatform.ios, const PlatformResult(status: ResultStatus.fail, device: 'iPad', notes: 'Tiles blank'));
+      final json = jsonEncode(ResultsController.toJson(c.read(resultsProvider)));
+
+      final other = _container();
+      other.read(resultsProvider.notifier).importJson(json);
+      final maps = other.read(resultsProvider).results.firstWhere((r) => r.id == 'maps');
+      expect(maps.of(PocPlatform.ios).status, ResultStatus.fail);
+      expect(maps.of(PocPlatform.ios).notes, 'Tiles blank');
+    });
+
+    test('import rejects files that are not a results export', () {
+      final c = _container();
+      expect(() => c.read(resultsProvider.notifier).importJson('{"hello": 1}'), throwsFormatException);
+      expect(() => c.read(resultsProvider.notifier).importJson('not json'), throwsFormatException);
+    });
+
+    test('CSV quotes commas, quotes and newlines', () {
+      final c = _container();
+      c
+          .read(resultsProvider.notifier)
+          .setResult(
+            'maps',
+            PocPlatform.web,
+            const PlatformResult(status: ResultStatus.partial, device: 'Chrome', notes: 'Slow, "laggy"\nzoom'),
+          );
+      final csv = ResultsController.toCsv(c.read(resultsProvider));
+      final lines = const LineSplitter().convert(csv);
+      expect(lines.first, startsWith('group,scenario,ios_status'));
+      expect(csv, contains('"Slow, ""laggy""\nzoom"'));
+    });
+  });
+
+  group('Results screen', () {
+    testWidgets('phone: summary, filter and per-platform icons', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
+      expect(find.byType(ResultsScreen), findsOneWidget);
+      expect(find.text('Findings so far'), findsOneWidget);
+      expect(find.text('0 of 44 tested'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
+
+      final all = find.byType(InkWell).evaluate().length;
+      await tester.tap(find.text('Failing'));
+      await tester.pumpAndSettle();
+      expect(find.byType(InkWell).evaluate().length, lessThan(all));
+      semantics.dispose();
+    });
+
+    testWidgets('row opens the result sheet at its URL; validators guard Save', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
+      await tester.tap(find.text('Back navigation'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/settings/poc/results/back-navigation');
+      expect(find.byType(ResultSheet), findsOneWidget);
+
+      // Default platform is Android here; switch to iOS (not tested yet).
+      await tester.tap(find.text('iOS').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Fail'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.text('Which device and version did you test on?'), findsOneWidget);
+      expect(find.text('Describe what failed or only partly worked'), findsOneWidget);
+
+      await tester.enterText(find.widgetWithText(TextFormField, 'Device and version'), 'iPhone 16, iOS 26');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Notes'), 'Swipe back skipped the dialog');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/settings/poc/results');
+      expect(find.text('Your results'), findsOneWidget);
+      final row = app.container.read(resultsProvider).results.firstWhere((r) => r.id == 'back-navigation');
+      expect(row.of(PocPlatform.ios).status, ResultStatus.fail);
+      expect(row.of(PocPlatform.android).status, ResultStatus.pass);
+    });
+
+    testWidgets('not tested needs no device or notes', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results/hero');
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Not tested'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/settings/poc/results');
+    });
+
+    testWidgets('export CSV and JSON go through the share service; import JSON', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
+      await tester.tap(find.byTooltip('Export results'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export CSV'));
+      await tester.pumpAndSettle();
+      expect(app.fakes.share.files, ['poc-results.csv']);
+      expect(utf8.decode(app.fakes.share.contents['poc-results.csv']!), startsWith('group,scenario'));
+
+      await tester.tap(find.byTooltip('Export results'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export JSON'));
+      await tester.pumpAndSettle();
+      final exported = utf8.decode(app.fakes.share.contents['poc-results.json']!);
+
+      await tester.tap(find.byTooltip('Export results'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start blank'));
+      await tester.pumpAndSettle();
+      expect(find.text('Blank'), findsOneWidget);
+
+      app.fakes.media.nextJson = exported;
+      await tester.tap(find.byTooltip('Export results'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import'));
+      await tester.pumpAndSettle();
+      expect(find.text('Results imported.'), findsOneWidget);
+      expect(app.container.read(resultsProvider).tested(PocPlatform.web), greaterThan(10));
+    });
+
+    testWidgets('import of another file shows an error', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
+      app.fakes.media.nextJson = '{"format": "something-else"}';
+      await tester.tap(find.byTooltip('Export results'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import'));
+      await tester.pumpAndSettle();
+      expect(find.text('That file is not a PoC results export.'), findsOneWidget);
+    });
+
+    testWidgets('desktop shows the D05 table with notes', (tester) async {
+      await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results', size: desktopSize, capabilities: web);
+      expect(find.byType(Table), findsOneWidget);
+      expect(find.text('Scenario'), findsOneWidget);
+      expect(find.textContaining('flutter_map + OSM tiles'), findsOneWidget);
+    });
+  });
+}

@@ -13,6 +13,7 @@ import '../../core/router/routes.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/models/notification.dart';
 import '../../data/providers.dart';
+import '../../l10n/l10n.dart';
 import '../inspections/inspections_controller.dart';
 import 'reminders.dart';
 
@@ -40,8 +41,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final closed = messenger
         .showSnackBar(
           SnackBar(
-            content: const Text('Notification dismissed'),
-            action: SnackBarAction(label: 'Undo', onPressed: () => setState(() => _hidden.remove(n.id))),
+            content: Text(context.l10n.notificationDismissed),
+            action: SnackBarAction(label: context.l10n.undo, onPressed: () => setState(() => _hidden.remove(n.id))),
           ),
         )
         .closed;
@@ -89,8 +90,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [IconButton(tooltip: 'Mark all as read', onPressed: _markAll, icon: const Icon(Symbols.done_all))],
+        title: Text(context.l10n.notificationsTitle),
+        actions: [IconButton(tooltip: context.l10n.markAllRead, onPressed: _markAll, icon: const Icon(Symbols.done_all))],
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(notificationsProvider.future),
@@ -227,9 +228,9 @@ class _PermissionCard extends ConsumerWidget {
               child: blocked && caps.openSystemSettings
                   ? FilledButton.tonal(
                       onPressed: () => ref.read(permissionServiceProvider).openSettings(),
-                      child: const Text('Open settings'),
+                      child: Text(context.l10n.openSettings),
                     )
-                  : FilledButton.tonal(onPressed: turnOn, child: const Text('Turn on')),
+                  : FilledButton.tonal(onPressed: turnOn, child: Text(context.l10n.turnOn)),
             ),
           ],
         ),
@@ -262,7 +263,7 @@ class DeepLinksScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final caps = ref.watch(capabilitiesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Deep-link tester')),
+      appBar: AppBar(title: Text(context.l10n.deepLinkTester)),
       body: ListView(
         children: [
           Padding(

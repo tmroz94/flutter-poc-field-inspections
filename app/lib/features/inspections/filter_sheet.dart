@@ -11,6 +11,7 @@ import '../../data/api/api_exception.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
 import '../../data/providers.dart';
+import '../../l10n/l10n.dart';
 
 /// P05: filter and sort as a bottom sheet with its own URL
 /// (`/inspections/filter?…`). Applying goes to `/inspections?…`, which also
@@ -106,7 +107,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 Expanded(
                   child: Semantics(header: true, child: Text('Filter and sort', style: theme.textTheme.titleLarge)),
                 ),
-                TextButton(onPressed: _reset, child: const Text('Reset')),
+                TextButton(onPressed: _reset, child: Text(context.l10n.reset)),
               ],
             ),
             Padding(
@@ -120,7 +121,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                     width: 180,
                     child: CheckboxListTile(
                       value: _checked.contains(s),
-                      title: Text(s.label),
+                      title: Text(s.localized(context.l10n)),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
                       onChanged: (v) => _change(() => v! ? _checked.add(s) : _checked.remove(s)),
@@ -131,7 +132,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
             if (_checked.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text('Select at least one status', style: TextStyle(color: theme.colorScheme.error)),
+                child: Text(context.l10n.selectAtLeastOneStatus, style: TextStyle(color: theme.colorScheme.error)),
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
@@ -140,7 +141,18 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: SegmentedButton<DueWindow>(
-                segments: [for (final d in DueWindow.values) ButtonSegment(value: d, label: Text(d.label))],
+                segments: [
+                  for (final d in DueWindow.values)
+                    ButtonSegment(
+                      value: d,
+                      label: Text(switch (d) {
+                        DueWindow.any => context.l10n.dueAny,
+                        DueWindow.today => context.l10n.dueToday,
+                        DueWindow.week => context.l10n.dueWeek,
+                        DueWindow.custom => context.l10n.dueCustom,
+                      }),
+                    ),
+                ],
                 selected: {_draft.due},
                 onSelectionChanged: (s) {
                   _change(() => _draft = _draft.copyWith(due: s.first));
@@ -176,7 +188,15 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               child: Column(
                 children: [
                   for (final s in SortOrder.values)
-                    RadioListTile<SortOrder>(value: s, title: Text(s.label), contentPadding: EdgeInsets.zero),
+                    RadioListTile<SortOrder>(
+                      value: s,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(switch (s) {
+                        SortOrder.dueAsc => context.l10n.sortDueAsc,
+                        SortOrder.dueDesc => context.l10n.sortDueDesc,
+                        SortOrder.siteAsc => context.l10n.sortSiteAsc,
+                      }),
+                    ),
                 ],
               ),
             ),
@@ -187,9 +207,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                 onPressed: _canApply ? () => context.go(_result.toLocation(Routes.inspections)) : null,
                 child: Text(switch (_count) {
-                  null => 'Show results',
-                  1 => 'Show 1 result',
-                  final n => 'Show $n results',
+                  null => context.l10n.showResultsPlain,
+                  final n => context.l10n.showResults(n),
                 }),
               ),
             ),

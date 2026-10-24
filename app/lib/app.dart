@@ -9,6 +9,7 @@ import 'data/sync/sync_service.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/auth_models.dart';
 import 'features/auth/auth_screens.dart';
+import 'l10n/l10n.dart';
 
 class FieldInspectionsApp extends ConsumerWidget {
   const FieldInspectionsApp({super.key});
@@ -36,7 +37,6 @@ class FieldInspectionsApp extends ConsumerWidget {
     ThemeData theme(Brightness b, AppContrast c) => buildTheme(colorSchemeFor(b, c), reduceMotion: settings.reduceMotion);
 
     return MaterialApp.router(
-      title: 'Field Inspections',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       themeMode: settings.mode,
@@ -47,7 +47,11 @@ class FieldInspectionsApp extends ConsumerWidget {
       highContrastDarkTheme: theme(Brightness.dark, settings.contrast ?? AppContrast.high),
       locale: settings.locale,
       supportedLocales: supportedLocales,
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      // App strings (gen-l10n) plus material_ui's Material/Cupertino/widgets
+      // localizations. Not AppLocalizations.localizationsDelegates: that list
+      // uses the framework's older flutter_localizations classes.
+      localizationsDelegates: const [AppLocalizations.delegate, ...GlobalMaterialLocalizations.delegates],
+      onGenerateTitle: (context) => context.l10n.appName,
       builder: (context, child) {
         final media = MediaQuery.of(context);
         return MediaQuery(

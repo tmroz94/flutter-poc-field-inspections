@@ -11,8 +11,8 @@ Claude Design canvas "Flutter PoC – Field Inspections" (Material 3).
 | `packages/mock_data/` | Pure-Dart fixtures + in-memory backend, shared by the server and the app's offline fake |
 | `mock_server/` | Local REST mock API (shelf): CORS, latency and failure injection |
 | `design/` | Design tokens copied from the canvas |
-| `docs/` | `decisions.md` (how mock gaps were resolved), `deep-links.md`, `platform-setup.md` (Android/iOS/web specifics, Mac steps) |
-| `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py`, `gen_color_schemes.py` |
+| `docs/` | `decisions.md` (how mock gaps were resolved), `deep-links.md`, `platform-setup.md` (Android/iOS/web specifics, Mac steps, what's verified), `testing.md` (tests, goldens, integration tests, JS vs wasm) |
+| `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py` (SPA host, optional COOP/COEP), `code_stats.dart` (shared-code ratio for Diagnostics), `gen_color_schemes.py` |
 
 ## Setup
 
@@ -55,14 +55,33 @@ Web like production (SPA rewrite, so deep-link refresh works; serves `.wasm` as
 cd app && fvm flutter build web && cd .. && python tool/serve_web.py
 ```
 
+WebAssembly build (Skwasm renderer; browsers without WasmGC fall back to the
+JS build automatically). `--isolate` adds the COOP/COEP headers it works best
+with:
+
+```bash
+cd app && fvm flutter build web --wasm -o build/web-wasm && cd .. && python tool/serve_web.py 5176 build/web-wasm --isolate
+```
+
 ## Check
 
 ```bash
 pwsh tool/check.ps1
 ```
 
-Runs format check, analyze and tests for all three packages. On macOS/Linux:
-`tool/check.sh`.
+Runs format check, analyze and tests for all three packages (unit, widget,
+router, accessibility and golden tests). On macOS/Linux: `tool/check.sh`.
+Integration tests run on a device: `cd app && fvm flutter test integration_test -d emulator-5554`.
+Details in `docs/testing.md`.
+
+## PoC tools (Settings › PoC tools)
+
+- **Results tracker**: pass / partial / fail per scenario and platform, with
+  notes; starts with the findings verified so far; export CSV/JSON, import JSON.
+- **Adaptive widgets**: Material vs Cupertino side by side.
+- **Diagnostics**: versions, renderer, device, storage, permissions, shared-code
+  ratio and frame timings; Copy report.
+- **Deep-link tester**: every route, open it or send it as a notification.
 
 ## Status
 
@@ -72,4 +91,4 @@ Runs format check, analyze and tests for all three packages. On macOS/Linux:
 | M1 | Shell, auth screens, lists, detail, list-detail, photo viewer | done |
 | M2 | Wizard, validators, drafts, outbox | done |
 | M3 | Camera, files, maps, notifications, biometrics, permissions | done |
-| M4 | Appearance, l10n, a11y, adaptive widgets, diagnostics, results tracker | next |
+| M4 | Appearance, EN/PL, a11y, adaptive widgets, diagnostics, results tracker, goldens, integration tests, wasm build | done (iOS still to run on the Mac) |

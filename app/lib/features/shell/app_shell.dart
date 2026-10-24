@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/layout/window_size.dart';
 import '../../core/router/routes.dart';
+import '../../l10n/l10n.dart';
 
 class _Destination {
   const _Destination(this.label, this.icon, {this.branch, this.location});
@@ -22,6 +23,14 @@ const _branchDestinations = [
   _Destination('Map', Symbols.map, branch: 2),
   _Destination('Settings', Symbols.settings, branch: 3),
 ];
+
+String _label(BuildContext context, _Destination d) => switch (d.label) {
+  'Home' => context.l10n.navHome,
+  'Inspections' => context.l10n.navInspections,
+  'Map' => context.l10n.navMap,
+  'Settings' => context.l10n.navSettings,
+  _ => context.l10n.navPocResults,
+};
 
 /// Desktop (D02) adds a direct link to the results tracker.
 const _resultsDestination = _Destination('PoC results', Symbols.fact_check, location: Routes.results);
@@ -59,7 +68,8 @@ class AppShell extends StatelessWidget {
           selectedIndex: selected,
           onDestinationSelected: select,
           destinations: [
-            for (final d in destinations) NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.icon, fill: 1), label: d.label),
+            for (final d in destinations)
+              NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.icon, fill: 1), label: _label(context, d)),
           ],
         ),
       );
@@ -82,18 +92,18 @@ class AppShell extends StatelessWidget {
                       heroTag: 'rail-fab',
                       onPressed: () => context.push(Routes.newInspectionStep(1)),
                       icon: const Icon(Symbols.add),
-                      label: const Text('New inspection'),
+                      label: Text(context.l10n.newInspection),
                     )
                   : FloatingActionButton(
                       heroTag: 'rail-fab',
-                      tooltip: 'New inspection',
+                      tooltip: context.l10n.newInspection,
                       onPressed: () => context.push(Routes.newInspectionStep(1)),
                       child: const Icon(Symbols.add),
                     ),
             ),
             destinations: [
               for (final d in destinations)
-                NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.icon, fill: 1), label: Text(d.label)),
+                NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.icon, fill: 1), label: Text(_label(context, d))),
             ],
           ),
           Expanded(child: navigationShell),

@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:field_inspections/app.dart';
 import 'package:field_inspections/core/platform/capabilities.dart';
+import 'package:field_inspections/core/platform/device_summary.dart';
 import 'package:field_inspections/core/platform/notification_service.dart';
 import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
+import 'package:field_inspections/core/widgets/inspection_widgets.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/providers.dart';
 import 'package:field_inspections/data/repositories/inspections_repository.dart';
@@ -69,6 +71,9 @@ Future<TestApp> pumpApp(
   Duration authLatency = Duration.zero,
   bool settle = true,
   Fakes? fakes,
+
+  /// Freezes both the UI clock and the mock backend's fixtures (goldens).
+  DateTime? now,
 }) async {
   final f = fakes ?? Fakes(capabilities: capabilities);
   tester.view
@@ -99,6 +104,11 @@ Future<TestApp> pumpApp(
       launcherServiceProvider.overrideWithValue(f.launcher),
       permissionServiceProvider.overrideWithValue(f.permissions),
       notificationServiceProvider.overrideWithValue(f.notifications),
+      if (now != null) ...[
+        clockProvider.overrideWithValue(() => now),
+        mockDatabaseProvider.overrideWithValue(MockDatabase(clock: () => now)),
+      ],
+      deviceSummaryProvider.overrideWith((ref) async => const DeviceSummary(version: '0.1.0', build: '1', device: 'Test device')),
     ],
   );
   addTearDown(container.dispose);

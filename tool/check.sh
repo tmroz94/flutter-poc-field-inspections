@@ -11,7 +11,7 @@ step() {
   (cd "$root/$dir" && "$@") || failed+=("$name")
 }
 
-step 'format' . fvm dart format --output=none --set-exit-if-changed app/lib app/test packages/mock_data/lib packages/mock_data/test mock_server/lib mock_server/bin mock_server/test
+step 'format' . fvm dart format --output=none --set-exit-if-changed app/lib app/test app/integration_test app/test_driver packages/mock_data/lib packages/mock_data/test mock_server/lib mock_server/bin mock_server/test
 step 'mock_data: analyze' packages/mock_data fvm dart analyze --fatal-infos
 step 'mock_data: test' packages/mock_data fvm dart test
 step 'mock_server: analyze' mock_server fvm dart analyze --fatal-infos

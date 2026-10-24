@@ -13,9 +13,11 @@ import '../../core/router/deep_links.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/inspection_widgets.dart';
+import '../../core/widgets/search_field.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
+import '../../l10n/l10n.dart';
 import '../notifications/notification_bell.dart';
 import 'inspections_controller.dart';
 
@@ -77,12 +79,13 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
     final controller = ref.read(inspectionListProvider(_query).notifier);
     final index = ref.read(inspectionListProvider(_query)).items.indexOf(item);
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    final l10n = context.l10n;
     try {
       await controller.archive(item);
       messenger.showSnackBar(
         SnackBar(
-          content: Text('${item.id} archived'),
-          action: SnackBarAction(label: 'Undo', onPressed: () => controller.undoArchive(item, index)),
+          content: Text(l10n.archived(item.id)),
+          action: SnackBarAction(label: l10n.undo, onPressed: () => controller.undoArchive(item, index)),
         ),
       );
     } on ApiException {
@@ -110,7 +113,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
 
     final actions = [
       IconButton(
-        tooltip: query.activeFilterCount == 0 ? 'Filter and sort' : 'Filter and sort, ${query.activeFilterCount} active',
+        tooltip: query.activeFilterCount == 0 ? context.l10n.filterAndSort : context.l10n.filterAndSortActive(query.activeFilterCount),
         isSelected: query.activeFilterCount > 0,
         onPressed: () => context.push(query.toLocation(Routes.inspectionsFilter)),
         icon: Badge(
@@ -121,7 +124,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
       ),
       // Mouse and trackpad users can't pull to refresh.
       if (!caps.pullToRefreshOnly || size.isTwoPane)
-        IconButton(tooltip: 'Refresh list', onPressed: refresh, icon: const Icon(Symbols.refresh)),
+        IconButton(tooltip: context.l10n.refreshList, onPressed: refresh, icon: const Icon(Symbols.refresh)),
       if (!size.isTwoPane) const NotificationBell(),
     ];
 
@@ -163,7 +166,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
 
     if (!size.isTwoPane) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Inspections'), actions: actions),
+        appBar: AppBar(title: Text(context.l10n.inspectionsTitle), actions: actions),
         floatingActionButton: size.usesRail
             ? null
             : FloatingActionButton.extended(
@@ -217,9 +220,9 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
                 flex: 2,
                 child: pane(
                   widget.detail ??
-                      const MessageState(
+                      MessageState(
                         icon: Symbols.assignment,
-                        title: 'Select an inspection',
+                        title: context.l10n.selectInspection,
                         message: 'Pick one from the list to see its details here.',
                       ),
                 ),
@@ -257,22 +260,17 @@ class _Filters extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Column(
         children: [
-          SearchBar(
+          SearchField(
             controller: search,
             focusNode: searchFocus,
-            hintText: 'Search site or ID',
-            elevation: const WidgetStatePropertyAll(0),
-            leading: const Padding(padding: EdgeInsetsDirectional.only(start: 4), child: Icon(Symbols.search)),
-            trailing: [
-              ListenableBuilder(
-                listenable: search,
-                builder: (_, _) => search.text.isEmpty
-                    ? const SizedBox.shrink()
-                    : IconButton(tooltip: 'Clear search', onPressed: onClearSearch, icon: const Icon(Symbols.close)),
-              ),
-            ],
+            hintText: context.l10n.searchSiteOrId,
+            trailing: ListenableBuilder(
+              listenable: search,
+              builder: (_, _) => search.text.isEmpty
+                  ? const SizedBox.shrink()
+                  : IconButton(tooltip: context.l10n.clearSearch, onPressed: onClearSearch, icon: const Icon(Symbols.close)),
+            ),
             onChanged: onSearch,
-            textInputAction: TextInputAction.search,
           ),
           const SizedBox(height: 12),
           SingleChildScrollView(
@@ -282,11 +280,11 @@ class _Filters extends StatelessWidget {
               label: 'Status filter',
               child: Row(
                 children: [
-                  FilterChip(label: const Text('All'), selected: query.statuses.isEmpty, onSelected: (_) => onStatus(null)),
+                  FilterChip(label: Text(context.l10n.statusAll), selected: query.statuses.isEmpty, onSelected: (_) => onStatus(null)),
                   for (final s in InspectionStatus.values) ...[
                     const SizedBox(width: 8),
                     FilterChip(
-                      label: Text(s.label),
+                      label: Text(s.localized(context.l10n)),
                       selected: selected == s || (several && query.statuses.contains(s)),
                       onSelected: (_) => onStatus(s),
                     ),
@@ -340,11 +338,11 @@ class _ListBody extends StatelessWidget {
             child: MessageState(
               icon: Symbols.sync_problem,
               isError: true,
-              title: "Couldn't load inspections",
+              title: context.l10n.loadErrorTitle,
               message: error.isNetwork
                   ? "You're offline and nothing is saved on this device yet. Connect and try again."
                   : 'The server had a problem. Try again in a moment.',
-              action: FilledButton.icon(onPressed: onRefresh, icon: const Icon(Symbols.refresh), label: const Text('Try again')),
+              action: FilledButton.icon(onPressed: onRefresh, icon: const Icon(Symbols.refresh), label: Text(context.l10n.tryAgain)),
               detail: 'Error code: ${error.isNetwork ? 'NETWORK_UNREACHABLE' : error.code.toUpperCase()}',
             ),
           ),
@@ -355,11 +353,11 @@ class _ListBody extends StatelessWidget {
       final what = query.statuses.isEmpty ? 'Nothing' : 'Nothing ${query.statuses.map((s) => s.label.toLowerCase()).join(' or ')}';
       return MessageState(
         icon: Symbols.search_off,
-        title: 'No inspections match',
+        title: context.l10n.noMatchTitle,
         message: query.q.isEmpty
             ? '$what matches these filters.'
             : '$what with “${query.q}” in the name. Try another status or clear the search.',
-        action: FilledButton.tonal(onPressed: onClearFilters, child: const Text('Clear filters')),
+        action: FilledButton.tonal(onPressed: onClearFilters, child: Text(context.l10n.clearFilters)),
       );
     }
     if (table) {
@@ -403,14 +401,14 @@ class _LoadingMore extends StatelessWidget {
   const _LoadingMore();
 
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.all(16),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(16),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 3)),
-        SizedBox(width: 12),
-        Text('Loading more'),
+        const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 3)),
+        const SizedBox(width: 12),
+        Text(context.l10n.loadingMore),
       ],
     ),
   );
@@ -426,12 +424,12 @@ class _RowMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MenuAnchor(
     menuChildren: [
-      MenuItemButton(leadingIcon: const Icon(Symbols.archive), onPressed: onArchive, child: const Text('Archive')),
-      MenuItemButton(leadingIcon: const Icon(Symbols.link), onPressed: onCopyLink, child: const Text('Copy link')),
+      MenuItemButton(leadingIcon: const Icon(Symbols.archive), onPressed: onArchive, child: Text(context.l10n.archive)),
+      MenuItemButton(leadingIcon: const Icon(Symbols.link), onPressed: onCopyLink, child: Text(context.l10n.copyLink)),
       MenuItemButton(
         leadingIcon: const Icon(Symbols.map),
         onPressed: () => context.go(Routes.mapSite(item.siteId)),
-        child: const Text('Show on map'),
+        child: Text(context.l10n.showOnMap),
       ),
     ],
     builder: (context, controller, _) => IconButton(
@@ -475,7 +473,7 @@ class _InspectionTile extends StatelessWidget {
       onTap: onTap,
       leading: SiteThumb(inspection: item, heroTag: 'site-${item.id}'),
       title: Text(item.site, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text('${item.id} · ${relativeWhen(item.scheduledAt, now)}'),
+      subtitle: Text('${item.id} · ${localizedWhen(context, item.scheduledAt, now)}'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -502,7 +500,7 @@ class _InspectionTile extends StatelessWidget {
         ),
       ),
       child: Semantics(
-        customSemanticsActions: {const CustomSemanticsAction(label: 'Archive'): onArchive},
+        customSemanticsActions: {CustomSemanticsAction(label: context.l10n.archive): onArchive},
         child: tile,
       ),
     );
@@ -606,7 +604,7 @@ class _InspectionsTable extends StatelessWidget {
                           Expanded(
                             child: Text(item.site, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
                           ),
-                          SizedBox(width: 140, child: Text(relativeWhen(item.scheduledAt, now), softWrap: false)),
+                          SizedBox(width: 140, child: Text(localizedWhen(context, item.scheduledAt, now), softWrap: false)),
                           SizedBox(
                             width: 140,
                             child: Align(alignment: AlignmentDirectional.centerStart, child: StatusChip(item.status)),
@@ -626,7 +624,7 @@ class _InspectionsTable extends StatelessWidget {
                   child: Center(
                     child: state.loadingMore
                         ? const CircularProgressIndicator()
-                        : OutlinedButton(onPressed: onLoadMore, child: const Text('Load more')),
+                        : OutlinedButton(onPressed: onLoadMore, child: Text(context.l10n.loadMore)),
                   ),
                 ),
             ],

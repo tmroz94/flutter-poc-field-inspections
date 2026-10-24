@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
@@ -50,6 +51,13 @@ class MediaService {
   Future<List<PickedFile>> files() async {
     final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'heic']);
     return [for (final f in picked) PickedFile(name: f.name, bytes: await f.xFile.readAsBytes(), mime: mimeFor(f.name))];
+  }
+
+  /// A JSON file's text (results import), or null when cancelled.
+  Future<String?> jsonText() async {
+    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['json']);
+    if (picked.isEmpty) return null;
+    return utf8.decode(await picked.first.xFile.readAsBytes());
   }
 
   /// Web only: images pasted with Ctrl/Cmd+V. Returns a cancel function.

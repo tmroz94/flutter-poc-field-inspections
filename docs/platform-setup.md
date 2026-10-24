@@ -91,3 +91,23 @@ Things to verify on iOS (record them in the Results tracker):
 | Notification tap after the app was killed | not confirmed (process wasn't killed) | n/a | – |
 | Biometric unlock | needs an enrolled fingerprint on the emulator | n/a | – |
 | Camera / gallery / files | tests with fakes | tests with fakes | – |
+| Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | – |
+| Integration tests (`integration_test/`, 3 flows) | ✓ all pass | needs chromedriver | – |
+| WebAssembly build (Skwasm, cross-origin isolated, drift on OPFS) | n/a | ✓ | n/a |
+
+## Web builds
+
+Measured on Windows 11 with Flutter 3.47.8, release builds of the same commit:
+
+| | JavaScript (CanvasKit) | WebAssembly (Skwasm) |
+|---|---|---|
+| Build time | ~70 s | ~75 s |
+| App code | `main.dart.js` 7.2 MB (1.8 MB gzipped) | `main.dart.wasm` 5.1 MB (1.8 MB gzipped) + 54 KB loader |
+| Renderer download | CanvasKit from the Flutter CDN | Skwasm from the Flutter CDN |
+| Local storage (drift) | IndexedDB | OPFS when served with `--isolate`, else IndexedDB |
+| Fallback | – | the JS build, for browsers without WasmGC (Safari before 18.2, Firefox before 120) |
+
+Both builds start in well under a second from localhost. Frame-time comparison
+needs a visible, focused browser window (hidden tabs are throttled), so it
+wasn't measured here: use Diagnostics › Reset frame stats on each build (see
+`testing.md`). Debug builds report much slower frames than release ones.

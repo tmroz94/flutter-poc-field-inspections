@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/models/inspection.dart';
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 
 /// "Now" for relative dates; tests pin it.
@@ -61,7 +62,7 @@ class StatusChip extends StatelessWidget {
       InspectionStatus.submitted => (scheme.surfaceContainerHighest, scheme.onSurfaceVariant, Symbols.task_alt),
     };
     return Semantics(
-      label: 'Status: ${status.label}',
+      label: '${context.l10n.status}: ${status.localized(context.l10n)}',
       excludeSemantics: true,
       child: Container(
         constraints: const BoxConstraints(minHeight: 24),
@@ -74,7 +75,7 @@ class StatusChip extends StatelessWidget {
             const SizedBox(width: 4),
             Flexible(
               child: Text(
-                status.label,
+                status.localized(context.l10n),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg),

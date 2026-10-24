@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 part 'app_database.g.dart';
 
@@ -59,8 +60,23 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
+  /// Web only: the storage drift picked for this browser (shown in Diagnostics).
+  /// OPFS when the page is cross-origin isolated, otherwise IndexedDB.
+  static String? webStorage;
+
   static QueryExecutor _open() => driftDatabase(
     name: 'field_inspections',
-    web: DriftWebOptions(sqlite3Wasm: Uri.parse('sqlite3.wasm'), driftWorker: Uri.parse('drift_worker.js')),
+    web: DriftWebOptions(
+      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+      driftWorker: Uri.parse('drift_worker.js'),
+      onResult: (r) {
+        webStorage = switch (r.chosenImplementation.name) {
+          final n when n.startsWith('opfs') => 'OPFS',
+          final n when n.contains('IndexedDb') => 'IndexedDB',
+          _ => 'in memory, not persisted',
+        };
+        if (r.missingFeatures.isNotEmpty) debugPrint('drift: ${r.chosenImplementation.name}, missing ${r.missingFeatures}');
+      },
+    ),
   );
 }

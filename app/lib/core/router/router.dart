@@ -10,7 +10,10 @@ import '../../features/inspections/inspection_screens.dart';
 import '../../features/map/map_screen.dart';
 import '../../features/not_found/not_found_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
-import '../../features/poc/poc_screens.dart';
+import '../../features/poc/adaptive_screen.dart';
+import '../../features/poc/diagnostics_screen.dart';
+import '../../features/poc/results_screens.dart';
+import '../../features/settings/appearance_screen.dart';
 import '../../features/settings/settings_screens.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/wizard/submitted_screen.dart';
@@ -186,7 +189,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: Routes.settings,
                 builder: (_, _) => const SettingsScreen(),
                 routes: [
-                  GoRoute(path: 'appearance', builder: (_, _) => const AppearanceScreen()),
+                  GoRoute(
+                    path: 'appearance',
+                    // From 840 appearance is the right pane of the settings screen (T03).
+                    pageBuilder: (context, state) => WindowSize.fromWidth(MediaQuery.sizeOf(context).width).isTwoPane
+                        ? NoTransitionPage<void>(key: state.pageKey, child: const SettingsScreen())
+                        : MaterialPage<void>(key: state.pageKey, child: const AppearanceScreen()),
+                  ),
                   GoRoute(
                     path: 'poc/results',
                     builder: (_, _) => const ResultsScreen(),

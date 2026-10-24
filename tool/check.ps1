@@ -12,7 +12,7 @@ function Step([string]$name, [string]$dir, [scriptblock]$cmd) {
   try { & $cmd; if ($LASTEXITCODE -ne 0) { $script:failed += $name } } finally { Pop-Location }
 }
 
-Step 'format' '.' { & $fvm dart format --output=none --set-exit-if-changed app/lib app/test packages/mock_data/lib packages/mock_data/test mock_server/lib mock_server/bin mock_server/test }
+Step 'format' '.' { & $fvm dart format --output=none --set-exit-if-changed app/lib app/test app/integration_test app/test_driver packages/mock_data/lib packages/mock_data/test mock_server/lib mock_server/bin mock_server/test }
 Step 'mock_data: analyze' 'packages/mock_data' { & $fvm dart analyze --fatal-infos }
 Step 'mock_data: test' 'packages/mock_data' { & $fvm dart test }
 Step 'mock_server: analyze' 'mock_server' { & $fvm dart analyze --fatal-infos }
