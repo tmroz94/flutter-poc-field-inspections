@@ -1,13 +1,16 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/router/routes.dart';
+import '../inspections/inspection_actions.dart';
+import '../inspections/inspections_controller.dart';
 
 /// P16: shown after submit. Sent → "Report submitted"; offline → "saved and
 /// queued". The badge pops and the text rises (explicit animation), unless
 /// the OS or the app asks for reduced motion.
-class SubmittedScreen extends StatefulWidget {
+class SubmittedScreen extends ConsumerStatefulWidget {
   const SubmittedScreen({required this.id, this.queued = false, this.site = '', super.key});
 
   /// Inspection id, or `queued` for a new inspection still in the outbox.
@@ -16,10 +19,10 @@ class SubmittedScreen extends StatefulWidget {
   final String site;
 
   @override
-  State<SubmittedScreen> createState() => _SubmittedScreenState();
+  ConsumerState<SubmittedScreen> createState() => _SubmittedScreenState();
 }
 
-class _SubmittedScreenState extends State<SubmittedScreen> with SingleTickerProviderStateMixin {
+class _SubmittedScreenState extends ConsumerState<SubmittedScreen> with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
 
   // M3 emphasized decelerate; badge 0–500 ms, text 200–600 ms.
@@ -113,14 +116,16 @@ class _SubmittedScreenState extends State<SubmittedScreen> with SingleTickerProv
                     ),
                     const SizedBox(height: 8),
                   ],
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                    onPressed: () =>
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF sharing arrives in M3.'))),
-                    icon: const Icon(Symbols.picture_as_pdf),
-                    label: const Text('Share PDF report'),
-                  ),
-                  const SizedBox(height: 8),
+                  if (known) ...[
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                      onPressed: () async =>
+                          InspectionActions(ref, context).exportPdf(await ref.read(inspectionDetailProvider(widget.id).future)),
+                      icon: const Icon(Symbols.picture_as_pdf),
+                      label: const Text('Share PDF report'),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   TextButton(onPressed: () => context.go(Routes.inspections), child: const Text('Back to inspections')),
                 ],
               ),

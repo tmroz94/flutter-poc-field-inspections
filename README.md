@@ -11,7 +11,7 @@ Claude Design canvas "Flutter PoC – Field Inspections" (Material 3).
 | `packages/mock_data/` | Pure-Dart fixtures + in-memory backend, shared by the server and the app's offline fake |
 | `mock_server/` | Local REST mock API (shelf): CORS, latency and failure injection |
 | `design/` | Design tokens copied from the canvas |
-| `docs/` | `decisions.md` (how mock gaps were resolved), `deep-links.md` |
+| `docs/` | `decisions.md` (how mock gaps were resolved), `deep-links.md`, `platform-setup.md` (Android/iOS/web specifics, Mac steps) |
 | `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py`, `gen_color_schemes.py` |
 
 ## Setup
@@ -71,5 +71,5 @@ Runs format check, analyze and tests for all three packages. On macOS/Linux:
 | M0 | Toolchain, mock API, theme, router with every route and guard, tests | done |
 | M1 | Shell, auth screens, lists, detail, list-detail, photo viewer | done |
 | M2 | Wizard, validators, drafts, outbox | done |
-| M3 | Camera, files, maps, notifications, biometrics, permissions | next |
-| M4 | Settings, l10n, a11y, adaptive widgets, diagnostics, results tracker | |
+| M3 | Camera, files, maps, notifications, biometrics, permissions | done |
+| M4 | Appearance, l10n, a11y, adaptive widgets, diagnostics, results tracker | next |

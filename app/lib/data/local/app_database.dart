@@ -32,14 +32,32 @@ class Outbox extends Table {
   TextColumn get lastError => text().nullable()();
 }
 
+/// Photo and file bytes for drafts (camera, gallery, file picker, drop, paste).
+class Blobs extends Table {
+  TextColumn get id => text()();
+  BlobColumn get data => blob()();
+  TextColumn get mime => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// SQLite on iOS and Android; SQLite compiled to WebAssembly on the web
 /// (`web/sqlite3.wasm` + `web/drift_worker.js`, from the drift 2.35.3 release).
-@DriftDatabase(tables: [Drafts, Outbox])
+@DriftDatabase(tables: [Drafts, Outbox, Blobs])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.createTable(blobs);
+    },
+  );
 
   static QueryExecutor _open() => driftDatabase(
     name: 'field_inspections',

@@ -631,15 +631,267 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
   }
 }
 
+class $BlobsTable extends Blobs with TableInfo<$BlobsTable, Blob> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BlobsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dataMeta = const VerificationMeta('data');
+  @override
+  late final GeneratedColumn<Uint8List> data = GeneratedColumn<Uint8List>(
+    'data',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mimeMeta = const VerificationMeta('mime');
+  @override
+  late final GeneratedColumn<String> mime = GeneratedColumn<String>(
+    'mime',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, data, mime, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'blobs';
+  @override
+  VerificationContext validateIntegrity(Insertable<Blob> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('data')) {
+      context.handle(_dataMeta, this.data.isAcceptableOrUnknown(data['data']!, _dataMeta));
+    } else if (isInserting) {
+      context.missing(_dataMeta);
+    }
+    if (data.containsKey('mime')) {
+      context.handle(_mimeMeta, mime.isAcceptableOrUnknown(data['mime']!, _mimeMeta));
+    } else if (isInserting) {
+      context.missing(_mimeMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Blob map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Blob(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      data: attachedDatabase.typeMapping.read(DriftSqlType.blob, data['${effectivePrefix}data'])!,
+      mime: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}mime'])!,
+      createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $BlobsTable createAlias(String alias) {
+    return $BlobsTable(attachedDatabase, alias);
+  }
+}
+
+class Blob extends DataClass implements Insertable<Blob> {
+  final String id;
+  final Uint8List data;
+  final String mime;
+  final DateTime createdAt;
+  const Blob({required this.id, required this.data, required this.mime, required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['data'] = Variable<Uint8List>(data);
+    map['mime'] = Variable<String>(mime);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  BlobsCompanion toCompanion(bool nullToAbsent) {
+    return BlobsCompanion(id: Value(id), data: Value(data), mime: Value(mime), createdAt: Value(createdAt));
+  }
+
+  factory Blob.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Blob(
+      id: serializer.fromJson<String>(json['id']),
+      data: serializer.fromJson<Uint8List>(json['data']),
+      mime: serializer.fromJson<String>(json['mime']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'data': serializer.toJson<Uint8List>(data),
+      'mime': serializer.toJson<String>(mime),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Blob copyWith({String? id, Uint8List? data, String? mime, DateTime? createdAt}) =>
+      Blob(id: id ?? this.id, data: data ?? this.data, mime: mime ?? this.mime, createdAt: createdAt ?? this.createdAt);
+  Blob copyWithCompanion(BlobsCompanion data) {
+    return Blob(
+      id: data.id.present ? data.id.value : this.id,
+      data: data.data.present ? data.data.value : this.data,
+      mime: data.mime.present ? data.mime.value : this.mime,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Blob(')
+          ..write('id: $id, ')
+          ..write('data: $data, ')
+          ..write('mime: $mime, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, $driftBlobEquality.hash(data), mime, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Blob &&
+          other.id == this.id &&
+          $driftBlobEquality.equals(other.data, this.data) &&
+          other.mime == this.mime &&
+          other.createdAt == this.createdAt);
+}
+
+class BlobsCompanion extends UpdateCompanion<Blob> {
+  final Value<String> id;
+  final Value<Uint8List> data;
+  final Value<String> mime;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const BlobsCompanion({
+    this.id = const Value.absent(),
+    this.data = const Value.absent(),
+    this.mime = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BlobsCompanion.insert({
+    required String id,
+    required Uint8List data,
+    required String mime,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       data = Value(data),
+       mime = Value(mime),
+       createdAt = Value(createdAt);
+  static Insertable<Blob> custom({
+    Expression<String>? id,
+    Expression<Uint8List>? data,
+    Expression<String>? mime,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (data != null) 'data': data,
+      if (mime != null) 'mime': mime,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BlobsCompanion copyWith({Value<String>? id, Value<Uint8List>? data, Value<String>? mime, Value<DateTime>? createdAt, Value<int>? rowid}) {
+    return BlobsCompanion(
+      id: id ?? this.id,
+      data: data ?? this.data,
+      mime: mime ?? this.mime,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (data.present) {
+      map['data'] = Variable<Uint8List>(data.value);
+    }
+    if (mime.present) {
+      map['mime'] = Variable<String>(mime.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlobsCompanion(')
+          ..write('id: $id, ')
+          ..write('data: $data, ')
+          ..write('mime: $mime, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $DraftsTable drafts = $DraftsTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
+  late final $BlobsTable blobs = $BlobsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [drafts, outbox];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [drafts, outbox, blobs];
 }
 
 typedef $$DraftsTableCreateCompanionBuilder = DraftsCompanion Function({
@@ -941,10 +1193,136 @@ typedef $$OutboxTableProcessedTableManager =
       OutboxData,
       PrefetchHooks Function()
     >;
+typedef $$BlobsTableCreateCompanionBuilder = BlobsCompanion Function({
+  required String id,
+  required Uint8List data,
+  required String mime,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$BlobsTableUpdateCompanionBuilder = BlobsCompanion Function({
+  Value<String> id,
+  Value<Uint8List> data,
+  Value<String> mime,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$BlobsTableFilterComposer extends Composer<_$AppDatabase, $BlobsTable> {
+  $$BlobsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<Uint8List> get data => $composableBuilder(column: $table.data, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get mime => $composableBuilder(column: $table.mime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$BlobsTableOrderingComposer extends Composer<_$AppDatabase, $BlobsTable> {
+  $$BlobsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<Uint8List> get data => $composableBuilder(column: $table.data, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get mime => $composableBuilder(column: $table.mime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$BlobsTableAnnotationComposer extends Composer<_$AppDatabase, $BlobsTable> {
+  $$BlobsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get data => $composableBuilder(column: $table.data, builder: (column) => column);
+
+  GeneratedColumn<String> get mime => $composableBuilder(column: $table.mime, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$BlobsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BlobsTable,
+          Blob,
+          $$BlobsTableFilterComposer,
+          $$BlobsTableOrderingComposer,
+          $$BlobsTableAnnotationComposer,
+          $$BlobsTableCreateCompanionBuilder,
+          $$BlobsTableUpdateCompanionBuilder,
+          (Blob, BaseReferences<_$AppDatabase, $BlobsTable, Blob>),
+          Blob,
+          PrefetchHooks Function()
+        > {
+  $$BlobsTableTableManager(_$AppDatabase db, $BlobsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$BlobsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$BlobsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$BlobsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<Uint8List> data = const Value.absent(),
+            Value<String> mime = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => BlobsCompanion(id: id, data: data, mime: mime, createdAt: createdAt, rowid: rowid),
+          createCompanionCallback: ({
+            required String id,
+            required Uint8List data,
+            required String mime,
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) => BlobsCompanion.insert(id: id, data: data, mime: mime, createdAt: createdAt, rowid: rowid),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable<$BlobsTable, Blob>(table), BaseReferences<_$AppDatabase, $BlobsTable, Blob>(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BlobsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BlobsTable,
+      Blob,
+      $$BlobsTableFilterComposer,
+      $$BlobsTableOrderingComposer,
+      $$BlobsTableAnnotationComposer,
+      $$BlobsTableCreateCompanionBuilder,
+      $$BlobsTableUpdateCompanionBuilder,
+      (Blob, BaseReferences<_$AppDatabase, $BlobsTable, Blob>),
+      Blob,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$DraftsTableTableManager get drafts => $$DraftsTableTableManager(_db, _db.drafts);
   $$OutboxTableTableManager get outbox => $$OutboxTableTableManager(_db, _db.outbox);
+  $$BlobsTableTableManager get blobs => $$BlobsTableTableManager(_db, _db.blobs);
 }

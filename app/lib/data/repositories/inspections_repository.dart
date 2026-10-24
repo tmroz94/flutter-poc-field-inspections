@@ -13,6 +13,8 @@ abstract interface class InspectionsRepository {
   Future<void> setArchived(String id, {required bool archived});
   Future<List<ChecklistItem>> checklist(String templateId);
   Future<List<AppNotification>> notifications();
+  Future<void> markNotificationsRead({String? id});
+  Future<void> deleteNotification(String id);
   Future<List<SiteOption>> searchSites(String query);
   Future<List<String>> inspectionTypes();
 
@@ -23,7 +25,15 @@ abstract interface class InspectionsRepository {
 
 /// A site suggestion for the wizard's autocomplete (P09).
 class SiteOption {
-  const SiteOption({required this.id, required this.name, required this.address, required this.city, required this.icon});
+  const SiteOption({
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.city,
+    required this.icon,
+    this.lat,
+    this.lng,
+  });
 
   factory SiteOption.fromJson(Map<String, Object?> j) => SiteOption(
     id: j['id']! as String,
@@ -31,6 +41,8 @@ class SiteOption {
     address: j['address'] as String? ?? '',
     city: j['city'] as String? ?? '',
     icon: j['icon'] as String? ?? 'location_on',
+    lat: (j['lat'] as num?)?.toDouble(),
+    lng: (j['lng'] as num?)?.toDouble(),
   );
 
   final String id;
@@ -38,6 +50,8 @@ class SiteOption {
   final String address;
   final String city;
   final String icon;
+  final double? lat;
+  final double? lng;
 }
 
 Map<String, Object?> _listParams(ListQuery q, int page, int pageSize) => {
@@ -87,6 +101,12 @@ class HttpInspectionsRepository implements InspectionsRepository {
   Future<List<AppNotification>> notifications() async => [
     for (final n in (await _api.get('/notifications'))! as List) AppNotification.fromJson((n as Map).cast<String, Object?>()),
   ];
+
+  @override
+  Future<void> markNotificationsRead({String? id}) => _api.post('/notifications/read', body: {'id': ?id});
+
+  @override
+  Future<void> deleteNotification(String id) => _api.delete('/notifications/${Uri.encodeComponent(id)}');
 
   @override
   Future<List<SiteOption>> searchSites(String query) async => [
@@ -152,6 +172,12 @@ class FakeInspectionsRepository implements InspectionsRepository {
 
   @override
   Future<List<AppNotification>> notifications() => _run(() => [for (final n in _db.notifications()) AppNotification.fromJson(n)]);
+
+  @override
+  Future<void> markNotificationsRead({String? id}) => _run(() => _db.markNotificationsRead(id: id));
+
+  @override
+  Future<void> deleteNotification(String id) => _run(() => _db.deleteNotification(id));
 
   @override
   Future<List<SiteOption>> searchSites(String query) => _run(() => [for (final s in _db.searchSites(query)) SiteOption.fromJson(s)]);

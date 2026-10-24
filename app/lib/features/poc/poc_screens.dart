@@ -36,12 +36,3 @@ class DiagnosticsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const PlaceholderView(title: 'Diagnostics', boards: ['P24']);
 }
-
-/// Lists every route and opens it, to test deep links and navigation.
-class DeepLinksScreen extends StatelessWidget {
-  const DeepLinksScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) =>
-      PlaceholderView(title: 'Deep-link tester', links: {for (final r in RouteTable.all) '${r.title}  ${r.example}': r.example});
-}

@@ -9,6 +9,7 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/models/inspection.dart';
+import 'inspection_actions.dart';
 import 'inspection_detail_screen.dart';
 import 'inspections_controller.dart';
 
@@ -40,17 +41,17 @@ class PhotoViewerScreen extends ConsumerWidget {
   }
 }
 
-class _Viewer extends StatefulWidget {
+class _Viewer extends ConsumerStatefulWidget {
   const _Viewer({required this.detail, required this.photoId});
 
   final InspectionDetail detail;
   final String photoId;
 
   @override
-  State<_Viewer> createState() => _ViewerState();
+  ConsumerState<_Viewer> createState() => _ViewerState();
 }
 
-class _ViewerState extends State<_Viewer> {
+class _ViewerState extends ConsumerState<_Viewer> {
   late int _index = widget.detail.photos.indexWhere((p) => p.id == widget.photoId);
   late final _pages = PageController(initialPage: _index);
   final _zoom = TransformationController();
@@ -124,7 +125,8 @@ class _ViewerState extends State<_Viewer> {
             actions: [
               IconButton(
                 tooltip: 'Share photo',
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sharing arrives in M3.'))),
+                onPressed: () =>
+                    InspectionActions(ref, context).share(widget.detail.summary, path: Routes.photo(widget.detail.id, photo.id)),
                 icon: const Icon(Symbols.share),
               ),
             ],

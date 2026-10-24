@@ -2,6 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos of inspection findings.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach photos of inspection findings from your library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Confirm you are on site and show your position on the map.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Unlock the app with Face ID after it was in the background.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>tel</string>
+		<string>maps</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Lets the simulator reach the local mock API over plain HTTP. -->

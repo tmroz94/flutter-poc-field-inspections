@@ -25,6 +25,10 @@ class _OfflineRepository implements InspectionsRepository {
   @override
   Future<List<AppNotification>> notifications() async => _fail();
   @override
+  Future<void> markNotificationsRead({String? id}) async => _fail();
+  @override
+  Future<void> deleteNotification(String id) async => _fail();
+  @override
   Future<List<SiteOption>> searchSites(String query) async => _fail();
   @override
   Future<List<String>> inspectionTypes() async => _fail();

@@ -14,6 +14,7 @@ import '../../core/widgets/inspection_widgets.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
+import 'inspection_actions.dart';
 import 'inspection_list_screen.dart';
 import 'inspections_controller.dart';
 
@@ -149,9 +150,6 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link copied: $link')));
   }
 
-  void _notYet(String what) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$what arrives with platform integrations (M3).')));
-
   @override
   Widget build(BuildContext context) {
     final d = widget.detail;
@@ -162,6 +160,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
     final now = ref.watch(clockProvider)();
     final when = '${relativeWhen(s.scheduledAt, now)}–${timeFmt.format(d.endsAt)}';
     final wideTablet = context.windowSize.usesRail;
+    final actions = InspectionActions(ref, context);
 
     final hero = Container(
       width: double.infinity,
@@ -179,7 +178,11 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
 
     final iconActions = [
       IconButton(tooltip: 'Copy link', onPressed: _copyLink, icon: const Icon(Symbols.link)),
-      IconButton(tooltip: 'Share report', onPressed: () => _notYet('Sharing'), icon: const Icon(Symbols.share)),
+      IconButton(
+        tooltip: 'Share report',
+        onPressed: () => actions.share(s, path: detailLocation(context, s.id, widget.tab)),
+        icon: const Icon(Symbols.share),
+      ),
       MenuAnchor(
         menuChildren: [
           MenuItemButton(
@@ -219,16 +222,12 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
             spacing: 8,
             runSpacing: 8,
             children: [
-              ActionChip(
-                avatar: const Icon(Symbols.directions),
-                label: const Text('Directions'),
-                onPressed: () => context.go(Routes.mapSite(s.siteId)),
-              ),
-              ActionChip(avatar: const Icon(Symbols.call), label: const Text('Call site'), onPressed: () => _notYet('Calling')),
+              ActionChip(avatar: const Icon(Symbols.directions), label: const Text('Directions'), onPressed: () => actions.directions(s)),
+              ActionChip(avatar: const Icon(Symbols.call), label: const Text('Call site'), onPressed: () => actions.call(d.siteManager)),
               ActionChip(
                 avatar: const Icon(Symbols.picture_as_pdf),
                 label: const Text('Export PDF'),
-                onPressed: () => _notYet('PDF export'),
+                onPressed: () => actions.exportPdf(d),
               ),
             ],
           ),
@@ -239,7 +238,11 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
     final tabBody = switch (DetailTab.values[_tabs.index]) {
       DetailTab.overview => _Overview(detail: d),
       DetailTab.checklist => _Checklist(detail: d),
-      DetailTab.photos => _Photos(detail: d, columns: wideTablet ? 4 : 3),
+      DetailTab.photos => _Photos(
+        detail: d,
+        columns: wideTablet ? 4 : 3,
+        onShare: (ids) => actions.share(s, path: Routes.photo(d.id, ids.first)),
+      ),
       DetailTab.history => _History(detail: d),
     };
 
@@ -437,10 +440,11 @@ class _ChecklistRow extends StatelessWidget {
 
 /// Photo grid. Tap opens the viewer (Hero); long-press starts multi-select (P07).
 class _Photos extends StatefulWidget {
-  const _Photos({required this.detail, required this.columns});
+  const _Photos({required this.detail, required this.columns, required this.onShare});
 
   final InspectionDetail detail;
   final int columns;
+  final ValueChanged<List<String>> onShare;
 
   @override
   State<_Photos> createState() => _PhotosState();
@@ -476,11 +480,7 @@ class _PhotosState extends State<_Photos> {
                 ),
               ),
               if (selecting) ...[
-                IconButton(
-                  tooltip: 'Share selected',
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sharing arrives in M3.'))),
-                  icon: const Icon(Symbols.share),
-                ),
+                IconButton(tooltip: 'Share selected', onPressed: () => widget.onShare(_selected.toList()), icon: const Icon(Symbols.share)),
                 IconButton(tooltip: 'Cancel selection', onPressed: () => setState(_selected.clear), icon: const Icon(Symbols.close)),
               ],
             ],
@@ -536,7 +536,7 @@ class _PhotosState extends State<_Photos> {
   }
 }
 
-/// Stand-in for a real photo until the camera arrives (M3).
+/// Stand-in for fixture photos, which have no image bytes.
 class PhotoPlaceholder extends StatelessWidget {
   const PhotoPlaceholder({required this.index, this.iconSize = 32, super.key});
 

@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../helpers/fakes.dart';
 import '../../helpers/test_app.dart';
 
 void main() {
@@ -117,7 +118,9 @@ void main() {
     testWidgets('sign-out from anywhere goes to sign-in', (tester) async {
       final app = await pumpApp(tester, store: signedInStore());
       await app.go('/settings');
-      await tester.tap(find.text('Sign out'));
+      await tester.scrollUntilVisible(find.text('Sign out'), 200);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign out'), warnIfMissed: true);
       await tester.pumpAndSettle();
       expect(find.byType(SignInScreen), findsOneWidget);
     });
@@ -173,20 +176,25 @@ void main() {
 
   group('biometric lock guard', () {
     testWidgets('cold start with lock on (Android) goes to unlock, then to the target', (tester) async {
-      final app = await pumpApp(tester, initialLocation: '/notifications', store: signedInStore(biometricLock: true));
+      final fakes = Fakes()..biometrics.ok = false;
+      final app = await pumpApp(tester, initialLocation: '/notifications', store: signedInStore(biometricLock: true), fakes: fakes);
       expect(find.byType(UnlockScreen), findsOneWidget);
       expect(app.location, '/unlock?from=%2Fnotifications');
+      expect(find.textContaining('Not recognised'), findsOneWidget, reason: 'the screen prompted on open');
 
+      fakes.biometrics.ok = true;
       await tester.tap(find.byTooltip('Unlock with biometrics'));
       await tester.pumpAndSettle();
       expect(find.byType(NotificationsScreen), findsOneWidget);
+      expect(fakes.biometrics.calls, 2);
     });
 
     testWidgets('locks after 5 minutes in the background', (tester) async {
-      final app = await pumpApp(tester, store: signedInStore(biometricLock: true));
-      await tester.tap(find.byTooltip('Unlock with biometrics'));
-      await tester.pumpAndSettle();
+      final fakes = Fakes();
+      final app = await pumpApp(tester, store: signedInStore(biometricLock: true), fakes: fakes);
+      expect(app.location, '/home', reason: 'biometrics passed on open');
       await app.go('/map');
+      fakes.biometrics.ok = false;
 
       final lock = app.container.read(lockControllerProvider.notifier);
       var now = DateTime(2026, 10, 24, 12);

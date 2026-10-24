@@ -42,6 +42,10 @@ abstract interface class LocalStore {
   Stream<List<OutboxEntry>> watchOutbox();
   Future<void> removeFromOutbox(int id);
   Future<void> markFailed(int id, String error);
+
+  Future<void> putBlob(String id, Uint8List data, String mime);
+  Future<Uint8List?> blob(String id);
+  Future<void> deleteBlob(String id);
 }
 
 class DriftLocalStore implements LocalStore {
@@ -106,14 +110,24 @@ class DriftLocalStore implements LocalStore {
   Future<void> removeFromOutbox(int id) => (_db.delete(_db.outbox)..where((o) => o.id.equals(id))).go();
 
   @override
-  Future<void> markFailed(int id, String error) => (_db.update(
-    _db.outbox,
-  )..where((o) => o.id.equals(id))).write(OutboxCompanion(lastError: Value(error), attempts: const Value.absent()));
+  Future<void> markFailed(int id, String error) =>
+      (_db.update(_db.outbox)..where((o) => o.id.equals(id))).write(OutboxCompanion(lastError: Value(error)));
+
+  @override
+  Future<void> putBlob(String id, Uint8List data, String mime) =>
+      _db.into(_db.blobs).insertOnConflictUpdate(BlobsCompanion.insert(id: id, data: data, mime: mime, createdAt: DateTime.now()));
+
+  @override
+  Future<Uint8List?> blob(String id) async => (await (_db.select(_db.blobs)..where((b) => b.id.equals(id))).getSingleOrNull())?.data;
+
+  @override
+  Future<void> deleteBlob(String id) => (_db.delete(_db.blobs)..where((b) => b.id.equals(id))).go();
 }
 
 /// In-memory store for tests.
 class MemoryLocalStore implements LocalStore {
   final Map<String, InspectionDraft> drafts = {};
+  final Map<String, Uint8List> blobs = {};
   final List<OutboxEntry> entries = [];
   final _draftsCtl = StreamController<Map<String, InspectionDraft>>.broadcast();
   final _outboxCtl = StreamController<List<OutboxEntry>>.broadcast();
@@ -184,6 +198,15 @@ class MemoryLocalStore implements LocalStore {
     );
     _emit();
   }
+
+  @override
+  Future<void> putBlob(String id, Uint8List data, String mime) async => blobs[id] = data;
+
+  @override
+  Future<Uint8List?> blob(String id) async => blobs[id];
+
+  @override
+  Future<void> deleteBlob(String id) async => blobs.remove(id);
 }
 
 final localStoreProvider = Provider<LocalStore>((ref) {
@@ -196,3 +219,6 @@ final localStoreProvider = Provider<LocalStore>((ref) {
 final draftsProvider = StreamProvider<Map<String, InspectionDraft>>((ref) => ref.watch(localStoreProvider).watchDrafts());
 
 final outboxProvider = StreamProvider<List<OutboxEntry>>((ref) => ref.watch(localStoreProvider).watchOutbox());
+
+/// Bytes of a photo or file saved with a draft; null for simulated entries.
+final blobProvider = FutureProvider.family<Uint8List?, String>((ref, id) => ref.watch(localStoreProvider).blob(id));

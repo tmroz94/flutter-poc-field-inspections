@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:field_inspections/app.dart';
 import 'package:field_inspections/core/platform/capabilities.dart';
+import 'package:field_inspections/core/platform/notification_service.dart';
+import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
 import 'package:field_inspections/data/local/local_store.dart';
@@ -9,11 +11,14 @@ import 'package:field_inspections/data/providers.dart';
 import 'package:field_inspections/data/repositories/inspections_repository.dart';
 import 'package:field_inspections/data/sync/sync_service.dart';
 import 'package:field_inspections/features/auth/auth_repository.dart';
+import 'package:field_inspections/features/map/map_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart';
+
+import 'fakes.dart';
 
 /// Phone, tablet landscape and desktop sizes from the design boards.
 const phoneSize = Size(390, 844);
@@ -33,10 +38,11 @@ Map<String, String> signedInStore({bool biometricLock = false}) => {
 };
 
 class TestApp {
-  TestApp(this.tester, this.container);
+  TestApp(this.tester, this.container, this.fakes);
 
   final WidgetTester tester;
   final ProviderContainer container;
+  final Fakes fakes;
 
   GoRouter get router => container.read(routerProvider);
 
@@ -62,7 +68,9 @@ Future<TestApp> pumpApp(
   bool online = true,
   Duration authLatency = Duration.zero,
   bool settle = true,
+  Fakes? fakes,
 }) async {
+  final f = fakes ?? Fakes(capabilities: capabilities);
   tester.view
     ..physicalSize = size
     ..devicePixelRatio = 1;
@@ -83,11 +91,19 @@ Future<TestApp> pumpApp(
       initialLocationProvider.overrideWithValue(initialLocation),
       localStoreProvider.overrideWithValue(localStore ?? MemoryLocalStore()),
       connectivityProvider.overrideWith((ref) => Stream.value(online)),
+      mapTilesEnabledProvider.overrideWithValue(false),
+      biometricServiceProvider.overrideWithValue(f.biometrics),
+      locationServiceProvider.overrideWithValue(f.location),
+      mediaServiceProvider.overrideWithValue(f.media),
+      shareServiceProvider.overrideWithValue(f.share),
+      launcherServiceProvider.overrideWithValue(f.launcher),
+      permissionServiceProvider.overrideWithValue(f.permissions),
+      notificationServiceProvider.overrideWithValue(f.notifications),
     ],
   );
   addTearDown(container.dispose);
 
   await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const FieldInspectionsApp()));
   if (settle) await tester.pumpAndSettle();
-  return TestApp(tester, container);
+  return TestApp(tester, container, f);
 }

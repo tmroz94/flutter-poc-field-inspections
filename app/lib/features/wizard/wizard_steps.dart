@@ -1,16 +1,20 @@
 import 'dart:async';
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/platform/capabilities.dart';
+import '../../core/platform/platform_services.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/validation/form_support.dart';
 import '../../core/validation/validators.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/api/api_exception.dart';
+import '../../data/local/local_store.dart';
 import '../../data/models/draft.dart';
 import '../../data/models/inspection.dart';
 import '../../data/providers.dart';
@@ -113,7 +117,15 @@ class _SiteStepState extends ConsumerState<_SiteStep> {
     switch (c) {
       case _Existing(:final site):
         _controller.text = site.name;
-        wizard.update((d) => d.copyWith(siteId: () => site.id, siteName: site.name, siteAddress: '${site.address}, ${site.city}'));
+        wizard.update(
+          (d) => d.copyWith(
+            siteId: () => site.id,
+            siteName: site.name,
+            siteAddress: '${site.address}, ${site.city}',
+            siteLat: () => site.lat,
+            siteLng: () => site.lng,
+          ),
+        );
       case _AddNew(:final name):
         _controller.text = name;
         wizard.update((d) => d.copyWith(siteId: () => null, siteName: name, siteAddress: ''));
@@ -189,14 +201,101 @@ class _SiteStepState extends ConsumerState<_SiteStep> {
         const SizedBox(height: 24),
         Text('Your location', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         const SizedBox(height: 8),
-        Card.outlined(
-          child: ListTile(
-            leading: Icon(Symbols.my_location, color: theme.colorScheme.primary),
-            title: const Text('Location check'),
-            subtitle: const Text('Confirms you are on site. Arrives with geolocation in M3; optional.'),
-          ),
-        ),
+        _LocationCheck(wizardKey: widget.wizardKey),
       ],
+    );
+  }
+}
+
+/// P09 "Your location": optional on-site check with accuracy and the
+/// distance to the site; warns when more than 200 m away.
+class _LocationCheck extends ConsumerStatefulWidget {
+  const _LocationCheck({required this.wizardKey});
+
+  final String wizardKey;
+
+  @override
+  ConsumerState<_LocationCheck> createState() => _LocationCheckState();
+}
+
+class _LocationCheckState extends ConsumerState<_LocationCheck> {
+  bool _busy = false;
+  String? _problem;
+  bool _canOpenSettings = false;
+
+  Future<void> _update() async {
+    setState(() {
+      _busy = true;
+      _problem = null;
+    });
+    final fix = await ref.read(locationServiceProvider).current();
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _canOpenSettings = fix.status == LocationStatus.deniedForever && ref.read(capabilitiesProvider).openSystemSettings;
+      _problem = switch (fix.status) {
+        LocationStatus.ok => null,
+        LocationStatus.serviceOff => 'Location is turned off on this device.',
+        LocationStatus.denied => 'Location permission was not given. The check is optional.',
+        LocationStatus.deniedForever => 'Location is blocked for this app.',
+        LocationStatus.unsupported => 'Location is not available here.',
+        LocationStatus.error => "Couldn't get a position. Try again outside or near a window.",
+      };
+    });
+    if (fix.status == LocationStatus.ok) {
+      ref
+          .read(wizardControllerProvider(widget.wizardKey).notifier)
+          .update((d) => d.copyWith(myLocation: () => (lat: fix.lat!, lng: fix.lng!, accuracy: fix.accuracy ?? 0)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = ref.watch(wizardControllerProvider(widget.wizardKey)).draft;
+    final theme = Theme.of(context);
+    final fix = d.myLat == null ? null : LocationFix(LocationStatus.ok, lat: d.myLat, lng: d.myLng, accuracy: d.myAccuracy);
+    final distance = fix?.distanceTo(d.siteLat, d.siteLng);
+    final far = distance != null && distance > 200;
+    return Card.outlined(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Symbols.my_location, color: theme.colorScheme.primary),
+              title: Text(fix == null ? 'Not checked yet' : '${fix.lat!.toStringAsFixed(4)}° N, ${fix.lng!.toStringAsFixed(4)}° E'),
+              subtitle: Text(
+                fix == null
+                    ? 'Optional: confirms you are on site.'
+                    : [
+                        'Accuracy ±${fix.accuracy?.round() ?? '?'} m',
+                        if (distance != null)
+                          '${distance >= 1000 ? '${(distance / 1000).toStringAsFixed(1)} km' : '${distance.round()} m'} from the site',
+                      ].join(' · '),
+              ),
+            ),
+            if (far) Text('You seem to be more than 200 m from the site address.', style: TextStyle(color: theme.colorScheme.tertiary)),
+            if (_problem != null) Text(_problem!, style: TextStyle(color: theme.colorScheme.error)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: _busy ? null : _update,
+                  icon: _busy
+                      ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Symbols.refresh),
+                  label: Text(fix == null ? 'Check location' : 'Update location'),
+                ),
+                if (_canOpenSettings)
+                  TextButton(onPressed: () => ref.read(permissionServiceProvider).openSettings(), child: const Text('Open settings')),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -521,25 +620,16 @@ class _ChecklistStepState extends ConsumerState<_ChecklistStep> {
             failure: d.failures[item.id] ?? const FailDetail(),
             photoCount: d.attachments.where((a) => a.forItem == item.id).length,
             error: widget.errors[item.id],
-            onAnswer: (a) => wizard.update((x) {
-              final answers = {...x.answers};
-              a == null ? answers.remove(item.id) : answers[item.id] = a;
-              return x.copyWith(answers: answers);
-            }),
+            onAnswer: (a) {
+              ref.read(hapticsProvider).selection();
+              wizard.update((x) {
+                final answers = {...x.answers};
+                a == null ? answers.remove(item.id) : answers[item.id] = a;
+                return x.copyWith(answers: answers);
+              });
+            },
             onFailure: (f) => wizard.update((x) => x.copyWith(failures: {...x.failures, item.id: f})),
-            onAddPhoto: () => wizard.update(
-              (x) => x.copyWith(
-                attachments: [
-                  ...x.attachments,
-                  DraftAttachment(
-                    id: 'ph-${DateTime.now().microsecondsSinceEpoch}',
-                    name: '${item.id}-photo.jpg',
-                    sizeBytes: 2400000,
-                    forItem: item.id,
-                  ),
-                ],
-              ),
-            ),
+            onAddPhoto: () => addPickedPhoto(ref, context, widget.wizardKey, camera: true, forItem: item.id),
           ),
           const SizedBox(height: 12),
         ],
@@ -659,7 +749,7 @@ class _ChecklistCardState extends State<_ChecklistCard> {
                               label: Text(widget.photoCount == 0 ? 'Add photo' : 'Add photo (${widget.photoCount})'),
                               onPressed: widget.onAddPhoto,
                             ),
-                            const ActionChip(avatar: Icon(Symbols.mic), label: Text('Dictate note (M3)')),
+                            const ActionChip(avatar: Icon(Symbols.mic), label: Text('Dictate note (not in the PoC)')),
                           ],
                         ),
                       ],
@@ -678,6 +768,66 @@ class _ChecklistCardState extends State<_ChecklistCard> {
 
 // ------------------------------------------------------- Step 4: Photos, files
 
+/// Saves picked bytes on the device (SQLite blob) and adds the attachment to
+/// the draft. Returns false when the type or size is not allowed.
+Future<bool> saveAttachment(WidgetRef ref, String wizardKey, PickedFile file, {String? forItem}) async {
+  final ext = file.name.split('.').last.toLowerCase();
+  if (!WizardValidator.allowedExtensions.contains(ext) || file.bytes.length > WizardValidator.maxFileBytes) return false;
+  final id = '${file.isImage ? 'ph' : 'f'}-${DateTime.now().microsecondsSinceEpoch}';
+  await ref.read(localStoreProvider).putBlob(id, file.bytes, file.mime);
+  ref
+      .read(wizardControllerProvider(wizardKey).notifier)
+      .update(
+        (d) => d.copyWith(
+          attachments: [
+            ...d.attachments,
+            DraftAttachment(id: id, name: file.name, sizeBytes: file.bytes.length, isPhoto: file.isImage, forItem: forItem),
+          ],
+        ),
+      );
+  return true;
+}
+
+enum CaptureResult { added, cancelled, rejected, denied, failed }
+
+/// Camera or gallery into the draft. Handles cancel and a denied camera.
+Future<CaptureResult> addPickedPhoto(WidgetRef ref, BuildContext context, String wizardKey, {required bool camera, String? forItem}) async {
+  try {
+    final file = await ref.read(mediaServiceProvider).photo(camera: camera);
+    if (file == null) return CaptureResult.cancelled;
+    final ok = await saveAttachment(ref, wizardKey, file, forItem: forItem);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Use JPG, PNG or HEIC up to 20 MB.')));
+    }
+    return ok ? CaptureResult.added : CaptureResult.rejected;
+  } on PlatformException catch (e) {
+    // iOS reports camera_access_denied / photo_access_denied.
+    if (e.code.contains('access_denied')) return CaptureResult.denied;
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Couldn't open the ${camera ? 'camera' : 'gallery'}.")));
+    }
+    return CaptureResult.failed;
+  }
+}
+
+/// A saved photo, or the placeholder for simulated or fixture photos.
+class AttachmentImage extends ConsumerWidget {
+  const AttachmentImage({required this.attachment, required this.index, super.key});
+
+  final DraftAttachment attachment;
+  final int index;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bytes = ref.watch(blobProvider(attachment.id)).value;
+    if (bytes == null) return PhotoPlaceholder(index: index);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.small),
+      child: Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true, semanticLabel: attachment.name),
+    );
+  }
+}
+
 class _PhotosStep extends ConsumerStatefulWidget {
   const _PhotosStep({required this.wizardKey, required this.errors});
 
@@ -691,20 +841,50 @@ class _PhotosStep extends ConsumerStatefulWidget {
 class _PhotosStepState extends ConsumerState<_PhotosStep> {
   final _grid = GlobalKey<SliverAnimatedGridState>();
   late List<DraftAttachment> _shown = ref.read(wizardControllerProvider(widget.wizardKey)).draft.photos;
+  bool _cameraDenied = false;
+  bool _dragging = false;
+  void Function()? _stopPaste;
+
+  @override
+  void initState() {
+    super.initState();
+    // Web: Ctrl/Cmd+V of a screenshot or copied image adds it (D04 "Paste image").
+    if (ref.read(capabilitiesProvider).isWeb) _stopPaste = ref.read(mediaServiceProvider).onPaste(_add);
+  }
+
+  @override
+  void dispose() {
+    _stopPaste?.call();
+    super.dispose();
+  }
 
   Duration get _duration => MediaQuery.disableAnimationsOf(context) ? Duration.zero : Durations.medium2;
 
-  /// Placeholder capture until the camera arrives (M3).
-  void _addPhoto(String source) {
-    final n = _shown.length + 1;
-    final photo = DraftAttachment(
-      id: 'ph-${DateTime.now().microsecondsSinceEpoch}',
-      name: '${source}_${n.toString().padLeft(3, '0')}.jpg',
-      sizeBytes: 2400000,
-    );
-    ref.read(wizardControllerProvider(widget.wizardKey).notifier).update((d) => d.copyWith(attachments: [...d.attachments, photo]));
-    _shown = [..._shown, photo];
-    _grid.currentState?.insertItem(_shown.length - 1, duration: _duration);
+  /// Keeps the animated grid in step with photos added elsewhere (drop, paste).
+  void _syncGrid(List<DraftAttachment> photos) {
+    for (final p in photos) {
+      if (!_shown.any((s) => s.id == p.id)) {
+        _shown = [..._shown, p];
+        _grid.currentState?.insertItem(_shown.length - 1, duration: _duration);
+      }
+    }
+  }
+
+  Future<void> _add(PickedFile file) async {
+    if (!await saveAttachment(ref, widget.wizardKey, file) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${file.name}: use JPG, PNG, HEIC or PDF up to 20 MB.')));
+    }
+  }
+
+  Future<void> _capture({required bool camera}) async {
+    final result = await addPickedPhoto(ref, context, widget.wizardKey, camera: camera);
+    if (result == CaptureResult.denied && mounted) setState(() => _cameraDenied = true);
+  }
+
+  Future<void> _attachFiles() async {
+    for (final f in await ref.read(mediaServiceProvider).files()) {
+      await _add(f);
+    }
   }
 
   void _remove(DraftAttachment photo) {
@@ -713,25 +893,10 @@ class _PhotosStepState extends ConsumerState<_PhotosStep> {
     ref
         .read(wizardControllerProvider(widget.wizardKey).notifier)
         .update((d) => d.copyWith(attachments: d.attachments.where((a) => a.id != photo.id).toList()));
+    unawaited(ref.read(localStoreProvider).deleteBlob(photo.id));
     _shown = [..._shown]..removeAt(index);
     _grid.currentState?.removeItem(index, (context, animation) => _tile(photo, index, animation), duration: _duration);
   }
-
-  void _addFile() => ref
-      .read(wizardControllerProvider(widget.wizardKey).notifier)
-      .update(
-        (d) => d.copyWith(
-          attachments: [
-            ...d.attachments,
-            DraftAttachment(
-              id: 'f-${DateTime.now().microsecondsSinceEpoch}',
-              name: 'site-document-${d.files.length + 1}.pdf',
-              sizeBytes: 240000,
-              isPhoto: false,
-            ),
-          ],
-        ),
-      );
 
   Widget _tile(DraftAttachment p, int index, Animation<double> animation) => ScaleTransition(
     scale: CurvedAnimation(parent: animation, curve: Easing.emphasizedDecelerate),
@@ -741,7 +906,7 @@ class _PhotosStepState extends ConsumerState<_PhotosStep> {
       children: [
         Semantics(
           label: 'Photo ${index + 1}${p.forItem != null ? ', for a failed item' : ''}',
-          child: PhotoPlaceholder(index: index),
+          child: AttachmentImage(attachment: p, index: index),
         ),
         Positioned(
           top: -6,
@@ -767,37 +932,92 @@ class _PhotosStepState extends ConsumerState<_PhotosStep> {
   @override
   Widget build(BuildContext context) {
     final d = ref.watch(wizardControllerProvider(widget.wizardKey)).draft;
+    _syncGrid(d.photos);
     final theme = Theme.of(context);
+    final caps = ref.watch(capabilitiesProvider);
     final e = widget.errors;
+
+    final buttons = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        FilledButton.tonalIcon(
+          onPressed: _cameraDenied ? null : () => _capture(camera: true),
+          icon: const Icon(Symbols.photo_camera),
+          label: Text(caps.isWeb ? 'Use camera' : 'Take photo'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => _capture(camera: false),
+          icon: const Icon(Symbols.photo_library),
+          label: const Text('Gallery'),
+        ),
+      ],
+    );
+
+    // Pointer platforms get a drop zone (D04); phones and tablets get buttons.
+    final zone = DropTarget(
+      onDragEntered: (_) => setState(() => _dragging = true),
+      onDragExited: (_) => setState(() => _dragging = false),
+      onDragDone: (detail) async {
+        setState(() => _dragging = false);
+        for (final f in detail.files) {
+          await _add(PickedFile(name: f.name, bytes: await f.readAsBytes(), mime: mimeFor(f.name)));
+        }
+      },
+      child: AnimatedContainer(
+        duration: _duration,
+        constraints: const BoxConstraints(minHeight: 160),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: _dragging ? theme.colorScheme.primaryContainer : theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppRadii.large),
+          border: Border.all(color: _dragging ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: _dragging ? 2 : 1),
+        ),
+        child: Column(
+          children: [
+            Icon(Symbols.upload, size: 40, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 8),
+            Text(
+              _dragging ? 'Drop files to upload' : 'Drag files here, or paste an image',
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            Text('JPG, PNG, HEIC or PDF, up to 20 MB each.', style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            buttons,
+          ],
+        ),
+      ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Add photos of the findings and any documents the site gave you.', style: theme.textTheme.bodyMedium),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.tonalIcon(
-                onPressed: () => _addPhoto('camera'),
-                icon: const Icon(Symbols.photo_camera),
-                label: const Text('Take photo'),
-              ),
+        if (_cameraDenied) ...[
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            decoration: BoxDecoration(color: theme.colorScheme.errorContainer, borderRadius: BorderRadius.circular(AppRadii.medium)),
+            child: Row(
+              children: [
+                Icon(Symbols.no_photography, color: theme.colorScheme.onErrorContainer),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Camera access is off. You can still choose photos from the gallery.',
+                    style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                  ),
+                ),
+                if (caps.openSystemSettings)
+                  TextButton(onPressed: () => ref.read(permissionServiceProvider).openSettings(), child: const Text('Open settings')),
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _addPhoto('gallery'),
-                icon: const Icon(Symbols.photo_library),
-                label: const Text('Gallery'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Camera and gallery are simulated until M3.',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (caps.isMobile) buttons else zone,
         const SizedBox(height: 16),
         Text('Photos · ${d.photos.length}', style: theme.textTheme.titleSmall),
         if (e['photos'] != null) Text(e['photos']!, style: TextStyle(color: theme.colorScheme.error)),
@@ -825,20 +1045,23 @@ class _PhotosStepState extends ConsumerState<_PhotosStep> {
         Row(
           children: [
             Expanded(child: Text('Files · ${d.files.length}', style: theme.textTheme.titleSmall)),
-            TextButton.icon(onPressed: _addFile, icon: const Icon(Symbols.attach_file), label: const Text('Attach file')),
+            TextButton.icon(onPressed: _attachFiles, icon: const Icon(Symbols.attach_file), label: const Text('Attach file')),
           ],
         ),
         for (final f in d.files)
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Symbols.picture_as_pdf),
+            leading: Icon(f.name.toLowerCase().endsWith('.pdf') ? Symbols.picture_as_pdf : Symbols.draft),
             title: Text(f.name),
             subtitle: Text('${(f.sizeBytes / 1000).round()} KB · saved on this device'),
             trailing: IconButton(
               tooltip: 'Remove ${f.name}',
-              onPressed: () => ref
-                  .read(wizardControllerProvider(widget.wizardKey).notifier)
-                  .update((x) => x.copyWith(attachments: x.attachments.where((a) => a.id != f.id).toList())),
+              onPressed: () {
+                unawaited(ref.read(localStoreProvider).deleteBlob(f.id));
+                ref
+                    .read(wizardControllerProvider(widget.wizardKey).notifier)
+                    .update((x) => x.copyWith(attachments: x.attachments.where((a) => a.id != f.id).toList()));
+              },
               icon: const Icon(Symbols.close),
             ),
           ),

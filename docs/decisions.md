@@ -50,3 +50,14 @@ M3 says nothing.
 | 40 | While the stored session loads, the old `/splash?from=` redirect added a browser history entry, so Back after a reload bounced forward again (back-button trap) | The router isn't built during restore; the splash shows at the current URL and the first route parse happens with the session known | Found in Chrome (M2) |
 | 41 | Sign-in, sign-up and unlock redirect to the original target as a new history entry, so Back lands on sign-in, which redirects forward again | After success the app navigates to the target inside `Router.neglect`, replacing the sign-in/unlock entry; covered by a test that records browser history updates | Found in Chrome (M2) |
 | 42 | A link opened while the app is cold-starting on Android was dropped (the app reopened the task's previous link) | The router's route-information provider is listened to for the app's whole lifetime, so platform links that arrive during the splash are kept | Found on the Android emulator (M2) |
+| 43 | Maps package (P18) | flutter_map + OpenStreetMap tiles: same code on all three platforms, no API keys. Production needs a tile provider (OSM usage policy) | Coverage board |
+| 44 | Photo bytes for drafts | Stored in the same SQLite database (`blobs` table, schema v2) so they survive reloads on web too; uploaded as metadata only to the mock API | PoC scope |
+| 45 | PDF report fonts | Built-in Helvetica; Polish letters are transliterated. Production: bundle a Unicode font (e.g. Noto Sans) in the PDF | pdf package |
+| 46 | Android CAMERA permission | Not declared: image_picker uses the system camera app, and declaring CAMERA would make that intent require the permission | image_picker docs |
+| 47 | compileSdk | 37 (permission_handler_android needs it); AGP warns it's above its tested 36, builds fine | Build error (M3) |
+| 48 | Reminders | 30 min before each open inspection, inexact alarms (no exact-alarm permission); web can't schedule, so the setting is disabled there with an explanation | flutter_local_notifications web limitations |
+| 49 | Notification payloads | Always an in-app route, routed through the same `DeepLinks` check as links (foreign payloads ignored); a tap that cold-starts the app becomes the initial location | — |
+| 50 | Biometric unlock fallback | Device PIN/pattern allowed (`biometricOnly: false`); "Use password instead" signs out | HIG / Android biometric guidelines |
+| 51 | Web "Use webcam" (D04) | The camera button uses the browser's file input with capture; live webcam preview is out of PoC scope | — |
+| 52 | Map fixed-size bug | The map was unpositioned in a Stack and laid out at 0×0 (no tiles); fixed with `Positioned.fill` and a size test | Found in Chrome (M3) |
+| 53 | Dictate note (speech-to-text) | Not built (stretch goal); the chip is shown disabled | Plan: stretch |

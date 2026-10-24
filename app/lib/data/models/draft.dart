@@ -24,8 +24,8 @@ class FailDetail {
   Map<String, Object?> toJson() => {'severity': severity, 'followUp': followUp, 'note': note};
 }
 
-/// A photo or file added in step 4. Real capture arrives in M3; until then
-/// entries are placeholders with a name and size.
+/// A photo or file added in step 4. Its bytes live in the local blob store
+/// under [id]; entries without bytes (fixtures) show a placeholder.
 @immutable
 class DraftAttachment {
   const DraftAttachment({required this.id, required this.name, required this.sizeBytes, this.isPhoto = true, this.forItem});
@@ -58,6 +58,11 @@ class InspectionDraft {
     this.siteId,
     this.siteName = '',
     this.siteAddress = '',
+    this.siteLat,
+    this.siteLng,
+    this.myLat,
+    this.myLng,
+    this.myAccuracy,
     this.type,
     this.date,
     this.startMinutes,
@@ -77,6 +82,11 @@ class InspectionDraft {
     siteId: j['siteId'] as String?,
     siteName: j['siteName'] as String? ?? '',
     siteAddress: j['siteAddress'] as String? ?? '',
+    siteLat: (j['siteLat'] as num?)?.toDouble(),
+    siteLng: (j['siteLng'] as num?)?.toDouble(),
+    myLat: (j['myLat'] as num?)?.toDouble(),
+    myLng: (j['myLng'] as num?)?.toDouble(),
+    myAccuracy: (j['myAccuracy'] as num?)?.toDouble(),
     type: j['type'] as String?,
     date: DateTime.tryParse(j['date'] as String? ?? ''),
     startMinutes: (j['startMinutes'] as num?)?.toInt(),
@@ -102,6 +112,8 @@ class InspectionDraft {
       siteId: s.siteId,
       siteName: s.site,
       siteAddress: s.address,
+      siteLat: s.lat,
+      siteLng: s.lng,
       type: s.type,
       date: DateTime(s.scheduledAt.year, s.scheduledAt.month, s.scheduledAt.day),
       startMinutes: s.scheduledAt.hour * 60 + s.scheduledAt.minute,
@@ -117,6 +129,13 @@ class InspectionDraft {
   final String? siteId;
   final String siteName;
   final String siteAddress;
+  final double? siteLat;
+  final double? siteLng;
+
+  /// Where the inspector was when they checked location (optional, P09).
+  final double? myLat;
+  final double? myLng;
+  final double? myAccuracy;
   final String? type;
 
   /// Calendar day (time ignored); combined with [startMinutes].
@@ -151,6 +170,9 @@ class InspectionDraft {
     String? Function()? siteId,
     String? siteName,
     String? siteAddress,
+    double? Function()? siteLat,
+    double? Function()? siteLng,
+    ({double lat, double lng, double accuracy})? Function()? myLocation,
     String? Function()? type,
     DateTime? Function()? date,
     int? Function()? startMinutes,
@@ -168,6 +190,11 @@ class InspectionDraft {
     siteId: siteId != null ? siteId() : this.siteId,
     siteName: siteName ?? this.siteName,
     siteAddress: siteAddress ?? this.siteAddress,
+    siteLat: siteLat != null ? siteLat() : this.siteLat,
+    siteLng: siteLng != null ? siteLng() : this.siteLng,
+    myLat: myLocation != null ? myLocation()?.lat : myLat,
+    myLng: myLocation != null ? myLocation()?.lng : myLng,
+    myAccuracy: myLocation != null ? myLocation()?.accuracy : myAccuracy,
     type: type != null ? type() : this.type,
     date: date != null ? date() : this.date,
     startMinutes: startMinutes != null ? startMinutes() : this.startMinutes,
@@ -187,6 +214,11 @@ class InspectionDraft {
     'siteId': siteId,
     'siteName': siteName,
     'siteAddress': siteAddress,
+    'siteLat': siteLat,
+    'siteLng': siteLng,
+    'myLat': myLat,
+    'myLng': myLng,
+    'myAccuracy': myAccuracy,
     'type': type,
     'date': date?.toIso8601String(),
     'startMinutes': startMinutes,
@@ -204,6 +236,7 @@ class InspectionDraft {
   /// Body for `POST /inspections` / `PUT /inspections/:id`.
   Map<String, Object?> toApiBody() => {
     if (siteId != null) 'siteId': siteId else 'site': siteName.trim(),
+    if (myLat != null) 'checkedInAt': {'lat': myLat, 'lng': myLng, 'accuracy': myAccuracy},
     'type': type,
     'scheduledAt': scheduledAt?.toIso8601String(),
     'durationMin': int.tryParse(duration.trim()),

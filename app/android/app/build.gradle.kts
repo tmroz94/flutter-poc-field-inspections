@@ -6,10 +6,13 @@ plugins {
 
 android {
     namespace = "dev.flutterpoc.field_inspections"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android needs 37; Flutter 3.47 defaults to 36.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // flutter_local_notifications needs java.time on older Android.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -27,6 +30,7 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -46,4 +50,10 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // AppCompat launch theme so the biometric prompt works on Android 8 and below.
+    implementation("androidx.appcompat:appcompat:1.7.1")
 }

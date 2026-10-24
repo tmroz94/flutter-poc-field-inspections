@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart' show demoEmail, demoPassword;
 
+import '../../core/platform/platform_services.dart';
 import '../../core/router/deep_links.dart';
 import '../../core/router/routes.dart';
 import '../../core/validation/form_support.dart';
@@ -590,12 +591,45 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 }
 
-/// P26: shown when the app was in the background too long with biometric lock on.
-class UnlockScreen extends ConsumerWidget {
+/// P26: shown when the app was in the background too long with biometric
+/// lock on. Prompts for biometrics on open; the device PIN is the fallback.
+class UnlockScreen extends ConsumerStatefulWidget {
   const UnlockScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UnlockScreen> createState() => _UnlockScreenState();
+}
+
+class _UnlockScreenState extends ConsumerState<UnlockScreen> {
+  bool _busy = false;
+  String? _message;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _unlock());
+  }
+
+  Future<void> _unlock() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    final ok = await ref.read(biometricServiceProvider).authenticate();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (ok) {
+      ref.read(hapticsProvider).success();
+      ref.read(lockControllerProvider.notifier).unlock();
+      continueToTarget(context);
+    } else {
+      setState(() => _message = 'Not recognised. Try again or use your password.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(authControllerProvider).user;
     return Scaffold(
@@ -617,15 +651,18 @@ class UnlockScreen extends ConsumerWidget {
                 const Spacer(),
                 FloatingActionButton.large(
                   tooltip: 'Unlock with biometrics',
-                  // M3 calls local_auth here; until then it unlocks directly.
-                  onPressed: () {
-                    ref.read(lockControllerProvider.notifier).unlock();
-                    continueToTarget(context);
-                  },
+                  onPressed: _busy ? null : _unlock,
                   child: const Icon(Symbols.fingerprint),
                 ),
                 const SizedBox(height: 16),
-                const Text('Use your fingerprint or face to unlock'),
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _message ?? 'Use your fingerprint or face to unlock',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _message == null ? null : theme.colorScheme.error),
+                  ),
+                ),
                 const Spacer(),
                 TextButton(onPressed: () => ref.read(authControllerProvider.notifier).signOut(), child: const Text('Use password instead')),
               ],

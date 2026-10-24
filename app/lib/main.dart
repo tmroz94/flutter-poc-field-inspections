@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app.dart';
+import 'core/platform/notification_service.dart';
+import 'core/router/router.dart';
+import 'core/router/routes.dart';
 import 'core/storage/key_value_store.dart';
 import 'data/api/backend_config.dart';
 
@@ -15,10 +18,17 @@ Future<void> main() async {
   // push/replace (photo viewer, detail tabs, sheets) also update the browser URL,
   // so what's on screen can always be shared, bookmarked and refreshed.
   GoRouter.optionURLReflectsImperativeAPIs = true;
-  final (store, backend) = (await PrefsStore.create(), await BackendConfig.resolve());
+  final notifications = NotificationService();
+  final (store, backend, launchRoute) = (await PrefsStore.create(), await BackendConfig.resolve(), await notifications.init());
   runApp(
     ProviderScope(
-      overrides: [keyValueStoreProvider.overrideWithValue(store), backendConfigProvider.overrideWithValue(backend)],
+      overrides: [
+        keyValueStoreProvider.overrideWithValue(store),
+        backendConfigProvider.overrideWithValue(backend),
+        notificationServiceProvider.overrideWithValue(notifications),
+        // A tap on a notification that started the app opens its route.
+        initialLocationProvider.overrideWithValue(launchRoute ?? Routes.home),
+      ],
       child: const FieldInspectionsApp(),
     ),
   );

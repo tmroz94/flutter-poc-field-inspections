@@ -61,7 +61,7 @@ class LockController extends Notifier<LockState> {
     state = LockState(enabled: enabled, locked: false);
   }
 
-  /// Called after a successful biometric check (M3 wires local_auth here).
+  /// Called after a successful biometric check (local_auth, see UnlockScreen).
   void unlock() => state = LockState(enabled: state.enabled, locked: false);
 }
 
