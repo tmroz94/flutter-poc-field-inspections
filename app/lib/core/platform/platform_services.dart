@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -83,7 +84,12 @@ class LocationFix {
 /// Current position with the permission flow. On the web the browser asks;
 /// it needs HTTPS (localhost counts as secure).
 class LocationService {
-  const LocationService();
+  const LocationService({this.useLocationManager = false});
+
+  /// Android only: read Android's LocationManager instead of Google Play
+  /// services' fused provider, which ignores test-provider (mock) positions.
+  /// Device tests set this so the host can steer the GPS.
+  final bool useLocationManager;
 
   Future<LocationFix> current() async {
     try {
@@ -93,12 +99,15 @@ class LocationService {
       if (permission == LocationPermission.denied) return const LocationFix(LocationStatus.denied);
       if (permission == LocationPermission.deniedForever) return const LocationFix(LocationStatus.deniedForever);
       final p = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15)),
+        locationSettings: useLocationManager
+            ? AndroidSettings(accuracy: LocationAccuracy.high, timeLimit: const Duration(seconds: 15), forceLocationManager: true)
+            : const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15)),
       );
       return LocationFix(LocationStatus.ok, lat: p.latitude, lng: p.longitude, accuracy: p.accuracy);
     } on MissingPluginException {
       return const LocationFix(LocationStatus.unsupported);
-    } on Object {
+    } on Object catch (e) {
+      debugPrint('Location failed: $e');
       return const LocationFix(LocationStatus.error);
     }
   }

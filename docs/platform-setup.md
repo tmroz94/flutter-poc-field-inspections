@@ -92,7 +92,10 @@ Things to verify on iOS (record them in the Results tracker):
 | Biometric unlock | needs an enrolled fingerprint on the emulator | n/a | – |
 | Camera / gallery / files | tests with fakes | tests with fakes | – |
 | Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | – |
-| Integration tests (`integration_test/`, 3 flows) | ✓ all pass | needs chromedriver | – |
+| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | needs chromedriver | – |
+| Offline submit → sync when back online (airplane mode) | ✓ | – | – |
+| GPS distance and far-away warning | ✓ via LocationManager test positions; fused provider needs a real phone | – | – |
+| Pickers, swipe, pull to refresh, Hero, animated grid, reduce motion | ✓ | partly (widget tests) | – |
 | WebAssembly build (Skwasm, cross-origin isolated, drift on OPFS) | n/a | ✓ | n/a |
 
 ## Web builds

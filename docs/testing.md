@@ -29,7 +29,7 @@ Add `-Coverage` (or `--coverage` to `check.sh`) to write `app/coverage/lcov.info
 | `app/test/features/` | Widget | auth forms, lists and filters, detail tabs, every wizard step and its validators, platform integrations through fakes, results tracker, adaptive widgets, diagnostics |
 | `app/test/a11y/` | Accessibility | key screens against Flutter's guidelines (48 dp Android and 44 pt iOS tap targets, labelled targets, text contrast); the same screens at 200 % text must not overflow |
 | `app/test/golden/` | Golden images | 7 phone screens in light, dark and high contrast; 4 desktop screens in light and dark |
-| `app/integration_test/` | On a device | deep link while signed out → sign in → detail → back; session and wizard draft surviving a restart (real SQLite); live re-theme and language switch |
+| `app/integration_test/` | On a device | see "Device tests" below |
 
 `app/test/helpers/test_app.dart` pumps the whole app with in-memory stores, a
 zero-latency fake backend and fakes for every platform service
@@ -50,16 +50,42 @@ After an intended UI change, regenerate and review the images:
 cd app && fvm flutter test --update-goldens test/golden
 ```
 
-## Integration tests
+## Device tests (Android)
 
-They use the real stores (shared_preferences and SQLite through drift) and the
-in-app fake backend.
+`app/integration_test/` runs on an emulator or phone with the real stores
+(shared_preferences, SQLite through drift):
+
+| File | Flows |
+|---|---|
+| `app_test.dart` | deep link while signed out → sign in → detail → back; session and wizard draft surviving a restart; live re-theme and language switch |
+| `ui_flows_test.dart` | full wizard (autocomplete, dropdown, date and time pickers, segmented answers for all 18 items, animated photo grid, success animation); list fling to page 2, pull to refresh, swipe to archive and Undo; Hero and page transitions, and none under reduced motion; keyboard Next/Done actions; filter sheet controls. Prints frame timings for the animated parts |
+| `host_test.dart` | needs the host: airplane mode on → offline state → submit queued → airplane mode off → outbox syncs to the mock server; GPS position next to the site and 7 km away (warning) |
+
+Run everything with the host helper, which starts the mock API when needed and
+carries out the `HOST>` requests the tests print (airplane mode, location
+permission, test GPS positions) with `adb`:
 
 ```bash
-cd app && fvm flutter test integration_test -d emulator-5554
+fvm dart tool/android_device_tests.dart --device emulator-5554
 ```
 
-On the Mac, the same command with an iOS simulator id (`xcrun simctl list`).
+`--only ui_flows` (or `app`, `host`) runs one file. Without the helper,
+`cd app && fvm flutter test integration_test -d emulator-5554` runs the same
+files and skips the host-driven tests. The helper always switches airplane mode
+off and removes the test GPS provider at the end.
+
+Limits:
+- The photo step uses a fake camera, because the system camera app is native UI
+  that `integration_test` can't drive.
+- GPS positions come from Android's test location provider. Google Play
+  services' fused provider (what the app uses on phones) ignores those, so the
+  GPS test reads Android's LocationManager instead; a real-GPS check on a phone
+  is still needed.
+- Frame timings are from debug builds, which are much slower than release ones.
+
+On the Mac, the same files run on an iOS simulator
+(`cd app && fvm flutter test integration_test -d <simulator-id>`); the host
+helper is Android-only for now.
 
 Chrome needs chromedriver running on port 4444, then:
 

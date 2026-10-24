@@ -171,7 +171,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
             ? null
             : FloatingActionButton.extended(
                 heroTag: 'list-fab',
-                onPressed: () => context.push(Routes.newInspectionStep(1)),
+                onPressed: () => context.go(Routes.newInspectionStep(1)),
                 icon: const Icon(Symbols.add),
                 label: const Text('New'),
               ),

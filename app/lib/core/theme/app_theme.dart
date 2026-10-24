@@ -37,6 +37,11 @@ const _platformTransitions = PageTransitionsTheme(
 class _NoTransitionsBuilder extends PageTransitionsBuilder {
   const _NoTransitionsBuilder();
 
+  // Zero, not just no movement: Hero flights follow the route's duration, so
+  // this also stops photos and site images flying between pages.
+  @override
+  Duration get transitionDuration => Duration.zero;
+
   @override
   Widget buildTransitions<T>(
     PageRoute<T> route,

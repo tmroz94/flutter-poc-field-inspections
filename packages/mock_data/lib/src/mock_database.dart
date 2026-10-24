@@ -221,7 +221,7 @@ class MockDatabase {
       'inspector': inspectorAnna,
       'siteManager': siteManagerPiotr,
       'answers': body['answers'] ?? const <String, String>{},
-      'photos': body['photos'] ?? const [],
+      'photos': _storePhotos(body['photos'], const []),
       'files': body['files'] ?? const [],
       'notes': body['notes'] ?? '',
       'archived': false,
@@ -236,11 +236,34 @@ class MockDatabase {
     final merged = {...existing, ...body};
     final errors = validateInspection(merged, submitting: submit);
     if (errors.isNotEmpty) throw MockError(422, 'validation', fields: errors);
+    final photos = _storePhotos(body['photos'] ?? existing['photos'], (existing['photos'] as List?) ?? const []);
     existing
       ..addAll(body)
+      ..['photos'] = photos
       ..['status'] = submit ? 'submitted' : existing['status']
       ..['updatedAt'] = _clock().toIso8601String();
     return getInspection(id);
+  }
+
+  /// Turns uploaded photo metadata (`{id, name, sizeBytes, forItem}` from the
+  /// app's drafts) into stored photo records, like a real API would: known ids
+  /// keep their record, new ones get a caption and a server timestamp.
+  List<Map<String, Object?>> _storePhotos(Object? uploaded, List<Object?> current) {
+    final known = {for (final p in current.cast<Map<String, Object?>>()) p['id']: p};
+    final now = _clock().toIso8601String();
+    return [
+      for (final p in ((uploaded as List?) ?? const []).cast<Map<String, Object?>>())
+        known[p['id']] ??
+            (p.containsKey('takenAt')
+                ? p
+                : {
+                    'id': p['id'],
+                    'caption': p['caption'] ?? p['name'] ?? '',
+                    'takenAt': now,
+                    'sizeBytes': p['sizeBytes'] ?? 0,
+                    if (p['forItem'] != null) 'forItem': p['forItem'],
+                  }),
+    ];
   }
 
   void setArchived(String id, bool archived) => _find(id)['archived'] = archived;

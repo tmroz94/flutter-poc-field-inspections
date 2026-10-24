@@ -12,7 +12,7 @@ Claude Design canvas "Flutter PoC – Field Inspections" (Material 3).
 | `mock_server/` | Local REST mock API (shelf): CORS, latency and failure injection |
 | `design/` | Design tokens copied from the canvas |
 | `docs/` | `decisions.md` (how mock gaps were resolved), `deep-links.md`, `platform-setup.md` (Android/iOS/web specifics, Mac steps, what's verified), `testing.md` (tests, goldens, integration tests, JS vs wasm) |
-| `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py` (SPA host, optional COOP/COEP), `code_stats.dart` (shared-code ratio for Diagnostics), `gen_color_schemes.py` |
+| `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py` (SPA host, optional COOP/COEP), `code_stats.dart` (shared-code ratio for Diagnostics), `android_device_tests.dart` (device tests with adb-driven steps), `gen_color_schemes.py` |
 
 ## Setup
 
@@ -71,7 +71,7 @@ pwsh tool/check.ps1
 
 Runs format check, analyze and tests for all three packages (unit, widget,
 router, accessibility and golden tests). On macOS/Linux: `tool/check.sh`.
-Integration tests run on a device: `cd app && fvm flutter test integration_test -d emulator-5554`.
+Device tests (Android, including airplane mode and GPS steps driven from the host): `fvm dart tool/android_device_tests.dart`.
 Details in `docs/testing.md`.
 
 ## PoC tools (Settings › PoC tools)

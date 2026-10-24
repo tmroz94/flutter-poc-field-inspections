@@ -188,7 +188,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
         menuChildren: [
           MenuItemButton(
             leadingIcon: const Icon(Symbols.edit),
-            onPressed: () => context.push(Routes.editInspection(s.id)),
+            onPressed: () => context.go(Routes.editInspection(s.id)),
             child: const Text('Edit'),
           ),
           MenuItemButton(
@@ -331,7 +331,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
       floatingActionButton: s.status.isOpen
           ? FloatingActionButton.extended(
               heroTag: 'detail-fab-${s.id}',
-              onPressed: () => context.push(Routes.editInspection(s.id, step: 3)),
+              onPressed: () => context.go(Routes.editInspection(s.id, step: 3)),
               icon: const Icon(Symbols.edit),
               label: Text(context.l10n.continueAction),
             )

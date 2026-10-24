@@ -61,7 +61,7 @@ class HomeScreen extends ConsumerWidget {
           ? null
           : FloatingActionButton.extended(
               heroTag: 'home-fab',
-              onPressed: () => context.push(Routes.newInspectionStep(1)),
+              onPressed: () => context.go(Routes.newInspectionStep(1, from: Routes.home)),
               icon: const Icon(Symbols.add),
               label: Text(context.l10n.newInspection),
             ),
@@ -297,7 +297,11 @@ class _LocalWork extends StatelessWidget {
                 [context.l10n.stepOf(d.lastStep, 5), if (d.updatedAt != null) context.l10n.savedAt(time.format(d.updatedAt!))].join(' · '),
               ),
               trailing: const Icon(Symbols.chevron_right),
-              onTap: () => context.push(key == 'new' ? Routes.newInspectionStep(d.lastStep) : Routes.editInspection(key, step: d.lastStep)),
+              onTap: () => context.go(
+                key == 'new'
+                    ? Routes.newInspectionStep(d.lastStep, from: Routes.home)
+                    : Routes.editInspection(key, step: d.lastStep, from: Routes.home),
+              ),
             ),
         ],
         if (outbox.isNotEmpty) ...[

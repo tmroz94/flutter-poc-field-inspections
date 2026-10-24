@@ -233,6 +233,21 @@ void main() {
       expect(app.location, '/inspections/INS-1042?tab=photos');
     });
 
+    testWidgets('reduce motion: the viewer opens with no transition or Hero flight', (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/inspections/INS-1042?tab=photos',
+        store: {...signedInStore(), 'theme_settings': '{"reduceMotion":true}'},
+      );
+      await tester.ensureVisible(find.bySemanticsLabel('Open photo 3 of 6'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Open photo 3 of 6'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(PhotoViewerScreen), findsOneWidget);
+      expect(find.byType(InspectionDetailScreen), findsNothing, reason: 'covered at once');
+    });
+
     testWidgets('long-press starts photo multi-select', (tester) async {
       await pumpApp(tester, initialLocation: '/inspections/INS-1042?tab=photos', store: signedInStore());
       await tester.ensureVisible(find.bySemanticsLabel('Open photo 2 of 6'));

@@ -64,7 +64,7 @@ Future<LeaveChoice> showLeaveDialog(BuildContext context) async =>
 
 /// New or edit inspection: 5 steps, step in `?step=` (P09–P13, T02, D04).
 class WizardScreen extends ConsumerStatefulWidget {
-  const WizardScreen({required this.step, this.inspectionId, super.key});
+  const WizardScreen({required this.step, this.inspectionId, this.from, super.key});
 
   static const stepCount = 5;
 
@@ -72,6 +72,10 @@ class WizardScreen extends ConsumerStatefulWidget {
 
   /// Null for a new inspection.
   final String? inspectionId;
+
+  /// Where Close returns to (`?from=`), when the wizard was opened from
+  /// somewhere other than its parent page.
+  final String? from;
 
   @override
   ConsumerState<WizardScreen> createState() => _WizardScreenState();
@@ -110,8 +114,9 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
     super.dispose();
   }
 
-  String _location(int step) =>
-      widget.inspectionId == null ? Routes.newInspectionStep(step) : Routes.editInspection(widget.inspectionId!, step: step);
+  String _location(int step) => widget.inspectionId == null
+      ? Routes.newInspectionStep(step, from: widget.from)
+      : Routes.editInspection(widget.inspectionId!, step: step, from: widget.from);
 
   WizardValidator _validator() {
     final items = ref.read(checklistProvider(fireSafetyTemplateId)).value ?? const [];
@@ -155,7 +160,9 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
     if (choice == LeaveChoice.leave) await controller.saveNow();
     if (!mounted) return;
     ref.read(wizardExitApprovedProvider.notifier).approve();
-    if (context.canPop()) {
+    if (widget.from != null) {
+      context.go(widget.from!);
+    } else if (context.canPop()) {
       context.pop();
     } else {
       context.go(widget.inspectionId == null ? Routes.inspections : Routes.inspection(widget.inspectionId!));

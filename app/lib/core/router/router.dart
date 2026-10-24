@@ -20,6 +20,7 @@ import '../../features/wizard/submitted_screen.dart';
 import '../../features/wizard/wizard_controller.dart';
 import '../../features/wizard/wizard_screen.dart';
 import '../layout/window_size.dart';
+import 'deep_links.dart';
 import 'guards.dart';
 import 'routes.dart';
 import 'sheet_page.dart';
@@ -139,7 +140,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (_, state) => MaterialPage<void>(
                       key: state.pageKey,
                       fullscreenDialog: true,
-                      child: WizardScreen(step: _step(state)),
+                      child: WizardScreen(step: _step(state), from: DeepLinks.sanitizeFrom(state.uri.queryParameters['from'])),
                     ),
                   ),
                   GoRoute(
@@ -160,7 +161,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                         pageBuilder: (_, state) => MaterialPage<void>(
                           key: state.pageKey,
                           fullscreenDialog: true,
-                          child: WizardScreen(step: _step(state), inspectionId: state.pathParameters['id']),
+                          child: WizardScreen(
+                            step: _step(state),
+                            inspectionId: state.pathParameters['id'],
+                            from: DeepLinks.sanitizeFrom(state.uri.queryParameters['from']),
+                          ),
                         ),
                       ),
                       GoRoute(

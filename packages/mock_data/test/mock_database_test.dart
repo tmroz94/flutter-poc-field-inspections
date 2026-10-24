@@ -135,6 +135,27 @@ void main() {
       expect(done['status'], 'submitted');
     });
 
+    test('uploaded photo metadata becomes stored photo records', () {
+      final created = db.createInspection({
+        ...validDraft(),
+        'photos': [
+          {'id': 'a1', 'name': 'IMG_0001.jpg', 'sizeBytes': 1200, 'isPhoto': true, 'forItem': 'c02'},
+        ],
+      });
+      final photo = (created['photos']! as List).single as Map<String, Object?>;
+      expect(photo['caption'], 'IMG_0001.jpg');
+      expect(DateTime.tryParse(photo['takenAt']! as String), isNotNull);
+      expect(photo['forItem'], 'c02');
+
+      // Re-sending a known id (edit flow) keeps the stored record.
+      final updated = db.updateInspection(created['id']! as String, {
+        'photos': [
+          {'id': 'a1', 'name': 'renamed.jpg'},
+        ],
+      });
+      expect(((updated['photos']! as List).single as Map)['caption'], 'IMG_0001.jpg');
+    });
+
     test('archiving hides an inspection from the list', () {
       db.setArchived('INS-1043', true);
       expect(db.listInspections(q: 'INS-1043')['total'], 0);

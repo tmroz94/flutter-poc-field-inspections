@@ -90,14 +90,14 @@ class AppShell extends StatelessWidget {
               child: extended
                   ? FloatingActionButton.extended(
                       heroTag: 'rail-fab',
-                      onPressed: () => context.push(Routes.newInspectionStep(1)),
+                      onPressed: () => _newInspection(context),
                       icon: const Icon(Symbols.add),
                       label: Text(context.l10n.newInspection),
                     )
                   : FloatingActionButton(
                       heroTag: 'rail-fab',
                       tooltip: context.l10n.newInspection,
-                      onPressed: () => context.push(Routes.newInspectionStep(1)),
+                      onPressed: () => _newInspection(context),
                       child: const Icon(Symbols.add),
                     ),
             ),
@@ -111,4 +111,11 @@ class AppShell extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The rail's New inspection button works on every tab; Close returns to the
+/// tab it was opened from (the list is the wizard's own parent).
+void _newInspection(BuildContext context) {
+  final here = GoRouterState.of(context).uri;
+  context.go(Routes.newInspectionStep(1, from: here.path.startsWith(Routes.inspections) ? null : here.toString()));
 }

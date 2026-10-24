@@ -57,6 +57,43 @@ void main() {
     expect(find.text('Step 2 of 5'), findsOneWidget);
   });
 
+  // Regression: entry points used to push the wizard; the first step change
+  // (go) then removed the pushed page and showed the leave dialog.
+  testWidgets('opened from Home, Next goes to step 2 without the leave dialog', (tester) async {
+    final app = await pumpApp(tester, store: signedInStore());
+    await tester.tap(find.text('New inspection'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, 'Site'), 'River');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('office, floor 4').last);
+    await tester.pumpAndSettle();
+    await tapNext(tester);
+    expect(find.text('Leave'), findsNothing);
+    expect(app.location, '/inspections/new?step=2&from=%2Fhome');
+  });
+
+  testWidgets('rail New inspection from the Map tab: Close returns to the map', (tester) async {
+    final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/map', size: tabletSize);
+    await tester.tap(find.byTooltip('New inspection'));
+    await tester.pumpAndSettle();
+    expect(app.location, '/inspections/new?step=1&from=%2Fmap');
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    expect(app.location, '/map');
+  });
+
+  testWidgets('opened from a detail (Continue), steps move without the leave dialog', (tester) async {
+    final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/inspections/INS-1042');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(app.location, '/inspections/INS-1042/edit?step=3');
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Back'));
+    await tester.pumpAndSettle();
+    expect(find.text('Leave'), findsNothing);
+    expect(app.location, '/inspections/INS-1042/edit?step=2');
+  });
+
   testWidgets('step 2: duration must be 15–480; pickers fill date and time', (tester) async {
     final store = MemoryLocalStore()
       ..drafts['new'] = const InspectionDraft(siteId: 's-solar-farm', siteName: 'Solar farm, inverter row B', lastStep: 2);
@@ -143,6 +180,28 @@ void main() {
     expect(store.drafts, isEmpty);
   });
 
+  // Regression: the backend kept the draft's attachment metadata as photo
+  // records, so a new inspection with photos couldn't be read back.
+  testWidgets('submit with photos, then View inspection shows them', (tester) async {
+    final store = MemoryLocalStore()
+      ..drafts['new'] = _ready().copyWith(
+        confirmed: true,
+        attachments: const [DraftAttachment(id: 'a1', name: 'IMG_0001.png', sizeBytes: 1200)],
+      );
+    final app = await pumpApp(tester, initialLocation: '/inspections/new?step=5', store: signedInStore(), localStore: store);
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Submit'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Submit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Report submitted'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('View inspection'));
+    await tester.pumpAndSettle();
+    expect(app.location, '/inspections/INS-1046');
+    await tester.tap(find.text('Photos'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Open photo 1 of 1'), findsOneWidget);
+  });
+
   testWidgets('offline submit is queued and shown on Home', (tester) async {
     final store = MemoryLocalStore()..drafts['new'] = _ready().copyWith(confirmed: true);
     final app = await pumpApp(
@@ -196,7 +255,7 @@ void main() {
 
     await tester.tap(find.text('Depot north'));
     await tester.pumpAndSettle();
-    expect(app.location, '/inspections/new?step=1');
+    expect(app.location, '/inspections/new?step=1&from=%2Fhome', reason: 'Close returns to Home');
     expect(find.widgetWithText(TextFormField, 'Depot north'), findsOneWidget);
   });
 

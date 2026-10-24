@@ -25,9 +25,13 @@ abstract final class Routes {
 
   static String inspection(String id, {String? tab}) => _withQuery('/inspections/$id', {'tab': tab});
 
-  static String editInspection(String id, {int step = 1}) => '/inspections/$id/edit?step=$step';
+  /// [from]: where closing the wizard returns to, when that isn't the wizard's
+  /// parent page (e.g. Home).
+  static String editInspection(String id, {int step = 1, String? from}) =>
+      Uri(path: '/inspections/$id/edit', queryParameters: {'step': '$step', 'from': ?from}).toString();
 
-  static String newInspectionStep(int step) => '$newInspection?step=$step';
+  static String newInspectionStep(int step, {String? from}) =>
+      Uri(path: newInspection, queryParameters: {'step': '$step', 'from': ?from}).toString();
 
   static String photo(String inspectionId, String photoId) => '/inspections/$inspectionId/photos/$photoId';
 
