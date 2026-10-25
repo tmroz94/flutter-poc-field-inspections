@@ -33,6 +33,9 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   int? _count;
   Timer? _debounce;
 
+  /// Bumped per count request, so a slow older answer can't overwrite a newer one.
+  int _countRequest = 0;
+
   @override
   void initState() {
     super.initState();
@@ -59,17 +62,19 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
 
   void _recount() {
     _debounce?.cancel();
+    final request = ++_countRequest;
     _debounce = Timer(const Duration(milliseconds: 200), () async {
       if (!_canApply) {
         if (mounted) setState(() => _count = null);
         return;
       }
+      int? count;
       try {
-        final page = await ref.read(inspectionsRepositoryProvider).list(_result, pageSize: 1);
-        if (mounted) setState(() => _count = page.total);
+        count = (await ref.read(inspectionsRepositoryProvider).list(_result, pageSize: 1)).total;
       } on ApiException {
-        if (mounted) setState(() => _count = null);
+        count = null;
       }
+      if (mounted && request == _countRequest) setState(() => _count = count);
     });
   }
 
@@ -92,8 +97,9 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = context.l10n;
     final label = theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    final dateFmt = DateFormat.yMMMd();
+    final dateFmt = DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag());
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
@@ -105,14 +111,14 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               children: [
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Semantics(header: true, child: Text('Filter and sort', style: theme.textTheme.titleLarge)),
+                  child: Semantics(header: true, child: Text(l.filterAndSort, style: theme.textTheme.titleLarge)),
                 ),
                 TextButton(onPressed: _reset, child: Text(context.l10n.reset)),
               ],
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 16, 12, 4),
-              child: Text('Status', style: label),
+              child: Text(l.statusLabel, style: label),
             ),
             Wrap(
               children: [
@@ -136,7 +142,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-              child: Text('Due', style: label),
+              child: Text(l.due, style: label),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -168,7 +174,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                   icon: const Icon(Symbols.date_range),
                   label: Text(
                     _draft.from == null || _draft.to == null
-                        ? 'Choose dates'
+                        ? l.chooseDates
                         : '${dateFmt.format(_draft.from!)} – ${dateFmt.format(_draft.to!)}',
                   ),
                 ),
@@ -176,11 +182,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
             if (_draft.due == DueWindow.custom && _rangeInvalid && _draft.from != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-                child: Text('The end date must be on or after the start date', style: TextStyle(color: theme.colorScheme.error)),
+                child: Text(l.rangeEndBeforeStart, style: TextStyle(color: theme.colorScheme.error)),
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 20, 12, 4),
-              child: Text('Sort by', style: label),
+              child: Text(l.sortBy, style: label),
             ),
             RadioGroup<SortOrder>(
               groupValue: _draft.sort,

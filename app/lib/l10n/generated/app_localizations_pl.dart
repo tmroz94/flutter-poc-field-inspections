@@ -603,7 +603,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get device => 'Urządzenie i wersja';
 
   @override
-  String get notes => 'Notatki';
+  String get notes => 'Uwagi';
 
   @override
   String get platform => 'Platforma';
@@ -1328,4 +1328,215 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get typesLoadFailed => 'Nie udało się wczytać rodzajów inspekcji.';
+
+  @override
+  String get archiveFailed => 'Nie udało się zarchiwizować. Spróbuj ponownie, gdy będziesz online.';
+
+  @override
+  String get undoFailed => 'Nie udało się cofnąć. Inspekcja pozostaje w archiwum.';
+
+  @override
+  String linkCopied(String link) {
+    return 'Skopiowano link: $link';
+  }
+
+  @override
+  String get statusFilter => 'Filtr statusu';
+
+  @override
+  String get noConnection => 'Brak połączenia';
+
+  @override
+  String errorCode(String code) {
+    return 'Kod błędu: $code';
+  }
+
+  @override
+  String get noMatchAny => 'Nic nie pasuje do tych filtrów.';
+
+  @override
+  String noMatchStatuses(String statuses) {
+    return 'Nic ze statusem $statuses nie pasuje do tych filtrów.';
+  }
+
+  @override
+  String noMatchSearch(String q) {
+    return 'Nic z „$q” w nazwie. Wybierz inny status lub wyczyść wyszukiwanie.';
+  }
+
+  @override
+  String get loadMoreFailed => 'Nie udało się wczytać kolejnych.';
+
+  @override
+  String actionsFor(String id) {
+    return 'Akcje dla $id';
+  }
+
+  @override
+  String get columnId => 'ID';
+
+  @override
+  String get statusLabel => 'Status';
+
+  @override
+  String sortByColumn(String column) {
+    return 'Sortuj według: $column';
+  }
+
+  @override
+  String get chooseDates => 'Wybierz daty';
+
+  @override
+  String get rangeEndBeforeStart => 'Data końcowa nie może być wcześniejsza niż początkowa';
+
+  @override
+  String inspectionNotFoundBody(String id) {
+    return 'Nie ma inspekcji $id. Mogła zostać usunięta albo link jest błędny.';
+  }
+
+  @override
+  String loadDetailFailed(String id) {
+    return 'Nie udało się wczytać $id';
+  }
+
+  @override
+  String get offlineTryAgain => 'Jesteś offline. Połącz się i spróbuj ponownie.';
+
+  @override
+  String get somethingWentWrong => 'Coś poszło nie tak.';
+
+  @override
+  String get loadingInspection => 'Wczytywanie inspekcji';
+
+  @override
+  String get loadingInspections => 'Wczytywanie inspekcji';
+
+  @override
+  String get sitePhotoPlaceholder => 'Miejsce na zdjęcie obiektu';
+
+  @override
+  String get moreOptions => 'Więcej opcji';
+
+  @override
+  String get inspectionTitle => 'Inspekcja';
+
+  @override
+  String checklistTemplateItems(int total) {
+    return 'Szablon listy kontrolnej v3 · punkty: $total';
+  }
+
+  @override
+  String get answerToDo => 'Do zrobienia';
+
+  @override
+  String get noPhotosTitle => 'Brak zdjęć';
+
+  @override
+  String get noPhotosBody => 'Tu pojawią się zdjęcia zrobione podczas inspekcji.';
+
+  @override
+  String selectedCount(int n) {
+    return 'Zaznaczono: $n';
+  }
+
+  @override
+  String get selectPhotosHint => 'Przytrzymaj zdjęcie lub użyj „Zaznacz”, aby wybrać kilka.';
+
+  @override
+  String get select => 'Zaznacz';
+
+  @override
+  String get shareSelected => 'Udostępnij zaznaczone';
+
+  @override
+  String get cancelSelection => 'Anuluj zaznaczenie';
+
+  @override
+  String openPhotoOf(int n, int total) {
+    return 'Otwórz zdjęcie $n z $total';
+  }
+
+  @override
+  String get photoNotFound => 'Nie znaleziono zdjęcia';
+
+  @override
+  String photoNotFoundBody(String photo, String id) {
+    return 'Inspekcja $id nie ma zdjęcia $photo.';
+  }
+
+  @override
+  String get closeViewer => 'Zamknij podgląd';
+
+  @override
+  String photoCounter(int n, int total) {
+    return '$n z $total';
+  }
+
+  @override
+  String get sharePhoto => 'Udostępnij zdjęcie';
+
+  @override
+  String photoCaption(int n, String caption) {
+    return 'Zdjęcie $n: $caption';
+  }
+
+  @override
+  String get noMapLocation => 'Brak lokalizacji tego obiektu na mapie.';
+
+  @override
+  String get mapsOpenFailed => 'Nie udało się otworzyć map.';
+
+  @override
+  String noPhoneFor(String name) {
+    return 'Brak numeru telefonu: $name.';
+  }
+
+  @override
+  String callPerson(String name, String phone) {
+    return 'Zadzwoń: $name, $phone';
+  }
+
+  @override
+  String inspectionNamed(String id) {
+    return 'Inspekcja $id';
+  }
+
+  @override
+  String get sharingUnavailable => 'Udostępnianie nie jest tu dostępne; skopiowano link.';
+
+  @override
+  String get preparingPdf => 'Przygotowuję raport PDF…';
+
+  @override
+  String pdfDownloaded(String file) {
+    return 'Pobrano raport: $file';
+  }
+
+  @override
+  String pdfFooter(int page, int total, String date) {
+    return 'Strona $page z $total | utworzono $date';
+  }
+
+  @override
+  String get pdfAddress => 'Adres';
+
+  @override
+  String get pdfType => 'Rodzaj';
+
+  @override
+  String get pdfSiteManager => 'Kierownik obiektu';
+
+  @override
+  String get pdfInspector => 'Inspektor';
+
+  @override
+  String pdfChecklistSummary(int answered, int total, int failed) {
+    return 'Lista kontrolna: odpowiedzi $answered z $total, niespełnione: $failed';
+  }
+
+  @override
+  String get pdfItem => 'Punkt';
+
+  @override
+  String get pdfResult => 'Wynik';
 }

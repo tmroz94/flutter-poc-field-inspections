@@ -1261,4 +1261,215 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get typesLoadFailed => 'Couldn\'t load the inspection types.';
+
+  @override
+  String get archiveFailed => 'Couldn\'t archive. Try again when you\'re online.';
+
+  @override
+  String get undoFailed => 'Couldn\'t undo. The inspection stays archived.';
+
+  @override
+  String linkCopied(String link) {
+    return 'Link copied: $link';
+  }
+
+  @override
+  String get statusFilter => 'Status filter';
+
+  @override
+  String get noConnection => 'No connection';
+
+  @override
+  String errorCode(String code) {
+    return 'Error code: $code';
+  }
+
+  @override
+  String get noMatchAny => 'Nothing matches these filters.';
+
+  @override
+  String noMatchStatuses(String statuses) {
+    return 'Nothing with status $statuses matches these filters.';
+  }
+
+  @override
+  String noMatchSearch(String q) {
+    return 'Nothing with “$q” in the name. Try another status or clear the search.';
+  }
+
+  @override
+  String get loadMoreFailed => 'Couldn\'t load more.';
+
+  @override
+  String actionsFor(String id) {
+    return 'Actions for $id';
+  }
+
+  @override
+  String get columnId => 'ID';
+
+  @override
+  String get statusLabel => 'Status';
+
+  @override
+  String sortByColumn(String column) {
+    return 'Sort by $column';
+  }
+
+  @override
+  String get chooseDates => 'Choose dates';
+
+  @override
+  String get rangeEndBeforeStart => 'The end date must be on or after the start date';
+
+  @override
+  String inspectionNotFoundBody(String id) {
+    return 'There is no inspection $id. It may have been deleted or the link is wrong.';
+  }
+
+  @override
+  String loadDetailFailed(String id) {
+    return 'Couldn\'t load $id';
+  }
+
+  @override
+  String get offlineTryAgain => 'You\'re offline. Connect and try again.';
+
+  @override
+  String get somethingWentWrong => 'Something went wrong.';
+
+  @override
+  String get loadingInspection => 'Loading inspection';
+
+  @override
+  String get loadingInspections => 'Loading inspections';
+
+  @override
+  String get sitePhotoPlaceholder => 'Site photo placeholder';
+
+  @override
+  String get moreOptions => 'More options';
+
+  @override
+  String get inspectionTitle => 'Inspection';
+
+  @override
+  String checklistTemplateItems(int total) {
+    return 'Checklist template v3 · $total items';
+  }
+
+  @override
+  String get answerToDo => 'To do';
+
+  @override
+  String get noPhotosTitle => 'No photos yet';
+
+  @override
+  String get noPhotosBody => 'Photos taken during the inspection show up here.';
+
+  @override
+  String selectedCount(int n) {
+    return '$n selected';
+  }
+
+  @override
+  String get selectPhotosHint => 'Long-press a photo, or use Select, to choose several.';
+
+  @override
+  String get select => 'Select';
+
+  @override
+  String get shareSelected => 'Share selected';
+
+  @override
+  String get cancelSelection => 'Cancel selection';
+
+  @override
+  String openPhotoOf(int n, int total) {
+    return 'Open photo $n of $total';
+  }
+
+  @override
+  String get photoNotFound => 'Photo not found';
+
+  @override
+  String photoNotFoundBody(String photo, String id) {
+    return 'There is no photo $photo on $id.';
+  }
+
+  @override
+  String get closeViewer => 'Close viewer';
+
+  @override
+  String photoCounter(int n, int total) {
+    return '$n of $total';
+  }
+
+  @override
+  String get sharePhoto => 'Share photo';
+
+  @override
+  String photoCaption(int n, String caption) {
+    return 'Photo $n: $caption';
+  }
+
+  @override
+  String get noMapLocation => 'No map location for this site.';
+
+  @override
+  String get mapsOpenFailed => 'Couldn\'t open maps.';
+
+  @override
+  String noPhoneFor(String name) {
+    return 'No phone number for $name.';
+  }
+
+  @override
+  String callPerson(String name, String phone) {
+    return 'Call $name: $phone';
+  }
+
+  @override
+  String inspectionNamed(String id) {
+    return 'Inspection $id';
+  }
+
+  @override
+  String get sharingUnavailable => 'Sharing is not available here; link copied instead.';
+
+  @override
+  String get preparingPdf => 'Preparing the PDF report…';
+
+  @override
+  String pdfDownloaded(String file) {
+    return 'Report downloaded: $file';
+  }
+
+  @override
+  String pdfFooter(int page, int total, String date) {
+    return 'Page $page of $total | generated $date';
+  }
+
+  @override
+  String get pdfAddress => 'Address';
+
+  @override
+  String get pdfType => 'Type';
+
+  @override
+  String get pdfSiteManager => 'Site manager';
+
+  @override
+  String get pdfInspector => 'Inspector';
+
+  @override
+  String pdfChecklistSummary(int answered, int total, int failed) {
+    return 'Checklist: $answered of $total answered, $failed failed';
+  }
+
+  @override
+  String get pdfItem => 'Item';
+
+  @override
+  String get pdfResult => 'Result';
 }

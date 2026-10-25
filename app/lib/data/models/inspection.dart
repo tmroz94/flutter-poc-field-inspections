@@ -9,14 +9,6 @@ enum InspectionStatus {
 
   static InspectionStatus parse(Object? name) => values.asNameMap()[name] ?? scheduled;
 
-  String get label => switch (this) {
-    scheduled => 'Scheduled',
-    inProgress => 'In progress',
-    draft => 'Draft',
-    overdue => 'Overdue',
-    submitted => 'Submitted',
-  };
-
   bool get isOpen => this != submitted;
 }
 

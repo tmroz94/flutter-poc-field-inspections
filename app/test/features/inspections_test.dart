@@ -3,8 +3,10 @@ import 'package:field_inspections/data/api/api_exception.dart';
 import 'package:field_inspections/data/models/inspection.dart';
 import 'package:field_inspections/data/models/list_query.dart';
 import 'package:field_inspections/data/models/notification.dart';
+import 'package:field_inspections/data/providers.dart';
 import 'package:field_inspections/data/repositories/inspections_repository.dart';
 import 'package:field_inspections/features/inspections/inspection_screens.dart';
+import 'package:field_inspections/features/inspections/inspections_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -34,6 +36,23 @@ class _OfflineRepository implements InspectionsRepository {
   Future<List<String>> inspectionTypes() async => _fail();
   @override
   Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async => _fail();
+}
+
+/// The fake backend, with pages after the first failing while [pagesDown].
+class _FlakyPages extends FakeInspectionsRepository {
+  _FlakyPages(super.db) : super(latency: Duration.zero);
+
+  bool pagesDown = true;
+  int laterPageCalls = 0;
+
+  @override
+  Future<PageResult<InspectionSummary>> list(ListQuery query, {int page = 1, int pageSize = 20}) {
+    if (page > 1) {
+      laterPageCalls++;
+      if (pagesDown) throw const ApiException('network');
+    }
+    return super.list(query, page: page, pageSize: pageSize);
+  }
 }
 
 Finder _selectable(String text) => find.byWidgetPredicate((w) => w is SelectableText && w.data == text);
@@ -86,10 +105,28 @@ void main() {
     });
 
     testWidgets('infinite scroll loads the second page', (tester) async {
-      await pumpApp(tester, initialLocation: '/inspections', store: signedInStore());
-      expect(find.text('INS-1000', findRichText: true), findsNothing);
+      final app = await pumpApp(tester, initialLocation: '/inspections', store: signedInStore());
+      expect(app.container.read(inspectionListProvider(const ListQuery())).page, 1);
       await tester.scrollUntilVisible(find.textContaining('INS-1000 ·'), 400, scrollable: find.byType(Scrollable).last);
       expect(find.textContaining('INS-1000 ·'), findsOneWidget);
+      expect(app.container.read(inspectionListProvider(const ListQuery())).page, 2);
+    });
+
+    testWidgets('a page that fails shows Retry and stops asking until tapped', (tester) async {
+      late _FlakyPages repo;
+      await pumpApp(tester, initialLocation: '/inspections', store: signedInStore(), inspections: (db) => repo = _FlakyPages(db));
+      await tester.scrollUntilVisible(find.text("Couldn't load more."), 400, scrollable: find.byType(Scrollable).last);
+      final calls = repo.laterPageCalls;
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(repo.laterPageCalls, calls, reason: 'no request per rebuild while offline');
+
+      repo.pagesDown = false;
+      await tester.tap(find.widgetWithText(TextButton, 'Retry'));
+      await tester.pumpAndSettle();
+      expect(find.text("Couldn't load more."), findsNothing);
+      await tester.scrollUntilVisible(find.textContaining('INS-1000 ·'), 400, scrollable: find.byType(Scrollable).last);
     });
 
     testWidgets('swipe archives with undo', (tester) async {
@@ -101,6 +138,30 @@ void main() {
       await tester.tap(find.text('Undo'));
       await tester.pumpAndSettle();
       expect(find.text('Substation 12'), findsOneWidget);
+    });
+
+    testWidgets('undo after changing the filter still restores the inspection', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections', store: signedInStore());
+      await tester.drag(find.text('Substation 12'), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      // Another filter: the list the archive came from is gone.
+      await tester.tap(find.widgetWithText(FilterChip, 'Scheduled'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(app.container.read(mockDatabaseProvider).getInspection('INS-1038')['archived'], isFalse);
+    });
+
+    testWidgets('tablet: searching keeps the open detail and the field focus', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042', store: signedInStore(), size: tabletSize);
+      final field = find.byType(TextField).first;
+      await tester.tap(field);
+      await tester.enterText(field, 'ware');
+      await tester.pumpAndSettle(const Duration(milliseconds: 400));
+      expect(app.location, '/inspections/INS-1042?q=ware');
+      final editable = tester.widget<EditableText>(find.descendant(of: field, matching: find.byType(EditableText)));
+      expect(editable.focusNode.hasFocus, isTrue);
     });
 
     testWidgets('web gets a row menu instead of relying on swipe', (tester) async {
@@ -258,6 +319,23 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Photo 2'));
       await tester.pumpAndSettle();
       expect(find.text('2 selected'), findsOneWidget);
+    });
+
+    testWidgets('Select works without a long-press; Share sends every selected photo', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042?tab=photos', store: signedInStore());
+      await tester.ensureVisible(find.widgetWithText(TextButton, 'Select'));
+      await tester.tap(find.widgetWithText(TextButton, 'Select'));
+      await tester.pumpAndSettle();
+      expect(find.text('0 selected'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Photo 1'));
+      await tester.tap(find.bySemanticsLabel('Photo 3'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Share selected'));
+      await tester.pumpAndSettle();
+      final shared = [app.fakes.share.texts.last, app.fakes.share.links.last].join(' ');
+      expect(shared, contains('/inspections/INS-1042/photos/p1'));
+      expect(shared, contains('/inspections/INS-1042/photos/p3'));
+      expect(shared, isNot(contains('/photos/p2')));
     });
   });
 }

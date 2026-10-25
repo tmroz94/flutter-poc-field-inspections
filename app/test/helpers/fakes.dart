@@ -78,12 +78,14 @@ class FakeMedia extends MediaService {
 
 class FakeShare extends ShareService {
   final links = <Uri>[];
+  final texts = <String>[];
   final files = <String>[];
   final contents = <String, Uint8List>{};
 
   @override
   Future<ShareOutcome> shareLink({required String text, required Uri link, String? subject}) async {
     links.add(link);
+    texts.add(text);
     return ShareOutcome.shared;
   }
 

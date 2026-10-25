@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -6,12 +5,11 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/layout/window_size.dart';
-import '../../core/platform/capabilities.dart';
-import '../../core/router/deep_links.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/api/api_exception.dart';
+import '../../data/local/local_store.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
 import '../../l10n/l10n.dart';
@@ -19,15 +17,8 @@ import 'inspection_actions.dart';
 import 'inspection_list_screen.dart';
 import 'inspections_controller.dart';
 
-enum DetailTab {
-  overview('Overview'),
-  checklist('Checklist'),
-  photos('Photos'),
-  history('History');
-
-  const DetailTab(this.label);
-  final String label;
-}
+/// Tab names are localized in the tab bar.
+enum DetailTab { overview, checklist, photos, history }
 
 /// `/inspections/:id?tab=`: pushed full screen under 840 (P06), the detail
 /// pane of the list-detail layout from 840 (T01, D03).
@@ -84,6 +75,7 @@ class InspectionDetailView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(inspectionDetailProvider(id));
+    final l = context.l10n;
     return switch (detail) {
       AsyncData(:final value) => _DetailBody(detail: value, tab: tab, pane: pane, onBack: () => _back(context)),
       AsyncError(:final error) => Scaffold(
@@ -91,23 +83,23 @@ class InspectionDetailView extends ConsumerWidget {
         body: error is ApiException && error.code == 'notFound'
             ? MessageState(
                 icon: Symbols.search_off,
-                title: context.l10n.inspectionNotFound,
-                message: 'There is no inspection $id. It may have been deleted or the link is wrong.',
-                action: FilledButton.tonal(onPressed: () => context.go(Routes.inspections), child: Text(context.l10n.backToInspections)),
+                title: l.inspectionNotFound,
+                message: l.inspectionNotFoundBody(id),
+                action: FilledButton.tonal(onPressed: () => context.go(Routes.inspections), child: Text(l.backToInspections)),
               )
             : MessageState(
                 icon: Symbols.sync_problem,
                 isError: true,
-                title: "Couldn't load $id",
-                message: error is ApiException && error.isNetwork ? "You're offline. Connect and try again." : 'Something went wrong.',
+                title: l.loadDetailFailed(id),
+                message: error is ApiException && error.isNetwork ? l.offlineTryAgain : l.somethingWentWrong,
                 action: FilledButton.icon(
                   onPressed: () => ref.invalidate(inspectionDetailProvider(id)),
                   icon: const Icon(Symbols.refresh),
-                  label: Text(context.l10n.tryAgain),
+                  label: Text(l.tryAgain),
                 ),
               ),
       ),
-      _ => const Center(child: CircularProgressIndicator(semanticsLabel: 'Loading inspection')),
+      _ => Center(child: CircularProgressIndicator(semanticsLabel: l.loadingInspection)),
     };
   }
 }
@@ -144,12 +136,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
   /// leaves the inspection instead of stepping through its tabs.
   void _selectTab(int index) => GoRouter.of(context).replace<void>(detailLocation(context, widget.detail.id, DetailTab.values[index]));
 
-  Future<void> _copyLink() async {
-    final path = Routes.inspection(widget.detail.id, tab: widget.tab == DetailTab.overview ? null : widget.tab.name);
-    final link = ref.read(capabilitiesProvider).isWeb ? '${Uri.base.origin}$path' : '${DeepLinks.scheme}://${DeepLinks.schemeHost}$path';
-    await Clipboard.setData(ClipboardData(text: link));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link copied: $link')));
-  }
+  Future<void> _copyLink() => InspectionActions(
+    ref,
+    context,
+  ).copyLink(Routes.inspection(widget.detail.id, tab: widget.tab == DetailTab.overview ? null : widget.tab.name));
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +147,8 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
     final s = d.summary;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final timeFmt = DateFormat.Hm();
+    final l = context.l10n;
+    final timeFmt = DateFormat.Hm(Localizations.localeOf(context).toLanguageTag());
     final now = ref.watch(clockProvider)();
     final when = '${localizedWhen(context, s.scheduledAt, now)}–${timeFmt.format(d.endsAt)}';
     final wideTablet = context.windowSize.usesRail;
@@ -172,7 +163,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
         borderRadius: widget.pane || wideTablet ? BorderRadius.circular(AppRadii.extraLarge) : null,
       ),
       child: Semantics(
-        label: 'Site photo placeholder',
+        label: l.sitePhotoPlaceholder,
         child: Icon(siteIcon(s.icon), size: 56, color: scheme.onSecondaryContainer),
       ),
     );
@@ -181,7 +172,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
       IconButton(tooltip: context.l10n.copyLink, onPressed: _copyLink, icon: const Icon(Symbols.link)),
       IconButton(
         tooltip: context.l10n.shareReport,
-        onPressed: () => actions.share(s, path: detailLocation(context, s.id, widget.tab)),
+        onPressed: () => actions.share(s, paths: [detailLocation(context, s.id, widget.tab)]),
         icon: const Icon(Symbols.share),
       ),
       MenuAnchor(
@@ -189,7 +180,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
           MenuItemButton(
             leadingIcon: const Icon(Symbols.edit),
             onPressed: () => context.go(Routes.editInspection(s.id)),
-            child: const Text('Edit'),
+            child: Text(l.edit),
           ),
           MenuItemButton(
             leadingIcon: const Icon(Symbols.map),
@@ -198,7 +189,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
           ),
         ],
         builder: (context, c, _) =>
-            IconButton(tooltip: 'More options', onPressed: () => c.isOpen ? c.close() : c.open(), icon: const Icon(Symbols.more_vert)),
+            IconButton(tooltip: l.moreOptions, onPressed: () => c.isOpen ? c.close() : c.open(), icon: const Icon(Symbols.more_vert)),
       ),
     ];
 
@@ -250,7 +241,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
       DetailTab.photos => _Photos(
         detail: d,
         columns: wideTablet ? 4 : 3,
-        onShare: (ids) => actions.share(s, path: Routes.photo(d.id, ids.first)),
+        onShare: (ids) => actions.share(s, paths: [for (final id in ids) Routes.photo(d.id, id)]),
       ),
       DetailTab.history => _History(detail: d),
     };
@@ -278,7 +269,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
           SliverAppBar(
             pinned: true,
             leading: BackButton(onPressed: widget.onBack),
-            title: const Text('Inspection'),
+            title: Text(l.inspectionTitle),
             actions: iconActions,
           ),
         SliverToBoxAdapter(
@@ -372,7 +363,7 @@ class _Overview extends StatelessWidget {
         ListTile(
           leading: const Icon(Symbols.category),
           title: Text(s.type),
-          subtitle: Text('Checklist template v3 · ${detail.total} items'),
+          subtitle: Text(context.l10n.checklistTemplateItems(detail.total)),
         ),
         ListTile(
           leading: const Icon(Symbols.person),
@@ -380,7 +371,8 @@ class _Overview extends StatelessWidget {
           subtitle: Text([detail.siteManager.role, ?detail.siteManager.phone].join(' · ')),
         ),
         ListTile(leading: const Icon(Symbols.badge), title: Text(detail.inspector.name), subtitle: Text(detail.inspector.role)),
-        if (detail.notes.isNotEmpty) ListTile(leading: const Icon(Symbols.notes), title: const Text('Notes'), subtitle: Text(detail.notes)),
+        if (detail.notes.isNotEmpty)
+          ListTile(leading: const Icon(Symbols.notes), title: Text(context.l10n.notes), subtitle: Text(detail.notes)),
       ],
     );
   }
@@ -419,6 +411,16 @@ class _Checklist extends ConsumerWidget {
         const SizedBox(height: 8),
         if (items case AsyncData(:final value))
           for (final item in value) _ChecklistRow(title: item.title, answer: detail.answers[item.id])
+        else if (items.hasError)
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Text(context.l10n.checklistLoadFailed),
+                TextButton(onPressed: () => ref.invalidate(checklistProvider(detail.templateId)), child: Text(context.l10n.tryAgain)),
+              ],
+            ),
+          )
         else
           const Padding(
             padding: EdgeInsets.all(24),
@@ -438,11 +440,12 @@ class _ChecklistRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l = context.l10n;
     final (icon, color, label, fill) = switch (answer) {
-      Answer.pass => (Symbols.check_circle, scheme.primary, 'Pass', 1.0),
-      Answer.fail => (Symbols.cancel, scheme.error, 'Fail', 1.0),
-      Answer.na => (Symbols.remove_circle_outline, scheme.onSurfaceVariant, 'N/A', 0.0),
-      null => (Symbols.radio_button_unchecked, scheme.onSurfaceVariant, 'To do', 0.0),
+      Answer.pass => (Symbols.check_circle, scheme.primary, l.answerPass, 1.0),
+      Answer.fail => (Symbols.cancel, scheme.error, l.answerFail, 1.0),
+      Answer.na => (Symbols.remove_circle_outline, scheme.onSurfaceVariant, l.answerNa, 0.0),
+      null => (Symbols.radio_button_unchecked, scheme.onSurfaceVariant, l.answerToDo, 0.0),
     };
     return ListTile(
       leading: Icon(icon, color: color, fill: fill),
@@ -452,7 +455,8 @@ class _ChecklistRow extends StatelessWidget {
   }
 }
 
-/// Photo grid. Tap opens the viewer (Hero); long-press starts multi-select (P07).
+/// Photo grid. Tap opens the viewer (Hero); long-press, or Select for
+/// keyboard and mouse users, starts multi-select (P07).
 class _Photos extends StatefulWidget {
   const _Photos({required this.detail, required this.columns, required this.onShare});
 
@@ -467,19 +471,24 @@ class _Photos extends StatefulWidget {
 class _PhotosState extends State<_Photos> {
   final Set<String> _selected = {};
 
+  /// Select mode without a long-press (keyboard, mouse).
+  bool _selectMode = false;
+
+  void _endSelection() => setState(() {
+    _selected.clear();
+    _selectMode = false;
+  });
+
   @override
   Widget build(BuildContext context) {
     final photos = widget.detail.photos;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l = context.l10n;
     if (photos.isEmpty) {
-      return const MessageState(
-        icon: Symbols.photo_library,
-        title: 'No photos yet',
-        message: 'Photos taken during the inspection show up here.',
-      );
+      return MessageState(icon: Symbols.photo_library, title: l.noPhotosTitle, message: l.noPhotosBody);
     }
-    final selecting = _selected.isNotEmpty;
+    final selecting = _selectMode || _selected.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -489,14 +498,24 @@ class _PhotosState extends State<_Photos> {
             children: [
               Expanded(
                 child: Text(
-                  selecting ? '${_selected.length} selected' : 'Long-press a photo to select several.',
+                  selecting ? l.selectedCount(_selected.length) : l.selectPhotosHint,
                   style: selecting ? theme.textTheme.titleMedium : theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                 ),
               ),
               if (selecting) ...[
-                IconButton(tooltip: 'Share selected', onPressed: () => widget.onShare(_selected.toList()), icon: const Icon(Symbols.share)),
-                IconButton(tooltip: 'Cancel selection', onPressed: () => setState(_selected.clear), icon: const Icon(Symbols.close)),
-              ],
+                IconButton(
+                  tooltip: l.shareSelected,
+                  onPressed: _selected.isEmpty
+                      ? null
+                      : () => widget.onShare([
+                          for (final p in photos)
+                            if (_selected.contains(p.id)) p.id,
+                        ]),
+                  icon: const Icon(Symbols.share),
+                ),
+                IconButton(tooltip: l.cancelSelection, onPressed: _endSelection, icon: const Icon(Symbols.close)),
+              ] else
+                TextButton(onPressed: () => setState(() => _selectMode = true), child: Text(l.select)),
             ],
           ),
         ),
@@ -510,11 +529,14 @@ class _PhotosState extends State<_Photos> {
             final p = photos[i];
             final isSelected = _selected.contains(p.id);
             void toggle() => setState(() => isSelected ? _selected.remove(p.id) : _selected.add(p.id));
+            // InkWell (not a bare gesture detector) so the tiles take keyboard focus and Enter.
             return Semantics(
+              container: true,
               button: true,
               selected: selecting ? isSelected : null,
-              label: selecting ? 'Photo ${i + 1}' : 'Open photo ${i + 1} of ${photos.length}',
-              child: GestureDetector(
+              label: selecting ? l.photoN(i + 1) : l.openPhotoOf(i + 1, photos.length),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadii.small),
                 onTap: selecting ? toggle : () => context.push(Routes.photo(widget.detail.id, p.id)),
                 onLongPress: toggle,
                 child: AnimatedScale(
@@ -526,7 +548,7 @@ class _PhotosState extends State<_Photos> {
                     children: [
                       Hero(
                         tag: 'photo-${widget.detail.id}-${p.id}',
-                        child: PhotoPlaceholder(index: i),
+                        child: PhotoImage(photoId: p.id, index: i),
                       ),
                       if (selecting)
                         PositionedDirectional(
@@ -546,6 +568,35 @@ class _PhotosState extends State<_Photos> {
           },
         ),
       ],
+    );
+  }
+}
+
+/// The photo's bytes when this device took it (kept in the local store: the
+/// mock API takes metadata only), else the placeholder.
+class PhotoImage extends ConsumerWidget {
+  const PhotoImage({required this.photoId, required this.index, this.iconSize = 32, this.fit = BoxFit.cover, super.key});
+
+  final String photoId;
+  final int index;
+  final double iconSize;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bytes = ref.watch(blobProvider(photoId)).value;
+    if (bytes == null) return PhotoPlaceholder(index: index, iconSize: iconSize);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.small),
+      // The tile or viewer around it says what the photo is; bytes that
+      // don't decode fall back to the placeholder.
+      child: Image.memory(
+        bytes,
+        fit: fit,
+        gaplessPlayback: true,
+        excludeFromSemantics: true,
+        errorBuilder: (_, _, _) => PhotoPlaceholder(index: index, iconSize: iconSize),
+      ),
     );
   }
 }
@@ -577,7 +628,7 @@ class _History extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat.MMMd().add_Hm();
+    final fmt = DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).add_Hm();
     return Column(
       children: [
         for (final h in detail.history)

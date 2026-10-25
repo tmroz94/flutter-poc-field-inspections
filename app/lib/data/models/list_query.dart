@@ -2,24 +2,10 @@ import 'package:flutter/foundation.dart';
 
 import 'inspection.dart';
 
-enum SortOrder {
-  dueAsc('Due date, soonest first'),
-  dueDesc('Due date, latest first'),
-  siteAsc('Site name, A to Z');
+/// Labels are localized where they're shown (filter sheet, table headers).
+enum SortOrder { dueAsc, dueDesc, siteAsc }
 
-  const SortOrder(this.label);
-  final String label;
-}
-
-enum DueWindow {
-  any('Any'),
-  today('Today'),
-  week('Week'),
-  custom('Custom');
-
-  const DueWindow(this.label);
-  final String label;
-}
+enum DueWindow { any, today, week, custom }
 
 /// Inspections list filters. The URL query is the source of truth
 /// (`/inspections?status=overdue,draft&sort=dueDesc&q=sub&due=week`), so a

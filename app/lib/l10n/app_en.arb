@@ -894,5 +894,229 @@
   "viewInspection": "View inspection",
   "sharePdfReport": "Share PDF report",
   "pdfFailed": "Couldn't make the PDF report. Try again when you're online.",
-  "typesLoadFailed": "Couldn't load the inspection types."
+  "typesLoadFailed": "Couldn't load the inspection types.",
+  "archiveFailed": "Couldn't archive. Try again when you're online.",
+  "undoFailed": "Couldn't undo. The inspection stays archived.",
+  "linkCopied": "Link copied: {link}",
+  "@linkCopied": {
+    "placeholders": {
+      "link": {
+        "type": "String"
+      }
+    }
+  },
+  "statusFilter": "Status filter",
+  "noConnection": "No connection",
+  "errorCode": "Error code: {code}",
+  "@errorCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "noMatchAny": "Nothing matches these filters.",
+  "noMatchStatuses": "Nothing with status {statuses} matches these filters.",
+  "@noMatchStatuses": {
+    "placeholders": {
+      "statuses": {
+        "type": "String"
+      }
+    }
+  },
+  "noMatchSearch": "Nothing with “{q}” in the name. Try another status or clear the search.",
+  "@noMatchSearch": {
+    "placeholders": {
+      "q": {
+        "type": "String"
+      }
+    }
+  },
+  "loadMoreFailed": "Couldn't load more.",
+  "actionsFor": "Actions for {id}",
+  "@actionsFor": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "columnId": "ID",
+  "statusLabel": "Status",
+  "sortByColumn": "Sort by {column}",
+  "@sortByColumn": {
+    "placeholders": {
+      "column": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseDates": "Choose dates",
+  "rangeEndBeforeStart": "The end date must be on or after the start date",
+  "inspectionNotFoundBody": "There is no inspection {id}. It may have been deleted or the link is wrong.",
+  "@inspectionNotFoundBody": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "loadDetailFailed": "Couldn't load {id}",
+  "@loadDetailFailed": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineTryAgain": "You're offline. Connect and try again.",
+  "somethingWentWrong": "Something went wrong.",
+  "loadingInspection": "Loading inspection",
+  "loadingInspections": "Loading inspections",
+  "sitePhotoPlaceholder": "Site photo placeholder",
+  "moreOptions": "More options",
+  "inspectionTitle": "Inspection",
+  "checklistTemplateItems": "Checklist template v3 · {total} items",
+  "@checklistTemplateItems": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "answerToDo": "To do",
+  "noPhotosTitle": "No photos yet",
+  "noPhotosBody": "Photos taken during the inspection show up here.",
+  "selectedCount": "{n} selected",
+  "@selectedCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "selectPhotosHint": "Long-press a photo, or use Select, to choose several.",
+  "select": "Select",
+  "shareSelected": "Share selected",
+  "cancelSelection": "Cancel selection",
+  "openPhotoOf": "Open photo {n} of {total}",
+  "@openPhotoOf": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "photoNotFound": "Photo not found",
+  "photoNotFoundBody": "There is no photo {photo} on {id}.",
+  "@photoNotFoundBody": {
+    "placeholders": {
+      "photo": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "closeViewer": "Close viewer",
+  "photoCounter": "{n} of {total}",
+  "@photoCounter": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sharePhoto": "Share photo",
+  "photoCaption": "Photo {n}: {caption}",
+  "@photoCaption": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "caption": {
+        "type": "String"
+      }
+    }
+  },
+  "noMapLocation": "No map location for this site.",
+  "mapsOpenFailed": "Couldn't open maps.",
+  "noPhoneFor": "No phone number for {name}.",
+  "@noPhoneFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "callPerson": "Call {name}: {phone}",
+  "@callPerson": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "inspectionNamed": "Inspection {id}",
+  "@inspectionNamed": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "sharingUnavailable": "Sharing is not available here; link copied instead.",
+  "preparingPdf": "Preparing the PDF report…",
+  "pdfDownloaded": "Report downloaded: {file}",
+  "@pdfDownloaded": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfFooter": "Page {page} of {total} | generated {date}",
+  "@pdfFooter": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfAddress": "Address",
+  "pdfType": "Type",
+  "pdfSiteManager": "Site manager",
+  "pdfInspector": "Inspector",
+  "pdfChecklistSummary": "Checklist: {answered} of {total} answered, {failed} failed",
+  "@pdfChecklistSummary": {
+    "placeholders": {
+      "answered": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "pdfItem": "Item",
+  "pdfResult": "Result"
 }

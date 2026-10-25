@@ -9,6 +9,7 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/models/inspection.dart';
+import '../../l10n/l10n.dart';
 import 'inspection_actions.dart';
 import 'inspection_detail_screen.dart';
 import 'inspections_controller.dart';
@@ -33,7 +34,11 @@ class PhotoViewerScreen extends ConsumerWidget {
           appBar: AppBar(
             leading: CloseButton(onPressed: () => context.go(Routes.inspection(inspectionId, tab: 'photos'))),
           ),
-          body: MessageState(icon: Symbols.hide_image, title: 'Photo not found', message: 'There is no photo $photoId on $inspectionId.'),
+          body: MessageState(
+            icon: Symbols.hide_image,
+            title: context.l10n.photoNotFound,
+            message: context.l10n.photoNotFoundBody(photoId, inspectionId),
+          ),
         ),
         _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
       },
@@ -101,9 +106,10 @@ class _ViewerState extends ConsumerState<_Viewer> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = context.l10n;
     final photo = _photos[_index];
     final meta = [
-      DateFormat.Hm().format(photo.takenAt),
+      DateFormat.Hm(Localizations.localeOf(context).toLanguageTag()).format(photo.takenAt),
       if (photo.lat != null && photo.lng != null) '${photo.lat!.toStringAsFixed(4)}° N, ${photo.lng!.toStringAsFixed(4)}° E',
       if (photo.sizeBytes > 0) '${(photo.sizeBytes / 1e6).toStringAsFixed(1)} MB',
     ].join(' · ');
@@ -120,13 +126,13 @@ class _ViewerState extends ConsumerState<_Viewer> {
           backgroundColor: theme.colorScheme.surfaceContainerLowest,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
-            leading: IconButton(tooltip: 'Close viewer', onPressed: _close, icon: const Icon(Symbols.close)),
-            title: Text('${_index + 1} of ${_photos.length}'),
+            leading: IconButton(tooltip: l.closeViewer, onPressed: _close, icon: const Icon(Symbols.close)),
+            title: Text(l.photoCounter(_index + 1, _photos.length)),
             actions: [
               IconButton(
-                tooltip: 'Share photo',
+                tooltip: l.sharePhoto,
                 onPressed: () =>
-                    InspectionActions(ref, context).share(widget.detail.summary, path: Routes.photo(widget.detail.id, photo.id)),
+                    InspectionActions(ref, context).share(widget.detail.summary, paths: [Routes.photo(widget.detail.id, photo.id)]),
                 icon: const Icon(Symbols.share),
               ),
             ],
@@ -149,10 +155,10 @@ class _ViewerState extends ConsumerState<_Viewer> {
                           aspectRatio: 3 / 4,
                           child: Semantics(
                             image: true,
-                            label: 'Photo ${i + 1}: ${_photos[i].caption}',
+                            label: l.photoCaption(i + 1, _photos[i].caption),
                             child: Hero(
                               tag: 'photo-${widget.detail.id}-${_photos[i].id}',
-                              child: PhotoPlaceholder(index: i, iconSize: 64),
+                              child: PhotoImage(photoId: _photos[i].id, index: i, iconSize: 64, fit: BoxFit.contain),
                             ),
                           ),
                         ),
@@ -192,7 +198,7 @@ class _PageIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    if (count > 10) return Text('${index + 1} / $count');
+    if (count > 10) return Text(context.l10n.photoCounter(index + 1, count));
     return ExcludeSemantics(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

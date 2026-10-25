@@ -50,7 +50,13 @@ class AttachmentImage extends ConsumerWidget {
     if (bytes == null) return PhotoPlaceholder(index: index);
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.small),
-      child: Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true, semanticLabel: attachment.name),
+      child: Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        semanticLabel: attachment.name,
+        errorBuilder: (_, _, _) => PhotoPlaceholder(index: index),
+      ),
     );
   }
 }

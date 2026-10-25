@@ -13,6 +13,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart';
 
+import '../helpers/fakes.dart';
 import '../helpers/test_app.dart';
 
 class _OfflineSave extends FakeInspectionsRepository {
@@ -221,6 +222,7 @@ void main() {
         confirmed: true,
         attachments: const [DraftAttachment(id: 'a1', name: 'IMG_0001.png', sizeBytes: 1200)],
       );
+    await store.putBlob('a1', tinyPng, 'image/png');
     final app = await pumpApp(tester, initialLocation: '/inspections/new?step=5', store: signedInStore(), localStore: store);
     await tester.ensureVisible(find.widgetWithText(FilledButton, 'Submit'));
     await tester.tap(find.widgetWithText(FilledButton, 'Submit'));
@@ -233,6 +235,8 @@ void main() {
     await tester.tap(find.text('Photos'));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Open photo 1 of 1'), findsOneWidget);
+    // The bytes taken on this device are used (the mock API stores metadata only).
+    expect(find.byType(Image), findsOneWidget);
   });
 
   testWidgets('offline submit is queued and shown on Home', (tester) async {

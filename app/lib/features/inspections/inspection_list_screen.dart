@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/semantics.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -9,7 +8,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/layout/window_size.dart';
 import '../../core/platform/capabilities.dart';
-import '../../core/router/deep_links.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/inspection_widgets.dart';
@@ -19,6 +17,7 @@ import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
 import '../../l10n/l10n.dart';
 import '../notifications/notification_bell.dart';
+import 'inspection_actions.dart';
 import 'inspections_controller.dart';
 
 /// P03/P04 on phones, T01 list-detail on tablets, D03 table + detail on desktop.
@@ -56,9 +55,20 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
     super.dispose();
   }
 
-  /// Chips and the sheet add a history entry; typing replaces it.
+  /// Chips and the sheet add a history entry; typing replaces it. With a
+  /// detail open beside the list (from 840) the detail stays: its URL carries
+  /// the list filters, and replacing it with the plain list URL would swap
+  /// the page (and drop the search field's focus mid-typing).
   void _apply(ListQuery q, {bool replace = false}) {
-    final location = q.toLocation(Routes.inspections);
+    final selected = widget.selectedId;
+    final String location;
+    if (selected == null) {
+      location = q.toLocation(Routes.inspections);
+    } else {
+      final tab = GoRouterState.of(context).uri.queryParameters['tab'];
+      final params = {...q.toQuery(), 'tab': ?tab};
+      location = Uri(path: Routes.inspection(selected), queryParameters: params.isEmpty ? null : params).toString();
+    }
     replace ? GoRouter.of(context).replace<void>(location) : context.go(location);
   }
 
@@ -80,27 +90,31 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
     final index = ref.read(inspectionListProvider(_query)).items.indexOf(item);
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
     final l10n = context.l10n;
+
+    // Undo can come after this list is gone (another filter); the controller
+    // handles that, and a refusal from the server gets its own message.
+    Future<void> undo() async {
+      try {
+        await controller.undoArchive(item, index);
+      } on ApiException {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.undoFailed)));
+      }
+    }
+
     try {
       await controller.archive(item);
       messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.archived(item.id)),
-          action: SnackBarAction(label: l10n.undo, onPressed: () => controller.undoArchive(item, index)),
+          action: SnackBarAction(label: l10n.undo, onPressed: () => unawaited(undo())),
         ),
       );
     } on ApiException {
-      messenger.showSnackBar(const SnackBar(content: Text("Couldn't archive. Try again when you're online.")));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.archiveFailed)));
     }
   }
 
-  Future<void> _copyLink(InspectionSummary item) async {
-    final path = Routes.inspection(item.id);
-    final caps = ref.read(capabilitiesProvider);
-    // Web shares the page URL; mobile shares the app's custom-scheme link.
-    final link = caps.isWeb ? '${Uri.base.origin}$path' : '${DeepLinks.scheme}://${DeepLinks.schemeHost}$path';
-    await Clipboard.setData(ClipboardData(text: link));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link copied: $link')));
-  }
+  Future<void> _copyLink(InspectionSummary item) => InspectionActions(ref, context).copyLink(Routes.inspection(item.id));
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +163,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
       onCopyLink: _copyLink,
       onRefresh: refresh,
       onLoadMore: () => ref.read(inspectionListProvider(query).notifier).loadMore(),
+      onRetryMore: () => ref.read(inspectionListProvider(query).notifier).retryMore(),
       onClearFilters: () {
         _search.clear();
         context.go(Routes.inspections);
@@ -173,7 +188,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
                 heroTag: 'list-fab',
                 onPressed: () => context.go(Routes.newInspectionStep(1)),
                 icon: const Icon(Symbols.add),
-                label: const Text('New'),
+                label: Text(context.l10n.newShort),
               ),
         body: listColumn,
       );
@@ -203,7 +218,10 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
                           child: Row(
                             children: [
                               Expanded(
-                                child: Semantics(header: true, child: Text('Inspections', style: Theme.of(context).textTheme.titleLarge)),
+                                child: Semantics(
+                                  header: true,
+                                  child: Text(context.l10n.inspectionsTitle, style: Theme.of(context).textTheme.titleLarge),
+                                ),
                               ),
                               ...actions,
                             ],
@@ -223,7 +241,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
                       MessageState(
                         icon: Symbols.assignment,
                         title: context.l10n.selectInspection,
-                        message: 'Pick one from the list to see its details here.',
+                        message: context.l10n.selectInspectionHint,
                       ),
                 ),
               ),
@@ -277,7 +295,7 @@ class _Filters extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Semantics(
               container: true,
-              label: 'Status filter',
+              label: context.l10n.statusFilter,
               child: Row(
                 children: [
                   FilterChip(label: Text(context.l10n.statusAll), selected: query.statuses.isEmpty, onSelected: (_) => onStatus(null)),
@@ -309,6 +327,7 @@ class _ListBody extends ConsumerWidget {
     required this.onCopyLink,
     required this.onRefresh,
     required this.onLoadMore,
+    required this.onRetryMore,
     required this.onClearFilters,
     required this.showMenu,
     required this.table,
@@ -322,6 +341,7 @@ class _ListBody extends ConsumerWidget {
   final ValueChanged<InspectionSummary> onCopyLink;
   final Future<void> Function() onRefresh;
   final VoidCallback onLoadMore;
+  final VoidCallback onRetryMore;
   final VoidCallback onClearFilters;
   final bool showMenu;
   final bool table;
@@ -329,35 +349,36 @@ class _ListBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final error = state.error;
+    final l = context.l10n;
     if (state.loading) return const SingleChildScrollView(child: SkeletonList());
     if (error != null && state.items.isEmpty) {
       return Column(
         children: [
-          if (error.isNetwork) ...[const SizedBox(height: 4), OfflineBanner(onRetry: onRefresh, strong: true, message: 'No connection')],
+          if (error.isNetwork) ...[const SizedBox(height: 4), OfflineBanner(onRetry: onRefresh, strong: true, message: l.noConnection)],
           Expanded(
             child: MessageState(
               icon: Symbols.sync_problem,
               isError: true,
-              title: context.l10n.loadErrorTitle,
-              message: error.isNetwork
-                  ? "You're offline and nothing is saved on this device yet. Connect and try again."
-                  : 'The server had a problem. Try again in a moment.',
-              action: FilledButton.icon(onPressed: onRefresh, icon: const Icon(Symbols.refresh), label: Text(context.l10n.tryAgain)),
-              detail: 'Error code: ${error.isNetwork ? 'NETWORK_UNREACHABLE' : error.code.toUpperCase()}',
+              title: l.loadErrorTitle,
+              message: error.isNetwork ? l.loadErrorOffline : l.loadErrorServer,
+              action: FilledButton.icon(onPressed: onRefresh, icon: const Icon(Symbols.refresh), label: Text(l.tryAgain)),
+              detail: l.errorCode(error.isNetwork ? 'NETWORK_UNREACHABLE' : error.code.toUpperCase()),
             ),
           ),
         ],
       );
     }
     if (state.isEmpty) {
-      final what = query.statuses.isEmpty ? 'Nothing' : 'Nothing ${query.statuses.map((s) => s.label.toLowerCase()).join(' or ')}';
+      final statuses = query.statuses.map((s) => s.localized(l)).join(', ');
       return MessageState(
         icon: Symbols.search_off,
-        title: context.l10n.noMatchTitle,
-        message: query.q.isEmpty
-            ? '$what matches these filters.'
-            : '$what with “${query.q}” in the name. Try another status or clear the search.',
-        action: FilledButton.tonal(onPressed: onClearFilters, child: Text(context.l10n.clearFilters)),
+        title: l.noMatchTitle,
+        message: query.q.isNotEmpty
+            ? l.noMatchSearch(query.q)
+            : query.statuses.isEmpty
+            ? l.noMatchAny
+            : l.noMatchStatuses(statuses),
+        action: FilledButton.tonal(onPressed: onClearFilters, child: Text(l.clearFilters)),
       );
     }
     if (table) {
@@ -369,6 +390,7 @@ class _ListBody extends ConsumerWidget {
         onArchive: onArchive,
         onCopyLink: onCopyLink,
         onLoadMore: onLoadMore,
+        onRetryMore: onRetryMore,
       );
     }
     final now = ref.watch(clockProvider)();
@@ -379,8 +401,11 @@ class _ListBody extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 88),
         itemCount: state.items.length + extra,
         itemBuilder: (context, i) {
-          if (i >= state.items.length - 5) WidgetsBinding.instance.addPostFrameCallback((_) => onLoadMore());
-          if (i == state.items.length) return const _LoadingMore();
+          // Infinite scroll near the end; after a failed page it waits for Retry.
+          if (i >= state.items.length - 5 && state.moreError == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => onLoadMore());
+          }
+          if (i == state.items.length) return state.moreError != null ? _LoadMoreFailed(onRetry: onRetryMore) : const _LoadingMore();
           final item = state.items[i];
           return _InspectionTile(
             item: item,
@@ -414,6 +439,25 @@ class _LoadingMore extends StatelessWidget {
   );
 }
 
+class _LoadMoreFailed extends StatelessWidget {
+  const _LoadMoreFailed({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(8),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Flexible(child: Semantics(liveRegion: true, child: Text(context.l10n.loadMoreFailed))),
+        const SizedBox(width: 8),
+        TextButton(onPressed: onRetry, child: Text(context.l10n.retry)),
+      ],
+    ),
+  );
+}
+
 class _RowMenu extends StatelessWidget {
   const _RowMenu({required this.item, required this.onArchive, required this.onCopyLink});
 
@@ -433,7 +477,7 @@ class _RowMenu extends StatelessWidget {
       ),
     ],
     builder: (context, controller, _) => IconButton(
-      tooltip: 'Actions for ${item.id}',
+      tooltip: context.l10n.actionsFor(item.id),
       onPressed: () => controller.isOpen ? controller.close() : controller.open(),
       icon: const Icon(Symbols.more_vert),
     ),
@@ -493,7 +537,7 @@ class _InspectionTile extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Archive', style: TextStyle(color: scheme.onTertiaryContainer)),
+            Text(context.l10n.archive, style: TextStyle(color: scheme.onTertiaryContainer)),
             const SizedBox(width: 8),
             Icon(Symbols.archive, color: scheme.onTertiaryContainer),
           ],
@@ -517,6 +561,7 @@ class _InspectionsTable extends ConsumerWidget {
     required this.onArchive,
     required this.onCopyLink,
     required this.onLoadMore,
+    required this.onRetryMore,
   });
 
   final ListState state;
@@ -526,6 +571,7 @@ class _InspectionsTable extends ConsumerWidget {
   final ValueChanged<InspectionSummary> onArchive;
   final ValueChanged<InspectionSummary> onCopyLink;
   final VoidCallback onLoadMore;
+  final VoidCallback onRetryMore;
 
   static const _minWidth = 560.0;
 
@@ -549,7 +595,7 @@ class _InspectionsTable extends ConsumerWidget {
           ? text
           : InkWell(
               onTap: () => sortBy(sort),
-              child: Semantics(button: true, label: 'Sort by $label', child: text),
+              child: Semantics(button: true, label: context.l10n.sortByColumn(label), child: text),
             );
       return width != null
           ? SizedBox(
@@ -568,15 +614,20 @@ class _InspectionsTable extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              header('ID', width: 96),
-              header('Site', flex: 1, sort: SortOrder.siteAsc, arrow: query.sort == SortOrder.siteAsc ? Symbols.arrow_upward : null),
+              header(context.l10n.columnId, width: 96),
               header(
-                'Due',
+                context.l10n.siteLabel,
+                flex: 1,
+                sort: SortOrder.siteAsc,
+                arrow: query.sort == SortOrder.siteAsc ? Symbols.arrow_upward : null,
+              ),
+              header(
+                context.l10n.due,
                 width: 140,
                 sort: sortAsc ? SortOrder.dueDesc : SortOrder.dueAsc,
                 arrow: dueSorted ? (sortAsc ? Symbols.arrow_upward : Symbols.arrow_downward) : null,
               ),
-              header('Status', width: 140),
+              header(context.l10n.statusLabel, width: 140),
               const SizedBox(width: 56),
             ],
           ),
@@ -618,7 +669,9 @@ class _InspectionsTable extends ConsumerWidget {
                     ),
                   ),
                 ),
-              if (state.hasMore || state.loadingMore)
+              if (state.moreError != null)
+                _LoadMoreFailed(onRetry: onRetryMore)
+              else if (state.hasMore || state.loadingMore)
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Center(

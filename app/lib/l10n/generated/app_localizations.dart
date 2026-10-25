@@ -2275,6 +2275,348 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load the inspection types.'**
   String get typesLoadFailed;
+
+  /// No description provided for @archiveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t archive. Try again when you\'re online.'**
+  String get archiveFailed;
+
+  /// No description provided for @undoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t undo. The inspection stays archived.'**
+  String get undoFailed;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied: {link}'**
+  String linkCopied(String link);
+
+  /// No description provided for @statusFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Status filter'**
+  String get statusFilter;
+
+  /// No description provided for @noConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection'**
+  String get noConnection;
+
+  /// No description provided for @errorCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Error code: {code}'**
+  String errorCode(String code);
+
+  /// No description provided for @noMatchAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches these filters.'**
+  String get noMatchAny;
+
+  /// No description provided for @noMatchStatuses.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing with status {statuses} matches these filters.'**
+  String noMatchStatuses(String statuses);
+
+  /// No description provided for @noMatchSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing with “{q}” in the name. Try another status or clear the search.'**
+  String noMatchSearch(String q);
+
+  /// No description provided for @loadMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load more.'**
+  String get loadMoreFailed;
+
+  /// No description provided for @actionsFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions for {id}'**
+  String actionsFor(String id);
+
+  /// No description provided for @columnId.
+  ///
+  /// In en, this message translates to:
+  /// **'ID'**
+  String get columnId;
+
+  /// No description provided for @statusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get statusLabel;
+
+  /// No description provided for @sortByColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by {column}'**
+  String sortByColumn(String column);
+
+  /// No description provided for @chooseDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose dates'**
+  String get chooseDates;
+
+  /// No description provided for @rangeEndBeforeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'The end date must be on or after the start date'**
+  String get rangeEndBeforeStart;
+
+  /// No description provided for @inspectionNotFoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'There is no inspection {id}. It may have been deleted or the link is wrong.'**
+  String inspectionNotFoundBody(String id);
+
+  /// No description provided for @loadDetailFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load {id}'**
+  String loadDetailFailed(String id);
+
+  /// No description provided for @offlineTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. Connect and try again.'**
+  String get offlineTryAgain;
+
+  /// No description provided for @somethingWentWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong.'**
+  String get somethingWentWrong;
+
+  /// No description provided for @loadingInspection.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading inspection'**
+  String get loadingInspection;
+
+  /// No description provided for @loadingInspections.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading inspections'**
+  String get loadingInspections;
+
+  /// No description provided for @sitePhotoPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Site photo placeholder'**
+  String get sitePhotoPlaceholder;
+
+  /// No description provided for @moreOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get moreOptions;
+
+  /// No description provided for @inspectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection'**
+  String get inspectionTitle;
+
+  /// No description provided for @checklistTemplateItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Checklist template v3 · {total} items'**
+  String checklistTemplateItems(int total);
+
+  /// No description provided for @answerToDo.
+  ///
+  /// In en, this message translates to:
+  /// **'To do'**
+  String get answerToDo;
+
+  /// No description provided for @noPhotosTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No photos yet'**
+  String get noPhotosTitle;
+
+  /// No description provided for @noPhotosBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos taken during the inspection show up here.'**
+  String get noPhotosBody;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} selected'**
+  String selectedCount(int n);
+
+  /// No description provided for @selectPhotosHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press a photo, or use Select, to choose several.'**
+  String get selectPhotosHint;
+
+  /// No description provided for @select.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get select;
+
+  /// No description provided for @shareSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Share selected'**
+  String get shareSelected;
+
+  /// No description provided for @cancelSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel selection'**
+  String get cancelSelection;
+
+  /// No description provided for @openPhotoOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Open photo {n} of {total}'**
+  String openPhotoOf(int n, int total);
+
+  /// No description provided for @photoNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo not found'**
+  String get photoNotFound;
+
+  /// No description provided for @photoNotFoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'There is no photo {photo} on {id}.'**
+  String photoNotFoundBody(String photo, String id);
+
+  /// No description provided for @closeViewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Close viewer'**
+  String get closeViewer;
+
+  /// No description provided for @photoCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} of {total}'**
+  String photoCounter(int n, int total);
+
+  /// No description provided for @sharePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Share photo'**
+  String get sharePhoto;
+
+  /// No description provided for @photoCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo {n}: {caption}'**
+  String photoCaption(int n, String caption);
+
+  /// No description provided for @noMapLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'No map location for this site.'**
+  String get noMapLocation;
+
+  /// No description provided for @mapsOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open maps.'**
+  String get mapsOpenFailed;
+
+  /// No description provided for @noPhoneFor.
+  ///
+  /// In en, this message translates to:
+  /// **'No phone number for {name}.'**
+  String noPhoneFor(String name);
+
+  /// No description provided for @callPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Call {name}: {phone}'**
+  String callPerson(String name, String phone);
+
+  /// No description provided for @inspectionNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection {id}'**
+  String inspectionNamed(String id);
+
+  /// No description provided for @sharingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing is not available here; link copied instead.'**
+  String get sharingUnavailable;
+
+  /// No description provided for @preparingPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing the PDF report…'**
+  String get preparingPdf;
+
+  /// No description provided for @pdfDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Report downloaded: {file}'**
+  String pdfDownloaded(String file);
+
+  /// No description provided for @pdfFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {total} | generated {date}'**
+  String pdfFooter(int page, int total, String date);
+
+  /// No description provided for @pdfAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get pdfAddress;
+
+  /// No description provided for @pdfType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get pdfType;
+
+  /// No description provided for @pdfSiteManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Site manager'**
+  String get pdfSiteManager;
+
+  /// No description provided for @pdfInspector.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspector'**
+  String get pdfInspector;
+
+  /// No description provided for @pdfChecklistSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Checklist: {answered} of {total} answered, {failed} failed'**
+  String pdfChecklistSummary(int answered, int total, int failed);
+
+  /// No description provided for @pdfItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Item'**
+  String get pdfItem;
+
+  /// No description provided for @pdfResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result'**
+  String get pdfResult;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

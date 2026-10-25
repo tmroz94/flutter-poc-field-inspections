@@ -109,7 +109,7 @@ class SkeletonList extends StatelessWidget {
     );
     const widths = [(0.72, 0.44), (0.58, 0.38), (0.8, 0.5), (0.64, 0.3), (0.7, 0.46), (0.52, 0.4), (0.76, 0.34)];
     return Semantics(
-      label: 'Loading inspections',
+      label: context.l10n.loadingInspections,
       child: ExcludeSemantics(
         child: LayoutBuilder(
           builder: (context, c) {
@@ -248,7 +248,7 @@ class OfflineBanner extends StatelessWidget {
                 ],
               ),
             ),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(context.l10n.retry)),
           ],
         ),
       ),
