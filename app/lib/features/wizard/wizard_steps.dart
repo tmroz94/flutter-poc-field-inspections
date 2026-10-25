@@ -84,7 +84,21 @@ class _SiteStepState extends ConsumerState<_SiteStep> {
   late final _controller = TextEditingController(text: ref.read(wizardControllerProvider(widget.wizardKey)).draft.siteName);
   final _focus = FocusNode();
   Timer? _debounce;
-  Completer<List<_SiteChoice>>? _pending;
+
+  /// Suggestions shown inline under the field (not in an overlay: on the web,
+  /// with the accessibility tree on, an overlay opening took focus from the
+  /// field and closed itself, so screen-reader users couldn't pick a site).
+  List<_SiteChoice> _choices = const [];
+  int _highlighted = 0;
+  int _lookup = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus && _choices.isNotEmpty) setState(() => _choices = const []);
+    });
+  }
 
   @override
   void dispose() {
@@ -95,25 +109,56 @@ class _SiteStepState extends ConsumerState<_SiteStep> {
   }
 
   /// Debounced lookup (250 ms): only the last keystroke hits the API.
-  Future<List<_SiteChoice>> _options(String text) {
+  void _search(String text) {
     final q = text.trim();
     _debounce?.cancel();
-    if (_pending != null && !_pending!.isCompleted) _pending!.complete(const []);
-    if (q.isEmpty) return Future.value(const []);
-    final completer = _pending = Completer();
+    final lookup = ++_lookup;
+    if (q.isEmpty) {
+      setState(() => _choices = const []);
+      return;
+    }
     _debounce = Timer(const Duration(milliseconds: 250), () async {
+      List<_SiteChoice> found;
       try {
         final sites = await ref.read(inspectionsRepositoryProvider).searchSites(q);
         final exact = sites.any((s) => s.name.toLowerCase() == q.toLowerCase());
-        if (!completer.isCompleted) completer.complete([for (final s in sites) _Existing(s), if (!exact && q.length >= 3) _AddNew(q)]);
+        found = [for (final s in sites) _Existing(s), if (!exact && q.length >= 3) _AddNew(q)];
       } on ApiException {
-        if (!completer.isCompleted) completer.complete([if (q.length >= 3) _AddNew(q)]);
+        found = [if (q.length >= 3) _AddNew(q)];
       }
+      if (!mounted || lookup != _lookup || !_focus.hasFocus) return;
+      setState(() {
+        _choices = found;
+        _highlighted = 0;
+      });
     });
-    return completer.future;
+  }
+
+  /// Arrow keys move through the suggestions, Enter picks, Escape closes.
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (_choices.isEmpty || event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowDown || key == LogicalKeyboardKey.arrowUp) {
+      final step = key == LogicalKeyboardKey.arrowDown ? 1 : -1;
+      setState(() => _highlighted = (_highlighted + step) % _choices.length);
+      return KeyEventResult.handled;
+    }
+    if (event is KeyRepeatEvent) return KeyEventResult.ignored;
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+      _select(_choices[_highlighted]);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      setState(() => _choices = const []);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   void _select(_SiteChoice c) {
+    _lookup++;
+    _debounce?.cancel();
+    setState(() => _choices = const []);
     final wizard = ref.read(wizardControllerProvider(widget.wizardKey).notifier);
     switch (c) {
       case _Existing(:final site):
@@ -137,50 +182,63 @@ class _SiteStepState extends ConsumerState<_SiteStep> {
   Widget build(BuildContext context) {
     final draft = ref.watch(wizardControllerProvider(widget.wizardKey)).draft;
     final theme = Theme.of(context);
+    // One tap region with the field, so tapping a suggestion doesn't count as
+    // a tap outside (which would unfocus the field and close the list first).
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        RawAutocomplete<_SiteChoice>(
-          textEditingController: _controller,
-          focusNode: _focus,
-          optionsBuilder: (v) => _options(v.text),
-          displayStringForOption: (c) => switch (c) {
-            _Existing(:final site) => site.name,
-            _AddNew(:final name) => name,
-          },
-          onSelected: _select,
-          fieldViewBuilder: (context, controller, focus, onSubmit) => TextFormField(
-            controller: controller,
-            focusNode: focus,
-            textInputAction: TextInputAction.search,
-            onFieldSubmitted: (_) => onSubmit(),
-            onChanged: (text) => ref
-                .read(wizardControllerProvider(widget.wizardKey).notifier)
-                .update((d) => d.copyWith(siteId: () => null, siteName: text, siteAddress: '')),
-            decoration: InputDecoration(
-              labelText: 'Site',
-              prefixIcon: const Icon(Symbols.search),
-              helperText: 'Search by name or address',
-              errorText: widget.errors['site'],
-              suffixIcon: ListenableBuilder(
-                listenable: controller,
-                builder: (_, _) => controller.text.isEmpty
-                    ? const SizedBox.shrink()
-                    : IconButton(
-                        tooltip: 'Clear',
-                        icon: const Icon(Symbols.cancel),
-                        onPressed: () {
-                          controller.clear();
-                          ref
-                              .read(wizardControllerProvider(widget.wizardKey).notifier)
-                              .update((d) => d.copyWith(siteId: () => null, siteName: '', siteAddress: ''));
-                        },
-                      ),
+        TextFieldTapRegion(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Focus(
+                onKeyEvent: _onKey,
+                canRequestFocus: false,
+                skipTraversal: true,
+                child: TextFormField(
+                  controller: _controller,
+                  focusNode: _focus,
+                  textInputAction: TextInputAction.search,
+                  onFieldSubmitted: (_) {
+                    if (_choices.isNotEmpty) _select(_choices[_highlighted]);
+                  },
+                  onChanged: (text) {
+                    ref
+                        .read(wizardControllerProvider(widget.wizardKey).notifier)
+                        .update((d) => d.copyWith(siteId: () => null, siteName: text, siteAddress: ''));
+                    _search(text);
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Site',
+                    prefixIcon: const Icon(Symbols.search),
+                    helperText: 'Search by name or address',
+                    errorText: widget.errors['site'],
+                    suffixIcon: ListenableBuilder(
+                      listenable: _controller,
+                      builder: (_, _) => _controller.text.isEmpty
+                          ? const SizedBox.shrink()
+                          : IconButton(
+                              tooltip: 'Clear',
+                              icon: const Icon(Symbols.cancel),
+                              onPressed: () {
+                                _controller.clear();
+                                _search('');
+                                ref
+                                    .read(wizardControllerProvider(widget.wizardKey).notifier)
+                                    .update((d) => d.copyWith(siteId: () => null, siteName: '', siteAddress: ''));
+                              },
+                            ),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              if (_choices.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: _SiteOptions(query: _controller.text, options: _choices, highlighted: _highlighted, onSelected: _select),
+                ),
+            ],
           ),
-          optionsViewBuilder: (context, onSelected, options) =>
-              _SiteOptions(query: _controller.text, options: options.toList(), onSelected: onSelected),
         ),
         const SizedBox(height: 16),
         if (draft.siteId != null)
@@ -302,11 +360,12 @@ class _LocationCheckState extends ConsumerState<_LocationCheck> {
 }
 
 class _SiteOptions extends StatelessWidget {
-  const _SiteOptions({required this.query, required this.options, required this.onSelected});
+  const _SiteOptions({required this.query, required this.options, required this.highlighted, required this.onSelected});
 
   final String query;
   final List<_SiteChoice> options;
-  final AutocompleteOnSelected<_SiteChoice> onSelected;
+  final int highlighted;
+  final ValueChanged<_SiteChoice> onSelected;
 
   /// Bold the typed text inside a suggestion, as on P09.
   Widget _highlight(BuildContext context, String text) {
@@ -330,7 +389,6 @@ class _SiteOptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final highlighted = AutocompleteHighlightedOption.of(context);
     return Align(
       alignment: AlignmentDirectional.topStart,
       child: Material(

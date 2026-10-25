@@ -25,7 +25,9 @@ void main() {
 
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    // System back (Android) / browser back: on a phone the list replaces the
+    // detail; on wide screens the list stays and the detail pane closes.
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byType(InspectionsScreen), findsOneWidget);
     await quit(tester, c);
@@ -63,9 +65,10 @@ void main() {
     await signIn(tester);
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
-    expect(Theme.of(tester.element(find.text('Theme'))).brightness, Brightness.dark);
+    expect(Theme.of(tester.element(find.text('Theme').first)).brightness, Brightness.dark);
 
-    await tester.scrollUntilVisible(find.text('Polski'), 200);
+    await tester.ensureVisible(find.text('Polski')); // one or two scrolling panes, by width
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Polski'));
     await tester.pumpAndSettle();
     expect(find.text('Motyw'), findsOneWidget);

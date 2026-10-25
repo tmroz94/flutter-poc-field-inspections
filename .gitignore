@@ -25,3 +25,8 @@ Thumbs.db
 # Patrol: generated test bundle and local dart-defines
 **/test_bundle.dart
 .patrol.env
+
+# web_e2e (Playwright)
+web_e2e/node_modules/
+web_e2e/test-results/
+web_e2e/playwright-report/

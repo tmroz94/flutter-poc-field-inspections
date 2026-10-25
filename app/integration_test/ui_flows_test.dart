@@ -6,6 +6,7 @@
 import 'dart:ui' as ui;
 
 import 'package:field_inspections/core/platform/platform_services.dart';
+import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/theme/theme_settings.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/models/inspection.dart';
@@ -13,20 +14,23 @@ import 'package:field_inspections/features/inspections/inspection_detail_screen.
 import 'package:field_inspections/features/inspections/inspection_list_screen.dart';
 import 'package:field_inspections/features/inspections/photo_viewer_screen.dart';
 import 'package:field_inspections/features/wizard/submitted_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../test/helpers/fakes.dart';
 import 'support.dart';
 
 /// A fake camera that returns a real, decodable PNG (the unit-test fake's
 /// 1×1 image isn't meant to be drawn).
-class _Camera extends FakeMedia {
+// Self-contained (no import from test/): web builds only serve integration_test/.
+class _Camera extends MediaService {
   Uint8List? _png;
+  int photos = 0;
 
   @override
   Future<PickedFile?> photo({required bool camera}) async {
@@ -41,6 +45,15 @@ class _Camera extends FakeMedia {
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     return bytes!.buffer.asUint8List();
   }
+}
+
+/// The wizard step in the URL (the "Step N of 5" header is phone-only).
+int _step(ProviderContainer c) => int.parse(c.read(routerProvider).state.uri.queryParameters['step'] ?? '0');
+
+/// The footer's Next button: "Next" on phones, "Next: Details" (etc.) on wide screens.
+Future<void> _next(WidgetTester tester) async {
+  await tester.tap(find.ancestor(of: find.textContaining(RegExp(r'^Next')), matching: find.byWidgetPredicate((w) => w is FilledButton)));
+  await tester.pumpAndSettle();
 }
 
 /// Records engine frame timings while [body] runs and prints a summary.
@@ -87,9 +100,8 @@ void main() {
       await tester.tap(find.textContaining('office, floor 4').last);
       await tester.pumpAndSettle();
     }
-    await tester.tap(find.widgetWithText(FilledButton, 'Next'));
-    await tester.pumpAndSettle();
-    expect(find.text('Step 2 of 5'), findsOneWidget);
+    await _next(tester);
+    expect(_step(c), 2);
 
     // Step 2: dropdown, date and time pickers, segmented priority, number field.
     await tester.tap(find.byType(DropdownMenu<String>));
@@ -112,9 +124,8 @@ void main() {
     // The keyboard's Done/Next action must not break anything.
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Next'));
-    await tester.pumpAndSettle();
-    expect(find.text('Step 3 of 5'), findsOneWidget);
+    await _next(tester);
+    expect(_step(c), 3);
 
     // Step 3: answer all 18 items with the segmented buttons, scrolling as needed.
     for (var guard = 0; guard < 60 && find.textContaining('18 of 18 answered').evaluate().isEmpty; guard++) {
@@ -128,15 +139,14 @@ void main() {
       }
     }
     expect(find.textContaining('18 of 18 answered'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Next'));
-    await tester.pumpAndSettle();
-    expect(find.text('Step 4 of 5'), findsOneWidget);
+    await _next(tester);
+    expect(_step(c), 4);
 
     // Step 4: the photo grid animates items in and out.
     await frames('photo grid insert/remove', () async {
-      await tester.tap(find.text('Take photo'));
+      await tester.tap(find.text(kIsWeb ? 'Use camera' : 'Take photo'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Take photo'));
+      await tester.tap(find.text(kIsWeb ? 'Use camera' : 'Take photo'));
       await tester.pumpAndSettle();
       expect(find.text('Photos · 2'), findsOneWidget);
       await tester.tap(find.byTooltip('Remove photo 1'));
@@ -147,8 +157,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Photos · 1'), findsOneWidget);
     });
-    await tester.tap(find.widgetWithText(FilledButton, 'Next'));
-    await tester.pumpAndSettle();
+    await _next(tester);
 
     // Step 5: checkbox gate, then the success animation.
     final submit = find.widgetWithText(FilledButton, 'Submit');
@@ -165,45 +174,74 @@ void main() {
     await quit(tester, c);
   });
 
-  testWidgets('list: fling to the second page, pull to refresh, swipe to archive and undo', (tester) async {
+  testWidgets('list: next page, refresh, archive and undo (touch gestures on phones, buttons and menus on the web)', (tester) async {
     final c = await launch(tester, initialLocation: '/inspections');
     await signIn(tester);
     expect(find.byType(InspectionsScreen), findsOneWidget);
 
-    await frames('list fling to page 2', () async {
-      for (var i = 0; i < 20 && find.textContaining('INS-1000 ·').evaluate().isEmpty; i++) {
-        await tester.fling(find.byType(Scrollable).last, const Offset(0, -800), 3000);
+    // The vertical scroll view that actually scrolls (lists and the table nest several).
+    Finder mainList() {
+      final all = tester.stateList<ScrollableState>(find.byType(Scrollable)).toList();
+      final best = all
+          .where((st) => st.widget.axisDirection == AxisDirection.down)
+          .reduce((a, b) => a.position.maxScrollExtent >= b.position.maxScrollExtent ? a : b);
+      return find.byWidget(best.widget);
+    }
+
+    await frames('list to page 2', () async {
+      for (var i = 0; i < 20 && find.textContaining('INS-1000').evaluate().isEmpty; i++) {
+        final loadMore = find.text('Load more').hitTestable();
+        if (loadMore.evaluate().isNotEmpty) {
+          await tester.tap(loadMore); // desktop table (D03)
+        } else {
+          await tester.fling(mainList(), const Offset(0, -800), 3000);
+        }
         await settle(tester, const Duration(milliseconds: 600));
       }
     });
-    expect(find.textContaining('INS-1000 ·'), findsOneWidget, reason: 'infinite scroll loaded the next page');
+    final diag = [
+      for (final st in tester.stateList<ScrollableState>(find.byType(Scrollable)))
+        '${st.widget.axisDirection} ${st.position.pixels.round()}/${st.position.maxScrollExtent.round()}',
+      ...find.byType(Text).hitTestable().evaluate().map((e) => (e.widget as Text).data).whereType<String>().take(40),
+    ].join(' | ');
+    expect(find.textContaining('INS-1000'), findsWidgets, reason: 'the next page loaded. $diag');
 
-    // Back to the top, then pull to refresh: the indicator shows while reloading.
-    final list = find.byType(Scrollable).last;
+    final list = mainList();
     for (var i = 0; i < 30 && tester.state<ScrollableState>(list).position.pixels > 0; i++) {
       await tester.fling(list, const Offset(0, 800), 3000);
       await settle(tester, const Duration(milliseconds: 300));
     }
-    await tester.fling(list, const Offset(0, 500), 1000);
-    var refreshed = false;
-    for (var i = 0; i < 60 && !refreshed; i++) {
-      await tester.pump(const Duration(milliseconds: 16));
-      refreshed = find.byType(RefreshProgressIndicator).evaluate().isNotEmpty;
+    if (kIsWeb) {
+      // No pull gesture with a mouse: the app bar's Refresh button.
+      await tester.tap(find.byTooltip('Refresh list'));
+      await settle(tester, const Duration(seconds: 2));
+      expect(find.textContaining('INS-1000'), findsNothing, reason: 'the refresh reloaded page 1');
+    } else {
+      await tester.fling(list, const Offset(0, 500), 1000);
+      var refreshed = false;
+      for (var i = 0; i < 60 && !refreshed; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        refreshed = find.byType(RefreshProgressIndicator).evaluate().isNotEmpty;
+      }
+      expect(refreshed, isTrue, reason: 'pull to refresh started a reload');
+      await settle(tester, const Duration(seconds: 2));
     }
-    expect(refreshed, isTrue, reason: 'pull to refresh started a reload');
-    await settle(tester, const Duration(seconds: 2));
 
     // "Substation 12" also names an older inspection further down (INS-1026).
-    final row = find.textContaining('INS-1038');
-    expect(row, findsOneWidget);
-    await tester.drag(row, const Offset(-600, 0));
+    if (kIsWeb) {
+      await tester.tap(find.byTooltip('Actions for INS-1038'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Archive'));
+    } else {
+      await tester.drag(find.textContaining('INS-1038'), const Offset(-600, 0));
+    }
     await tester.pumpAndSettle();
-    expect(find.textContaining('INS-1038 ·'), findsNothing);
+    expect(find.textContaining('INS-1038'), findsNothing);
     await waitFor(tester, () => find.text('INS-1038 archived').evaluate().isNotEmpty, reason: 'archive snackbar');
     await tester.pumpAndSettle(); // let the snackbar finish sliding in
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('INS-1038 ·'), findsOneWidget);
+    expect(find.textContaining('INS-1038'), findsWidgets);
     await quit(tester, c);
   });
 

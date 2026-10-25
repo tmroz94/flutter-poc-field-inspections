@@ -408,6 +408,13 @@ Future<void> main(List<String> args) async {
   // Never leave the device offline or on a fake position.
   await _hostCommand(device, 'airplane off');
   await _restoreLocation(device);
-  server?.kill();
+  if (server != null) {
+    // On Windows killing fvm.exe leaves its dart child serving :8080; end the tree.
+    if (Platform.isWindows) {
+      Process.runSync('taskkill', ['/F', '/T', '/PID', '${server.pid}']);
+    } else {
+      server.kill();
+    }
+  }
   exit(code != 0 || failed ? 1 : 0);
 }

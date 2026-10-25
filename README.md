@@ -12,6 +12,7 @@ Claude Design canvas "Flutter PoC – Field Inspections" (Material 3).
 | `mock_server/` | Local REST mock API (shelf): CORS, latency and failure injection |
 | `design/` | Design tokens copied from the canvas |
 | `docs/` | `decisions.md` (how mock gaps were resolved), `deep-links.md`, `platform-setup.md` (Android/iOS/web specifics, Mac steps, what's verified), `testing.md` (tests, goldens, integration tests, JS vs wasm) |
+| `web_e2e/` | Playwright tests of the web builds: browser prompts (notifications, location, camera) and JS vs WebAssembly frame timings |
 | `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py` (SPA host, optional COOP/COEP), `code_stats.dart` (shared-code ratio for Diagnostics), `android_device_tests.dart` (device tests with adb-driven steps), `gen_color_schemes.py` |
 
 ## Setup
@@ -71,7 +72,7 @@ pwsh tool/check.ps1
 
 Runs format check, analyze and tests for all three packages (unit, widget,
 router, accessibility and golden tests). On macOS/Linux: `tool/check.sh`.
-Device tests (Android, including airplane mode and GPS steps driven from the host): `fvm dart tool/android_device_tests.dart`. Native UI (permission dialogs, camera, photo picker, share sheet, biometric prompt, notification tap after a kill) with Patrol: `fvm dart tool/android_device_tests.dart --patrol`.
+Device tests (Android, including airplane mode and GPS steps driven from the host): `fvm dart tool/android_device_tests.dart`. Native UI (permission dialogs, camera, photo picker, share sheet, biometric prompt, notification tap after a kill) with Patrol: `fvm dart tool/android_device_tests.dart --patrol`. Web: the same flows in Chrome via `flutter drive`, and browser prompts plus JS vs WebAssembly timings with Playwright in `web_e2e/` (see `docs/testing.md`).
 Details in `docs/testing.md`.
 
 ## PoC tools (Settings › PoC tools)

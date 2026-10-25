@@ -87,14 +87,15 @@ Things to verify on iOS (record them in the Results tracker):
 |---|---|---|---|
 | Map tiles, pins, `?site=` deep link | ✓ | ✓ | – |
 | PDF export | builds; share sheet not opened in tests | ✓ downloaded | – |
-| Test notification → tap opens its route (app in background) | ✓ | – (pane blocks prompts) | – |
+| Test notification → tap opens its route (app in background) | ✓ | ✓ shown by the service worker, click opens the route; tab closed too (Playwright) | – |
 | Notification tap after the app was killed | ✓ cold start on the route (host helper; a dropped-tap bug fixed) | n/a | – |
 | Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | – |
 | Camera / gallery / files | ✓ camera app and photo picker (Patrol); file picker with fakes | tests with fakes | – |
-| Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | – | – |
+| Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | ✓ granted and denied (Playwright) | – |
 | Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | – |
 | Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | – |
-| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | needs chromedriver | – |
+| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | – |
+| Camera (browser file input), geolocation in the browser | n/a | ✓ (Playwright) | – |
 | Offline submit → sync when back online (airplane mode) | ✓ | – | – |
 | GPS distance and far-away warning | ✓ via LocationManager test positions; fused provider needs a real phone | – | – |
 | Pickers, swipe, pull to refresh, Hero, animated grid, reduce motion | ✓ | partly (widget tests) | – |
@@ -112,7 +113,18 @@ Measured on Windows 11 with Flutter 3.47.8, release builds of the same commit:
 | Local storage (drift) | IndexedDB | OPFS when served with `--isolate`, else IndexedDB |
 | Fallback | – | the JS build, for browsers without WasmGC (Safari before 18.2, Firefox before 120) |
 
-Both builds start in well under a second from localhost. Frame-time comparison
-needs a visible, focused browser window (hidden tabs are throttled), so it
-wasn't measured here: use Diagnostics › Reset frame stats on each build (see
-`testing.md`). Debug builds report much slower frames than release ones.
+Measured with `web_e2e/tests/perf.spec.ts` (Playwright, installed Chrome 156,
+visible window, 1280×860, a 165 Hz display, served from localhost; median of 3
+runs each, 25 October 2026):
+
+| | JavaScript (CanvasKit) | WebAssembly (Skwasm) |
+|---|---|---|
+| Cold load to the first frame | 1176 ms | 814 ms |
+| Scrolling the inspections table (wheel) | 163 fps, p95 6 ms, 0% of frames over 25 ms | 164 fps, p95 6 ms, 0% over 25 ms |
+| App engine timings (Diagnostics) | build 1.7–1.9 ms, raster 0.9–1.1 ms, 1.5–2.2% of frames over 16 ms | build 0.9–1.9 ms, raster 1.8–5.5 ms (first run), 1.9–7.7% over 16 ms (first run) |
+
+Both are smooth on this PC. WebAssembly reaches the first frame about 30%
+sooner and runs Dart (build) faster; its raster time is a little higher and the
+first run after a cold start shows more slow frames while it warms up. The
+renderer files come from the Flutter CDN, so load times include that download.
+Slower devices will show bigger differences; run the same spec there.

@@ -7,7 +7,9 @@ import 'package:field_inspections/features/home/home_screen.dart';
 import 'package:field_inspections/features/wizard/submitted_screen.dart';
 import 'package:field_inspections/features/wizard/wizard_controller.dart';
 import 'package:field_inspections/features/wizard/wizard_screen.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart';
 
@@ -92,6 +94,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Leave'), findsNothing);
     expect(app.location, '/inspections/INS-1042/edit?step=2');
+  });
+
+  testWidgets('site suggestions: inline list; arrows move, Enter picks, Escape closes', (tester) async {
+    await pumpApp(tester, initialLocation: '/inspections/new?step=1', store: signedInStore());
+    await tester.enterText(find.widgetWithText(TextFormField, 'Site'), 'River');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    final options = find.byWidgetPredicate(
+      (w) => w is ListTile && w.onTap != null && w.subtitle != null,
+    ); // existing sites show their address
+    expect(options, findsWidgets, reason: 'existing sites are listed under the field');
+    expect(tester.widget<ListTile>(options.first).selected, isTrue, reason: 'the first one is highlighted');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.text('Add “River” as a new site'), findsNothing);
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Site'), 'Rive');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('Add “Rive” as a new site'), findsNothing, reason: 'the list closed after picking');
+    expect(
+      find.byWidgetPredicate((w) => w is Icon && w.icon == Symbols.check_circle),
+      findsOneWidget,
+      reason: 'an existing site was picked',
+    );
+    await tester.pump(const Duration(milliseconds: 500)); // let the draft autosave run
   });
 
   testWidgets('step 2: duration must be 15–480; pickers fill date and time', (tester) async {

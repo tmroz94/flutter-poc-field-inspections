@@ -127,6 +127,66 @@ Notes:
 - Fingerprint enrollment itself isn't automated; the system prompt is the same,
   but the fingerprint path needs a phone or a manual emulator enrollment.
 
+### In Chrome
+
+The same `integration_test` files run in Chrome through `flutter drive` and
+chromedriver (Chrome for Testing, matching the installed Chrome's major
+version; here `D:/tools/chromedriver/chromedriver-win64`):
+
+```bash
+D:/tools/chromedriver/chromedriver-win64/chromedriver.exe --port=4444
+```
+
+```bash
+cd app && fvm flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d web-server --browser-name=chrome
+```
+
+Use `-d web-server --browser-name=chrome` (chromedriver opens the browser);
+`-d chrome` hung waiting for its debug connection. The flows adapt to the
+layout: the browser window is desktop-sized, so they use the Refresh button,
+row menus and "Load more" where phones use pull to refresh, swipe and
+infinite scroll. `host_test.dart` is Android-only and skips itself.
+
+## Native UI tests with Patrol (Android)
+
+`app/patrol_test/native_test.dart` uses [Patrol](https://patrol.leancode.co) to
+tap system UI that Flutter's own tests can't reach:
+
+| Test | What it drives |
+|---|---|
+| Location Deny / Allow | the system permission dialog; Deny shows the app's explanation |
+| Camera | the system camera app (shutter, done); the photo lands in the wizard's grid |
+| Gallery | the system photo picker; the picked photo lands in the grid |
+| Export PDF | the system share sheet opens with the PDF; Back returns to the app |
+| Biometric unlock | the system prompt when turning the lock on, then again after 5 minutes in the background (the lock's clock is moved forward) |
+
+The host helper also checks **a notification tap after the app was killed**,
+with the real app and no test harness: it opens the deep-link tester, signs in,
+sends a test notification (15 s), goes Home, kills the process with `am kill`
+(as Android does under memory pressure; `force-stop` would cancel the alarm),
+taps the notification in the shade and waits for the route's screen.
+
+One-time setup: `fvm dart pub global activate patrol_cli`, and a JDK (the helper
+uses `JAVA_HOME`, else Android Studio's bundled one). Then:
+
+```bash
+fvm dart tool/android_device_tests.dart --patrol
+```
+
+`--only native` or `--only kill` runs one part. For the run, the helper puts a
+test photo in Pictures and sets the screen-lock PIN `1111` (the emulator has no
+fingerprint enrolled, so the system prompt falls back to the PIN); it removes
+both afterwards.
+
+Notes:
+- The Allow-location test runs last: clearing app data before the next test
+  resets the granted permission, and Android then kills the app's processes,
+  which crashed the following test.
+- Patrol installs an APK whose entry point is its test bundle, so the
+  notification check installs a normal debug build instead.
+- Fingerprint enrollment itself isn't automated; the system prompt is the same,
+  but the fingerprint path needs a phone or a manual emulator enrollment.
+
 Chrome needs chromedriver running on port 4444, then:
 
 ```bash
@@ -135,33 +195,35 @@ cd app && fvm flutter drive --driver=test_driver/integration_test.dart --target=
 
 This hasn't been run here yet: chromedriver isn't installed on this machine.
 
-## Web: JavaScript vs WebAssembly
+## Web: browser prompts and JS vs WebAssembly (Playwright)
 
-Build both and serve them side by side (`.claude/launch.json` has the same
-entries as `web-js` and `web-wasm`):
+`web_e2e/` holds Playwright tests that drive the release web builds in the
+installed Chrome (no browser download; `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` when
+installing). They find widgets through Flutter's accessibility tree, which the
+helper switches on (`web_e2e/tests/flutter.ts`).
+
+| Spec | What it checks |
+|---|---|
+| `prompts.spec.ts` | a test notification is shown by the plugin's service worker and a click opens its route; with the tab closed, the URL the worker opens leads to the route; location granted (distance, then 7 km away with the warning) and denied; "Use camera" opens the browser file input and the photo lands in the grid |
+| `perf.spec.ts` | the JS and WebAssembly builds side by side: cold load to the first frame, frame pacing while scrolling the table, and the app's own engine timings from Diagnostics; 3 runs each, results in `web_e2e/test-results/perf.json` |
+
+Build both variants, then run:
 
 ```bash
 cd app && fvm flutter build web --release -o build/web-js && fvm flutter build web --release --wasm -o build/web-wasm
 ```
 
 ```bash
-python tool/serve_web.py 5174 build/web-js
+cd web_e2e && npm install && npx playwright test
 ```
 
-```bash
-python tool/serve_web.py 5176 build/web-wasm --isolate
-```
+Playwright starts `tool/serve_web.py` for both builds (JS on 5174, WebAssembly
+on 5176 with `--isolate`). The `perf` project opens a visible Chrome window,
+because hidden or occluded windows are throttled; the `prompts` project runs
+headless. Results so far: "Web builds" in `platform-setup.md`.
 
-`--isolate` sends COOP/COEP headers. The page is then cross-origin isolated, so
-Skwasm can render on a worker thread and drift stores SQLite in OPFS.
-
-To compare smoothness, open **Settings › Diagnostics** in each build, tap
-**Reset frame stats**, use the screen you want to measure (for example scroll
-the inspections table), then come back. Diagnostics shows the frame count,
-average build and raster time, and the share of frames over 16 ms. Measure in
-a visible, focused window: hidden tabs are throttled.
-
-Measured so far: see "Web builds" in `platform-setup.md`.
+To compare by hand instead, open **Settings › Diagnostics** in each build, tap
+**Reset frame stats**, use the screen you want to measure, then come back.
 
 ## Manual checks
 
