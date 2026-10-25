@@ -5,6 +5,9 @@ import { defineConfig } from '@playwright/test';
 //   fvm flutter build web --release -o build/web-js
 //   fvm flutter build web --release --wasm -o build/web-wasm
 // Then, from web_e2e/:  npx playwright test
+// `python` on Windows, `python3` on Linux/macOS (CI runners).
+const py = process.platform === 'win32' ? 'python' : 'python3';
+
 export default defineConfig({
   testDir: './tests',
   timeout: 120_000,
@@ -34,7 +37,7 @@ export default defineConfig({
     },
   ],
   webServer: [
-    { command: 'python ../tool/serve_web.py 5174 build/web-js', port: 5174, reuseExistingServer: true },
-    { command: 'python ../tool/serve_web.py 5176 build/web-wasm --isolate', port: 5176, reuseExistingServer: true },
+    { command: `${py} ../tool/serve_web.py 5174 build/web-js`, port: 5174, reuseExistingServer: true },
+    { command: `${py} ../tool/serve_web.py 5176 build/web-wasm --isolate`, port: 5176, reuseExistingServer: true },
   ],
 });

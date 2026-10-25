@@ -225,6 +225,19 @@ headless. Results so far: "Web builds" in `platform-setup.md`.
 To compare by hand instead, open **Settings › Diagnostics** in each build, tap
 **Reset frame stats**, use the screen you want to measure, then come back.
 
+## CI (GitHub Actions)
+
+| Workflow | When | What |
+|---|---|---|
+| `ci.yml` | every push and pull request | quality gate (`tool/check.sh --coverage`; goldens skip on Linux), both web builds as artifacts, the integration flows in headless Chrome (`flutter drive`), the Playwright prompt tests |
+| `android.yml` | pushes and pull requests to `main`, or by hand | emulator with the local image (API 37, Google Play): `tool/android_device_tests.dart` (including airplane mode and GPS), then `--patrol` (native UI, notification after kill) |
+| `ios.yml` | by hand only | iPhone simulator on a macOS runner: builds for iOS and runs the integration flows |
+
+Every job installs the Flutter version from `.fvmrc`; `tool/check.sh` and the
+host helper use FVM when it's installed and the plain `flutter`/`dart` on PATH
+otherwise. The repository is private, so the jobs use Actions minutes from the
+account's allowance (macOS minutes count 10×).
+
 ## Manual checks
 
 `docs/platform-setup.md` lists what has been verified by hand on each platform.

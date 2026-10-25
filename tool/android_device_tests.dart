@@ -20,10 +20,33 @@ import 'dart:typed_data';
 
 const _package = 'dev.flutterpoc.field_inspections';
 
-String get _fvm {
-  final local = Platform.isWindows ? r'D:\tools\fvm\fvm.exe' : '';
-  final onPath = Process.runSync(Platform.isWindows ? 'where' : 'which', ['fvm'], runInShell: true).exitCode == 0;
-  return onPath || local.isEmpty || !File(local).existsSync() ? 'fvm' : local;
+/// FVM when installed (it pins the SDK from .fvmrc), else null: CI runners
+/// install that same Flutter version and put flutter/dart on PATH.
+final String? _fvm = () {
+  if (Process.runSync(Platform.isWindows ? 'where' : 'which', ['fvm'], runInShell: true).exitCode == 0) return 'fvm';
+  const local = r'D:\tools\fvm\fvm.exe';
+  return Platform.isWindows && File(local).existsSync() ? local : null;
+}();
+
+/// Runs `flutter …` / `dart …` through FVM when there is one.
+Future<Process> _sdkStart(List<String> cmd, {String? workingDirectory, Map<String, String>? environment}) {
+  final fvm = _fvm;
+  return fvm != null
+      ? Process.start(fvm, cmd, workingDirectory: workingDirectory, environment: environment)
+      : Process.start(
+          cmd.first,
+          cmd.sublist(1),
+          workingDirectory: workingDirectory,
+          environment: environment,
+          runInShell: Platform.isWindows,
+        );
+}
+
+Future<ProcessResult> _sdkRun(List<String> cmd, {String? workingDirectory}) {
+  final fvm = _fvm;
+  return fvm != null
+      ? Process.run(fvm, cmd, workingDirectory: workingDirectory)
+      : Process.run(cmd.first, cmd.sublist(1), workingDirectory: workingDirectory, runInShell: Platform.isWindows);
 }
 
 String get _adb {
@@ -196,13 +219,12 @@ Map<String, String> _patrolEnv() {
   // Patrol calls adb by name.
   final adb = File(_adb);
   if (adb.existsSync()) env['PATH'] = '${adb.parent.path}${Platform.isWindows ? ';' : ':'}${env['PATH']}';
-  env['PATROL_FLUTTER_COMMAND'] = '$_fvm flutter';
+  env['PATROL_FLUTTER_COMMAND'] = _fvm == null ? 'flutter' : '$_fvm flutter';
   return env;
 }
 
 Future<int> _runPatrol(String device, String target, {bool uninstall = true}) async {
-  final p = await Process.start(
-    _fvm,
+  final p = await _sdkStart(
     [
       'dart',
       'pub',
@@ -243,7 +265,7 @@ Future<String> _uiDump(String device) async {
 /// The real app (not Patrol's test-bundle build, whose entry point waits for
 /// the test runner).
 Future<String?> _buildAppApk() async {
-  final r = await Process.run(_fvm, ['flutter', 'build', 'apk', '--debug'], workingDirectory: 'app');
+  final r = await _sdkRun(['flutter', 'build', 'apk', '--debug'], workingDirectory: 'app');
   final built = File('app/build/app/outputs/flutter-apk/app-debug.apk');
   if (r.exitCode != 0 || !built.existsSync()) {
     stdout.writeln('[host] FAIL: building the app APK\n${r.stdout}${r.stderr}');
@@ -373,20 +395,13 @@ Future<void> main(List<String> args) async {
   Process? server;
   if (!await _apiUp()) {
     stdout.writeln('[host] starting the mock API on :8080');
-    server = await Process.start(_fvm, ['dart', 'run', 'mock_server/bin/server.dart', '--port', '8080']);
+    server = await _sdkStart(['dart', 'run', 'mock_server/bin/server.dart', '--port', '8080']);
     for (var i = 0; i < 60 && !await _apiUp(); i++) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }
   }
 
-  final test = await Process.start(_fvm, [
-    'flutter',
-    'test',
-    target,
-    '-d',
-    device,
-    '--dart-define=HOST_HELPER=true',
-  ], workingDirectory: 'app');
+  final test = await _sdkStart(['flutter', 'test', target, '-d', device, '--dart-define=HOST_HELPER=true'], workingDirectory: 'app');
   var failed = false;
   // Host commands run one at a time, in the order the tests print them.
   var queue = Future<void>.value();

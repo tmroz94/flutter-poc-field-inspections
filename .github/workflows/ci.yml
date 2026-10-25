@@ -1,0 +1,105 @@
+# Every push and pull request: the quality gate, both web builds, and the web
+# tests in Chrome (integration flows via flutter drive, browser prompts via
+# Playwright). Linux runners only.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Format, analyze, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Flutter version from .fvmrc
+        id: fvm
+        run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.fvm.outputs.version }}
+          channel: stable
+          cache: true
+      - name: Get packages
+        run: |
+          (cd app && flutter pub get)
+          (cd packages/mock_data && dart pub get)
+          (cd mock_server && dart pub get)
+      # Golden tests skip themselves off Windows (reference images are made there).
+      - name: Quality gate
+        run: bash tool/check.sh --coverage
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage
+          path: app/coverage/lcov.info
+          if-no-files-found: ignore
+
+  web:
+    name: Web builds and Chrome tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - name: Flutter version from .fvmrc
+        id: fvm
+        run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.fvm.outputs.version }}
+          channel: stable
+          cache: true
+      - name: Build web (JavaScript and WebAssembly)
+        working-directory: app
+        run: |
+          flutter build web --release -o build/web-js
+          flutter build web --release --wasm -o build/web-wasm
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web-builds
+          path: |
+            app/build/web-js
+            app/build/web-wasm
+          retention-days: 7
+
+      # integration_test flows in headless Chrome. The runner image ships Chrome
+      # and a matching chromedriver ($CHROMEWEBDRIVER).
+      - name: Start chromedriver
+        run: |
+          "$CHROMEWEBDRIVER/chromedriver" --port=4444 &
+          sleep 2
+      - name: Integration flows in Chrome
+        working-directory: app
+        run: |
+          for t in app_test ui_flows_test; do
+            flutter drive --driver=test_driver/integration_test.dart --target=integration_test/$t.dart \
+              -d web-server --browser-name=chrome --headless --browser-dimension=1280x860
+          done
+
+      # Browser prompts (notifications, location, camera) with Playwright and the
+      # runner's Chrome; frame timings need a real display, so they stay local.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web_e2e/package-lock.json
+      - name: Playwright prompt tests
+        working-directory: web_e2e
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: |
+          npm ci
+          npx playwright test --project=prompts
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-results
+          path: web_e2e/test-results
+          retention-days: 7
