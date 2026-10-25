@@ -75,6 +75,8 @@ router, accessibility and golden tests). On macOS/Linux: `tool/check.sh`.
 Device tests (Android, including airplane mode and GPS steps driven from the host): `fvm dart tool/android_device_tests.dart`. Native UI (permission dialogs, camera, photo picker, share sheet, biometric prompt, notification tap after a kill) with Patrol: `fvm dart tool/android_device_tests.dart --patrol`. Web: the same flows in Chrome via `flutter drive`, and browser prompts plus JS vs WebAssembly timings with Playwright in `web_e2e/` (see `docs/testing.md`).
 Details in `docs/testing.md`.
 
+CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run on every push (`.github/workflows/ci.yml`); the Android emulator and iOS simulator jobs run when started by hand from the Actions tab.
+
 ## PoC tools (Settings › PoC tools)
 
 - **Results tracker**: pass / partial / fail per scenario and platform, with

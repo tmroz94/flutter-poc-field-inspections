@@ -56,7 +56,10 @@ Future<void> _withShadows(Future<void> Function() body) async {
 }
 
 void main() {
-  setUpAll(_loadFonts);
+  // Only where the goldens run: other hosts skip them and may lack the SDK font files.
+  setUpAll(() async {
+    if (!_skip) await _loadFonts();
+  });
 
   const phoneScreens = {
     'sign_in': '/sign-in',
