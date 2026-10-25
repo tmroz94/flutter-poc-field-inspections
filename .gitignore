@@ -21,3 +21,7 @@ Thumbs.db
 
 # Local Claude Code preview config (machine-specific paths)
 .claude/
+
+# Patrol: generated test bundle and local dart-defines
+**/test_bundle.dart
+.patrol.env

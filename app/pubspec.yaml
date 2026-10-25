@@ -86,6 +86,7 @@ dev_dependencies:
   mocktail: ^1.0.5
   drift_dev: ^2.35.2
   build_runner: ^2.17.1
+  patrol: ^4.10.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -130,3 +131,13 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Patrol device tests with native UI automation (permission prompts, camera,
+# notifications, biometrics, share sheet). Run with `patrol test`; see docs/testing.md.
+patrol:
+  app_name: Field Inspections
+  test_directory: patrol_test
+  android:
+    package_name: dev.flutterpoc.field_inspections
+  ios:
+    bundle_id: dev.flutterpoc.fieldInspections

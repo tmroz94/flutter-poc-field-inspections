@@ -71,7 +71,7 @@ pwsh tool/check.ps1
 
 Runs format check, analyze and tests for all three packages (unit, widget,
 router, accessibility and golden tests). On macOS/Linux: `tool/check.sh`.
-Device tests (Android, including airplane mode and GPS steps driven from the host): `fvm dart tool/android_device_tests.dart`.
+Device tests (Android, including airplane mode and GPS steps driven from the host): `fvm dart tool/android_device_tests.dart`. Native UI (permission dialogs, camera, photo picker, share sheet, biometric prompt, notification tap after a kill) with Patrol: `fvm dart tool/android_device_tests.dart --patrol`.
 Details in `docs/testing.md`.
 
 ## PoC tools (Settings › PoC tools)

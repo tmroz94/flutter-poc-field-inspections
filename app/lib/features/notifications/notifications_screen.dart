@@ -241,9 +241,11 @@ class _PermissionCard extends ConsumerWidget {
 
 /// Sends a notification that opens [route] after [delay] (deep-link tester).
 /// Mobile schedules it so it also works with the app in the background or
-/// closed; the web shows it from a timer while the tab is open.
-Future<String> sendTestNotification(WidgetRef ref, String route, {Duration delay = const Duration(seconds: 5)}) async {
+/// closed, with time to close the app first (15 s); the web shows it from a
+/// timer while the tab is open (5 s).
+Future<String> sendTestNotification(WidgetRef ref, String route, {Duration? delay}) async {
   final n = ref.read(notificationServiceProvider);
+  delay ??= Duration(seconds: n.isWeb ? 5 : 15);
   if (await n.permission() != PermissionState.granted && !await n.requestPermission()) {
     return 'Notifications are not allowed on this device.';
   }

@@ -31,6 +31,14 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        // Patrol device tests (patrol_test/): native UI automation, one app
+        // process per test with cleared data.
+        testInstrumentationRunner = "pl.leancode.patrol.PatrolJUnitRunner"
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
+    }
+
+    testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
     }
 
     buildTypes {
@@ -56,4 +64,5 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     // AppCompat launch theme so the biometric prompt works on Android 8 and below.
     implementation("androidx.appcompat:appcompat:1.7.1")
+    androidTestUtil("androidx.test:orchestrator:1.5.1")
 }

@@ -19,17 +19,37 @@ class NotificationService {
 
   final bool isWeb;
   final _plugin = FlutterLocalNotificationsPlugin();
-  final _taps = StreamController<String>.broadcast();
+  late final _taps = StreamController<String>.broadcast(onListen: _flushPending);
   bool _ready = false;
+
+  /// A tap that arrived before anything listened. On Android a tap that
+  /// relaunches a killed app comes in as a new intent during start-up, before
+  /// the app subscribes; a broadcast stream would drop it.
+  String? _pendingTap;
 
   /// Routes from notification taps while the app runs (foreground or background).
   Stream<String> get taps => _taps.stream;
+
+  void _emit(String route) {
+    debugPrint('Notification tap → $route');
+    if (_taps.hasListener) {
+      _taps.add(route);
+    } else {
+      _pendingTap = route;
+    }
+  }
+
+  void _flushPending() {
+    final route = _pendingTap;
+    _pendingTap = null;
+    if (route != null) scheduleMicrotask(() => _taps.add(route));
+  }
 
   /// Simulates a tap on a notification carrying [payload].
   @visibleForTesting
   void debugTap(String payload) {
     final route = DeepLinks.toLocation(payload);
-    if (route != null) _taps.add(route);
+    if (route != null) _emit(route);
   }
 
   static const _details = NotificationDetails(
@@ -57,7 +77,7 @@ class NotificationService {
         ),
         onDidReceiveNotificationResponse: (r) {
           final route = DeepLinks.toLocation(r.payload ?? '');
-          if (route != null) _taps.add(route);
+          if (route != null) _emit(route);
         },
       );
       _ready = true;

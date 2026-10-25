@@ -169,7 +169,7 @@ void main() {
       await tester.tap(find.byTooltip('Notification for Map'));
       await tester.pumpAndSettle();
       expect(app.fakes.notifications.scheduled.single.$2, '/map?site=s-riverside-office');
-      expect(find.textContaining('Notification in 5 s'), findsOneWidget);
+      expect(find.textContaining('Notification in 15 s'), findsOneWidget, reason: 'time to close the app first');
     });
 
     testWidgets('web shows it from a timer instead', (tester) async {

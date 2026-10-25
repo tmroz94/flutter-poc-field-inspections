@@ -88,9 +88,11 @@ Things to verify on iOS (record them in the Results tracker):
 | Map tiles, pins, `?site=` deep link | ✓ | ✓ | – |
 | PDF export | builds; share sheet not opened in tests | ✓ downloaded | – |
 | Test notification → tap opens its route (app in background) | ✓ | – (pane blocks prompts) | – |
-| Notification tap after the app was killed | not confirmed (process wasn't killed) | n/a | – |
-| Biometric unlock | needs an enrolled fingerprint on the emulator | n/a | – |
-| Camera / gallery / files | tests with fakes | tests with fakes | – |
+| Notification tap after the app was killed | ✓ cold start on the route (host helper; a dropped-tap bug fixed) | n/a | – |
+| Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | – |
+| Camera / gallery / files | ✓ camera app and photo picker (Patrol); file picker with fakes | tests with fakes | – |
+| Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | – | – |
+| Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | – |
 | Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | – |
 | Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | needs chromedriver | – |
 | Offline submit → sync when back online (airplane mode) | ✓ | – | – |

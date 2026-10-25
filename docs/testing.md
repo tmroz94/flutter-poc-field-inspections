@@ -76,7 +76,7 @@ off and removes the test GPS provider at the end.
 
 Limits:
 - The photo step uses a fake camera, because the system camera app is native UI
-  that `integration_test` can't drive.
+  that `integration_test` can't drive (the Patrol tests below cover it).
 - GPS positions come from Android's test location provider. Google Play
   services' fused provider (what the app uses on phones) ignores those, so the
   GPS test reads Android's LocationManager instead; a real-GPS check on a phone
@@ -86,6 +86,46 @@ Limits:
 On the Mac, the same files run on an iOS simulator
 (`cd app && fvm flutter test integration_test -d <simulator-id>`); the host
 helper is Android-only for now.
+
+## Native UI tests with Patrol (Android)
+
+`app/patrol_test/native_test.dart` uses [Patrol](https://patrol.leancode.co) to
+tap system UI that Flutter's own tests can't reach:
+
+| Test | What it drives |
+|---|---|
+| Location Deny / Allow | the system permission dialog; Deny shows the app's explanation |
+| Camera | the system camera app (shutter, done); the photo lands in the wizard's grid |
+| Gallery | the system photo picker; the picked photo lands in the grid |
+| Export PDF | the system share sheet opens with the PDF; Back returns to the app |
+| Biometric unlock | the system prompt when turning the lock on, then again after 5 minutes in the background (the lock's clock is moved forward) |
+
+The host helper also checks **a notification tap after the app was killed**,
+with the real app and no test harness: it opens the deep-link tester, signs in,
+sends a test notification (15 s), goes Home, kills the process with `am kill`
+(as Android does under memory pressure; `force-stop` would cancel the alarm),
+taps the notification in the shade and waits for the route's screen.
+
+One-time setup: `fvm dart pub global activate patrol_cli`, and a JDK (the helper
+uses `JAVA_HOME`, else Android Studio's bundled one). Then:
+
+```bash
+fvm dart tool/android_device_tests.dart --patrol
+```
+
+`--only native` or `--only kill` runs one part. For the run, the helper puts a
+test photo in Pictures and sets the screen-lock PIN `1111` (the emulator has no
+fingerprint enrolled, so the system prompt falls back to the PIN); it removes
+both afterwards.
+
+Notes:
+- The Allow-location test runs last: clearing app data before the next test
+  resets the granted permission, and Android then kills the app's processes,
+  which crashed the following test.
+- Patrol installs an APK whose entry point is its test bundle, so the
+  notification check installs a normal debug build instead.
+- Fingerprint enrollment itself isn't automated; the system prompt is the same,
+  but the fingerprint path needs a phone or a manual emulator enrollment.
 
 Chrome needs chromedriver running on port 4444, then:
 
