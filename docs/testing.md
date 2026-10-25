@@ -230,7 +230,7 @@ To compare by hand instead, open **Settings › Diagnostics** in each build, tap
 | Workflow | When | What |
 |---|---|---|
 | `ci.yml` | every push and pull request | quality gate (`tool/check.sh --coverage`; goldens skip on Linux), both web builds as artifacts, the integration flows in headless Chrome (`flutter drive`), the Playwright prompt tests |
-| `android.yml` | pushes and pull requests to `main`, or by hand | emulator with the local image (API 37, Google Play): `tool/android_device_tests.dart` (including airplane mode and GPS), then `--patrol` (native UI, notification after kill) |
+| `android.yml` | by hand only | emulator with the local image (API 37, Google Play): `tool/android_device_tests.dart` (including airplane mode and GPS), then `--patrol` (native UI, notification after kill) |
 | `ios.yml` | by hand only | iPhone simulator on a macOS runner: builds for iOS and runs the integration flows |
 
 Every job installs the Flutter version from `.fvmrc`; `tool/check.sh` and the

@@ -1,14 +1,11 @@
 # Android device tests on an emulator (same image as the local one: API 37,
 # Google Play, x86_64): the integration_test flows including the host-driven
 # airplane-mode and GPS steps, then the Patrol native UI tests and the
-# notification-after-kill check. Slow (≈30–45 min), so not on every push.
+# notification-after-kill check. Slow (≈45–60 min), so it runs only when
+# started by hand (Actions › Android device tests › Run workflow).
 name: Android device tests
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
