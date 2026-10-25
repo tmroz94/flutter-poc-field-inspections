@@ -148,7 +148,8 @@ void main() {
 
     setUp(() {
       store = MemoryLocalStore();
-      db = MockDatabase();
+      // Same frozen day as the drafts: the backend rejects dates before its own today.
+      db = MockDatabase(clock: () => _today);
       repo = _SwitchableRepository(db);
     });
 
