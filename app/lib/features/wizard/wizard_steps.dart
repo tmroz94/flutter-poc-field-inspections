@@ -27,8 +27,6 @@ import 'wizard_controller.dart';
 import 'wizard_screen.dart';
 import 'wizard_validation.dart';
 
-final inspectionTypesProvider = FutureProvider<List<String>>((ref) => ref.watch(inspectionsRepositoryProvider).inspectionTypes());
-
 /// Body of one wizard step. [errors] is empty until Next was tried on it.
 class WizardStepView extends ConsumerWidget {
   const WizardStepView({

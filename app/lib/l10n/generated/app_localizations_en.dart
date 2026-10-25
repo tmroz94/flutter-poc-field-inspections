@@ -600,4 +600,218 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showResultsPlain => 'Show results';
+
+  @override
+  String outboxQueued(String time) {
+    return 'Queued $time · sends when online';
+  }
+
+  @override
+  String outboxRejected(String reason) {
+    return 'Rejected by the server: $reason';
+  }
+
+  @override
+  String get outboxOptions => 'Report options';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get outboxEditBusy => 'Finish or discard the open draft for this inspection first.';
+
+  @override
+  String get outboxDeleteTitle => 'Delete this report?';
+
+  @override
+  String get outboxDeleteBody => 'It never reached the server, so it can\'t be recovered.';
+
+  @override
+  String get signOutTitle => 'Sign out?';
+
+  @override
+  String get signOutLocalData => 'These are saved only on this device and will be deleted:';
+
+  @override
+  String signOutUnsent(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count reports not sent yet', one: '1 report not sent yet');
+    return '$_temp0';
+  }
+
+  @override
+  String signOutDrafts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count drafts', one: '1 draft');
+    return '$_temp0';
+  }
+
+  @override
+  String get signOutConfirm => 'Sign out and delete';
+
+  @override
+  String get remindersBlocked => 'Notifications are blocked for this app. Allow them in the system settings.';
+
+  @override
+  String get remindersMobileOnly => 'Browsers can’t schedule notifications, so reminders are mobile-only.';
+
+  @override
+  String get remindersScheduleFailed =>
+      'Reminders are on, but they couldn\'t be scheduled yet. They\'ll be set up when the inspections load.';
+
+  @override
+  String get biometricNotSetUp => 'Set up a fingerprint, face or screen lock on this device first.';
+
+  @override
+  String reminderTitle(String site, String time) {
+    return '$site at $time';
+  }
+
+  @override
+  String get reminderBody => 'Starts in 30 minutes';
+
+  @override
+  String get reminderChannel => 'Inspection reminders';
+
+  @override
+  String get reminderChannelDescription => 'Alerts before inspections start';
+
+  @override
+  String get biometricReason => 'Unlock Field Inspections';
+
+  @override
+  String get loading => 'Loading';
+
+  @override
+  String get passwordHelperSignIn => 'Use 8 or more characters';
+
+  @override
+  String get capsLockOn => 'Caps Lock is on';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
+
+  @override
+  String get backendMockServer => 'Connected to the mock server';
+
+  @override
+  String get backendOfflineDemo => 'Offline demo data (mock server not reachable)';
+
+  @override
+  String get authErrorCredentials => 'Email or password is incorrect.';
+
+  @override
+  String get authErrorNetwork => 'Can\'t reach the server. Check your connection and try again.';
+
+  @override
+  String get authErrorValidation => 'Check the highlighted fields.';
+
+  @override
+  String get authErrorUnknown => 'Something went wrong. Try again.';
+
+  @override
+  String get createAccountTitle => 'Create account';
+
+  @override
+  String get fullName => 'Full name';
+
+  @override
+  String get strengthTooWeak => 'Too weak';
+
+  @override
+  String get strengthWeak => 'Weak';
+
+  @override
+  String get strengthFair => 'Fair';
+
+  @override
+  String get strengthGood => 'Good';
+
+  @override
+  String get strengthStrong => 'Strong';
+
+  @override
+  String passwordStrength(String strength) {
+    return 'Password strength: $strength';
+  }
+
+  @override
+  String get passwordHelperSignUp => '8+ characters with a letter and a digit';
+
+  @override
+  String get confirmPassword => 'Confirm password';
+
+  @override
+  String get acceptTerms => 'I accept the terms of use';
+
+  @override
+  String get haveAccount => 'I already have an account';
+
+  @override
+  String get resetPasswordTitle => 'Reset password';
+
+  @override
+  String get resetIntro => 'Enter your account\'s email and we\'ll send a reset link.';
+
+  @override
+  String resetSent(String email) {
+    return 'If an account exists for $email, we sent a link to reset the password. Check your inbox.';
+  }
+
+  @override
+  String get sendResetLink => 'Send reset link';
+
+  @override
+  String get backToSignIn => 'Back to sign in';
+
+  @override
+  String unlockWelcome(String name) {
+    return 'Welcome back, $name';
+  }
+
+  @override
+  String get unlockTimedOut => 'The app locked after 5 minutes in the background.';
+
+  @override
+  String get unlockOnStart => 'Biometric unlock is on for this app.';
+
+  @override
+  String get unlockButton => 'Unlock with biometrics';
+
+  @override
+  String get unlockPrompt => 'Use your fingerprint or face to unlock';
+
+  @override
+  String get unlockFailed => 'Not recognised. Try again or use your password.';
+
+  @override
+  String get usePasswordInstead => 'Use password instead';
+
+  @override
+  String get authTagline => 'Plan, run and report site inspections.';
+
+  @override
+  String get authTaglineSub => 'Same account and data on iOS, Android and the web.';
+
+  @override
+  String pocBuild(String version) {
+    return 'v$version · PoC build';
+  }
+
+  @override
+  String fieldsNeedAttention(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count fields need attention', one: '1 field needs attention');
+    return '$_temp0';
+  }
+
+  @override
+  String fieldNeedsAttention(String error) {
+    return '1 field needs attention: $error';
+  }
+
+  @override
+  String inProgressLabel(String label) {
+    return '$label, in progress';
+  }
 }

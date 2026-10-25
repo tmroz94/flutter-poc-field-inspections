@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/time/calendar.dart';
 import '../data/models/inspection.dart';
 import 'generated/app_localizations.dart';
 
@@ -25,8 +26,7 @@ extension InspectionStatusL10n on InspectionStatus {
 String localizedWhen(BuildContext context, DateTime at, DateTime now) {
   final l = context.l10n;
   final locale = Localizations.localeOf(context).toLanguageTag();
-  final today = DateTime(now.year, now.month, now.day);
-  final diff = DateTime(at.year, at.month, at.day).difference(today).inDays;
+  final diff = calendarDaysBetween(now, at);
   final time = DateFormat.Hm(locale).format(at);
   return switch (diff) {
     0 => l.todayAt(time),

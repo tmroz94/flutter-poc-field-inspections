@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/layout/window_size.dart';
 import '../../core/router/routes.dart';
+import '../../core/time/calendar.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/local/local_store.dart';
@@ -18,6 +19,7 @@ import '../../l10n/l10n.dart';
 import '../auth/auth_controller.dart';
 import '../inspections/inspections_controller.dart';
 import '../notifications/notification_bell.dart';
+import '../wizard/wizard_controller.dart';
 
 /// P02 (phone) / D02 (desktop): greeting, offline banner, today's cards and
 /// what's due this week.
@@ -80,10 +82,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
             ],
-            if (drafts.isNotEmpty || outbox.isNotEmpty) ...[
-              _LocalWork(drafts: drafts, outbox: outbox, onRetry: () => ref.read(syncServiceProvider.notifier).run()),
-              const SizedBox(height: 16),
-            ],
+            if (drafts.isNotEmpty || outbox.isNotEmpty) ...[_LocalWork(drafts: drafts, outbox: outbox), const SizedBox(height: 16)],
             _SectionHeader(
               title: context.l10n.homeToday,
               action: TextButton(onPressed: () => context.go(Routes.inspections), child: Text(context.l10n.seeAll)),
@@ -94,7 +93,17 @@ class HomeScreen extends ConsumerWidget {
                 child: Text(context.l10n.homeNothingToday),
               ),
               AsyncData(:final value) => _TodayCards(items: value.today, now: now),
-              AsyncError() => const SizedBox.shrink(),
+              // Network errors show the offline banner above; anything else gets its own message.
+              AsyncError() when offline => const SizedBox.shrink(),
+              AsyncError() => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(context.l10n.loadErrorServer)),
+                    TextButton(onPressed: refresh, child: Text(context.l10n.tryAgain)),
+                  ],
+                ),
+              ),
               _ => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
             },
             const SizedBox(height: 24),
@@ -192,7 +201,7 @@ class _TodayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final time = DateFormat.Hm().format(item.scheduledAt);
+    final time = DateFormat.Hm(Localizations.localeOf(context).toLanguageTag()).format(item.scheduledAt);
     return Card(
       elevation: 1,
       clipBehavior: Clip.antiAlias,
@@ -243,17 +252,14 @@ class _DueTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final overdue = item.status == InspectionStatus.overdue;
-    final days = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).difference(DateTime(item.scheduledAt.year, item.scheduledAt.month, item.scheduledAt.day)).inDays;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final days = calendarDaysBetween(item.scheduledAt, now);
     final subtitle = switch (item.status) {
       InspectionStatus.overdue => context.l10n.overdueByDays(days),
       InspectionStatus.draft => context.l10n.draftNotSynced,
-      _ => '${item.status.localized(context.l10n)} · ${DateFormat.Hm().format(item.scheduledAt)}',
+      _ => '${item.status.localized(context.l10n)} · ${DateFormat.Hm(locale).format(item.scheduledAt)}',
     };
-    final weekday = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][item.scheduledAt.weekday - 1];
+    final weekday = DateFormat.E(locale).format(item.scheduledAt);
     return ListTile(
       onTap: () => context.go(Routes.inspection(item.id)),
       leading: CircleAvatar(
@@ -272,30 +278,29 @@ class _DueTile extends StatelessWidget {
   }
 }
 
-/// Drafts saved on this device and reports waiting in the outbox.
-class _LocalWork extends StatelessWidget {
-  const _LocalWork({required this.drafts, required this.outbox, required this.onRetry});
+/// Drafts saved on this device and reports waiting in the outbox. A report
+/// the server rejected can be sent again, reopened in the wizard or deleted.
+class _LocalWork extends ConsumerWidget {
+  const _LocalWork({required this.drafts, required this.outbox});
 
   final Map<String, InspectionDraft> drafts;
   final List<OutboxEntry> outbox;
-  final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final time = DateFormat.Hm();
+    final l = context.l10n;
+    final time = DateFormat.Hm(Localizations.localeOf(context).toLanguageTag());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (drafts.isNotEmpty) ...[
-          _SectionHeader(title: context.l10n.homeDraftsOnDevice),
+          _SectionHeader(title: l.homeDraftsOnDevice),
           for (final MapEntry(key: key, value: d) in drafts.entries)
             ListTile(
               leading: Icon(Symbols.edit_note, color: scheme.tertiary),
-              title: Text(d.siteName.isEmpty ? (key == 'new' ? 'New inspection' : key) : d.siteName),
-              subtitle: Text(
-                [context.l10n.stepOf(d.lastStep, 5), if (d.updatedAt != null) context.l10n.savedAt(time.format(d.updatedAt!))].join(' · '),
-              ),
+              title: Text(d.siteName.isEmpty ? (key == 'new' ? l.newInspection : key) : d.siteName),
+              subtitle: Text([l.stepOf(d.lastStep, 5), if (d.updatedAt != null) l.savedAt(time.format(d.updatedAt!))].join(' · ')),
               trailing: const Icon(Symbols.chevron_right),
               onTap: () => context.go(
                 key == 'new'
@@ -306,8 +311,8 @@ class _LocalWork extends StatelessWidget {
         ],
         if (outbox.isNotEmpty) ...[
           _SectionHeader(
-            title: context.l10n.homeWaitingToSend,
-            action: TextButton(onPressed: onRetry, child: Text(context.l10n.syncNow)),
+            title: l.homeWaitingToSend,
+            action: TextButton(onPressed: () => unawaited(ref.read(syncServiceProvider.notifier).run()), child: Text(l.syncNow)),
           ),
           for (final e in outbox)
             ListTile(
@@ -315,13 +320,76 @@ class _LocalWork extends StatelessWidget {
                 e.lastError == null ? Symbols.cloud_upload : Symbols.sync_problem,
                 color: e.lastError == null ? null : scheme.error,
               ),
-              title: Text(e.site.isEmpty ? (e.inspectionId ?? 'New inspection') : e.site),
-              subtitle: Text(
-                e.lastError == null ? 'Queued ${time.format(e.createdAt)} · sends when online' : 'Rejected by the server: ${e.lastError}',
-              ),
+              title: Text(e.site.isEmpty ? (e.inspectionId ?? l.newInspection) : e.site),
+              subtitle: Text(e.lastError == null ? l.outboxQueued(time.format(e.createdAt)) : l.outboxRejected(e.lastError!)),
+              trailing: e.lastError == null
+                  ? null
+                  : MenuAnchor(
+                      menuChildren: [
+                        MenuItemButton(leadingIcon: const Icon(Symbols.sync), onPressed: () => _retry(ref, e), child: Text(l.retry)),
+                        if (e.draft != null)
+                          MenuItemButton(
+                            leadingIcon: const Icon(Symbols.edit),
+                            onPressed: () => _edit(context, ref, e),
+                            child: Text(l.edit),
+                          ),
+                        MenuItemButton(
+                          leadingIcon: const Icon(Symbols.delete),
+                          onPressed: () => _delete(context, ref, e),
+                          child: Text(l.delete),
+                        ),
+                      ],
+                      builder: (context, c, _) => IconButton(
+                        tooltip: l.outboxOptions,
+                        onPressed: () => c.isOpen ? c.close() : c.open(),
+                        icon: const Icon(Symbols.more_vert),
+                      ),
+                    ),
             ),
         ],
       ],
     );
+  }
+
+  Future<void> _retry(WidgetRef ref, OutboxEntry e) async {
+    final sync = ref.read(syncServiceProvider.notifier);
+    await ref.read(localStoreProvider).retryEntry(e.id);
+    await sync.run();
+  }
+
+  /// Puts a rejected report back into the wizard, on its review step, so it can be fixed and sent again.
+  Future<void> _edit(BuildContext context, WidgetRef ref, OutboxEntry e) async {
+    final store = ref.read(localStoreProvider);
+    final key = wizardKey(e.inspectionId);
+    final messenger = ScaffoldMessenger.of(context);
+    final busy = context.l10n.outboxEditBusy;
+    if (await store.draft(key) != null) {
+      messenger.showSnackBar(SnackBar(content: Text(busy)));
+      return;
+    }
+    await store.saveDraft(key, e.draft!.copyWith(lastStep: 5));
+    await store.removeFromOutbox(e.id);
+    if (!context.mounted) return;
+    context.go(
+      e.inspectionId == null
+          ? Routes.newInspectionStep(5, from: Routes.home)
+          : Routes.editInspection(e.inspectionId!, step: 5, from: Routes.home),
+    );
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref, OutboxEntry e) async {
+    final store = ref.read(localStoreProvider);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(dialog.l10n.outboxDeleteTitle),
+        content: Text(dialog.l10n.outboxDeleteBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(dialog.l10n.cancel)),
+          TextButton(onPressed: () => Navigator.pop(dialog, true), child: Text(dialog.l10n.delete)),
+        ],
+      ),
+    );
+    if (ok ?? false) await store.removeFromOutbox(e.id);
   }
 }

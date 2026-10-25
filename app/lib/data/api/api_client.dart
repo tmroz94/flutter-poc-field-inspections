@@ -52,8 +52,14 @@ class ApiClient {
     if (response == null) return const ApiException('network');
     final status = response.statusCode;
     final body = response.data is Map ? (response.data! as Map).cast<String, Object?>() : const <String, Object?>{};
-    final fields = (body['fields'] as Map?)?.map((k, v) => MapEntry('$k', '$v')) ?? const <String, String>{};
-    final code = body['error'] as String?;
+    final fields = switch (body['fields']) {
+      final Map<Object?, Object?> m => m.map((k, v) => MapEntry('$k', '$v')),
+      _ => const <String, String>{},
+    };
+    final code = switch (body['error']) {
+      final String s => s,
+      _ => null,
+    };
     if (status == 401 && code != 'invalidCredentials') onUnauthorized?.call();
     return ApiException(
       switch ((status, code)) {

@@ -1,3 +1,4 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +25,9 @@ class BackendConfig {
     return 'http://localhost:8080/api';
   }
 
-  /// Resolves `auto` by probing `/health` with a short timeout.
+  /// Resolves `auto` by probing `/health` with a short timeout. A physical
+  /// Android phone without `API_URL` can't reach the emulator-only 10.0.2.2,
+  /// so it skips the probe instead of waiting out the connect timeout.
   static Future<BackendConfig> resolve() async {
     final url = defaultBaseUrl;
     switch (_requested) {
@@ -33,14 +36,27 @@ class BackendConfig {
       case 'http':
         return BackendConfig(mode: BackendMode.http, baseUrl: url);
     }
+    if (_apiUrl.isEmpty && !kIsWeb && defaultTargetPlatform == TargetPlatform.android && await _isPhysicalAndroid()) {
+      return BackendConfig(mode: BackendMode.fake, baseUrl: url);
+    }
+    final dio = Dio(BaseOptions(connectTimeout: const Duration(milliseconds: 1500), receiveTimeout: const Duration(milliseconds: 1500)));
     try {
-      final dio = Dio(BaseOptions(connectTimeout: const Duration(milliseconds: 1500), receiveTimeout: const Duration(milliseconds: 1500)));
       final r = await dio.get<Object?>('$url/health');
       if (r.statusCode == 200) return BackendConfig(mode: BackendMode.http, baseUrl: url);
     } on DioException {
       // Fall through to the fake.
+    } finally {
+      dio.close();
     }
     return BackendConfig(mode: BackendMode.fake, baseUrl: url);
+  }
+
+  static Future<bool> _isPhysicalAndroid() async {
+    try {
+      return (await DeviceInfoPlugin().androidInfo).isPhysicalDevice;
+    } on Object {
+      return false;
+    }
   }
 }
 

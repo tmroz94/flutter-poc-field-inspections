@@ -21,7 +21,8 @@ Future<void> main() async {
   // so what's on screen can always be shared, bookmarked and refreshed.
   GoRouter.optionURLReflectsImperativeAPIs = true;
   final notifications = NotificationService();
-  final (store, backend, launchRoute) = (await PrefsStore.create(), await BackendConfig.resolve(), await notifications.init());
+  // In parallel: the backend probe can take up to its 1.5 s timeout.
+  final (store, backend, launchRoute) = await (PrefsStore.create(), BackendConfig.resolve(), notifications.init()).wait;
   runApp(
     ProviderScope(
       overrides: [

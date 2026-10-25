@@ -6,14 +6,17 @@ import '../../core/app/app_info.dart';
 import '../../core/layout/window_size.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_settings.dart';
+import '../../l10n/l10n.dart';
 
 /// Shared frame for sign-in, sign-up and reset (P01 on phones, D01 from 840):
 /// a single column on phones, a card with a brand panel on wide screens.
 class AuthLayout extends StatelessWidget {
-  const AuthLayout({required this.title, required this.child, this.subtitle = AppInfo.name, super.key});
+  const AuthLayout({required this.title, required this.child, this.subtitle, super.key});
 
   final String title;
-  final String subtitle;
+
+  /// Defaults to the app name.
+  final String? subtitle;
   final Widget child;
 
   @override
@@ -29,7 +32,7 @@ class AuthLayout extends StatelessWidget {
         Semantics(header: true, child: Text(title, style: wide ? theme.textTheme.headlineSmall : theme.textTheme.headlineMedium)),
         if (!wide) ...[
           const SizedBox(height: 4),
-          Text(subtitle, style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          Text(subtitle ?? context.l10n.appName, style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ],
         const SizedBox(height: 32),
         child,
@@ -114,7 +117,7 @@ class _BrandPanel extends StatelessWidget {
                 Icon(Symbols.fact_check, size: 32, color: on),
                 const SizedBox(width: 12),
                 Flexible(
-                  child: Text(AppInfo.name, style: theme.textTheme.titleLarge?.copyWith(color: on)),
+                  child: Text(context.l10n.appName, style: theme.textTheme.titleLarge?.copyWith(color: on)),
                 ),
               ],
             ),
@@ -122,13 +125,13 @@ class _BrandPanel extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Plan, run and report site inspections.', style: theme.textTheme.headlineLarge?.copyWith(color: on)),
+                Text(context.l10n.authTagline, style: theme.textTheme.headlineLarge?.copyWith(color: on)),
                 const SizedBox(height: 12),
-                Text('Same account and data on iOS, Android and the web.', style: theme.textTheme.bodyLarge?.copyWith(color: on)),
+                Text(context.l10n.authTaglineSub, style: theme.textTheme.bodyLarge?.copyWith(color: on)),
               ],
             ),
             const SizedBox(height: 48),
-            Text('v${AppInfo.version} · PoC build', style: theme.textTheme.bodySmall?.copyWith(color: on)),
+            Text(context.l10n.pocBuild(AppInfo.version), style: theme.textTheme.bodySmall?.copyWith(color: on)),
           ],
         ),
       ),
@@ -153,7 +156,7 @@ class _Footer extends ConsumerWidget {
           icon: const Icon(Symbols.language),
           label: Text(isPolish ? 'English' : 'Polski'),
         ),
-        Text('v${AppInfo.version} · PoC build', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        Text(context.l10n.pocBuild(AppInfo.version), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ],
     );
   }

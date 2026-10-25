@@ -197,6 +197,7 @@ class _PermissionCard extends ConsumerWidget {
         RemindersResult.permissionDenied => 'Notifications are blocked. Allow them in the system settings.',
         RemindersResult.unsupportedOnWeb =>
           'Browsers can’t schedule notifications. Test ones work from the deep-link tester while this tab is open.',
+        RemindersResult.scheduleFailed => context.l10n.remindersScheduleFailed,
         RemindersResult.off => '',
       };
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));

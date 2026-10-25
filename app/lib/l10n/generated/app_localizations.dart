@@ -1147,6 +1147,378 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show results'**
   String get showResultsPlain;
+
+  /// No description provided for @outboxQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued {time} · sends when online'**
+  String outboxQueued(String time);
+
+  /// No description provided for @outboxRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected by the server: {reason}'**
+  String outboxRejected(String reason);
+
+  /// No description provided for @outboxOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Report options'**
+  String get outboxOptions;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @outboxEditBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish or discard the open draft for this inspection first.'**
+  String get outboxEditBusy;
+
+  /// No description provided for @outboxDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this report?'**
+  String get outboxDeleteTitle;
+
+  /// No description provided for @outboxDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It never reached the server, so it can\'t be recovered.'**
+  String get outboxDeleteBody;
+
+  /// No description provided for @signOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out?'**
+  String get signOutTitle;
+
+  /// No description provided for @signOutLocalData.
+  ///
+  /// In en, this message translates to:
+  /// **'These are saved only on this device and will be deleted:'**
+  String get signOutLocalData;
+
+  /// No description provided for @signOutUnsent.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 report not sent yet} other{{count} reports not sent yet}}'**
+  String signOutUnsent(int count);
+
+  /// No description provided for @signOutDrafts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 draft} other{{count} drafts}}'**
+  String signOutDrafts(int count);
+
+  /// No description provided for @signOutConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out and delete'**
+  String get signOutConfirm;
+
+  /// No description provided for @remindersBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are blocked for this app. Allow them in the system settings.'**
+  String get remindersBlocked;
+
+  /// No description provided for @remindersMobileOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsers can’t schedule notifications, so reminders are mobile-only.'**
+  String get remindersMobileOnly;
+
+  /// No description provided for @remindersScheduleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders are on, but they couldn\'t be scheduled yet. They\'ll be set up when the inspections load.'**
+  String get remindersScheduleFailed;
+
+  /// No description provided for @biometricNotSetUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up a fingerprint, face or screen lock on this device first.'**
+  String get biometricNotSetUp;
+
+  /// No description provided for @reminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{site} at {time}'**
+  String reminderTitle(String site, String time);
+
+  /// No description provided for @reminderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts in 30 minutes'**
+  String get reminderBody;
+
+  /// No description provided for @reminderChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection reminders'**
+  String get reminderChannel;
+
+  /// No description provided for @reminderChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts before inspections start'**
+  String get reminderChannelDescription;
+
+  /// No description provided for @biometricReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Field Inspections'**
+  String get biometricReason;
+
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading'**
+  String get loading;
+
+  /// No description provided for @passwordHelperSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 8 or more characters'**
+  String get passwordHelperSignIn;
+
+  /// No description provided for @capsLockOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Caps Lock is on'**
+  String get capsLockOn;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get hidePassword;
+
+  /// No description provided for @backendMockServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected to the mock server'**
+  String get backendMockServer;
+
+  /// No description provided for @backendOfflineDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline demo data (mock server not reachable)'**
+  String get backendOfflineDemo;
+
+  /// No description provided for @authErrorCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Email or password is incorrect.'**
+  String get authErrorCredentials;
+
+  /// No description provided for @authErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach the server. Check your connection and try again.'**
+  String get authErrorNetwork;
+
+  /// No description provided for @authErrorValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the highlighted fields.'**
+  String get authErrorValidation;
+
+  /// No description provided for @authErrorUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Try again.'**
+  String get authErrorUnknown;
+
+  /// No description provided for @createAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get createAccountTitle;
+
+  /// No description provided for @fullName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get fullName;
+
+  /// No description provided for @strengthTooWeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Too weak'**
+  String get strengthTooWeak;
+
+  /// No description provided for @strengthWeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Weak'**
+  String get strengthWeak;
+
+  /// No description provided for @strengthFair.
+  ///
+  /// In en, this message translates to:
+  /// **'Fair'**
+  String get strengthFair;
+
+  /// No description provided for @strengthGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get strengthGood;
+
+  /// No description provided for @strengthStrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Strong'**
+  String get strengthStrong;
+
+  /// No description provided for @passwordStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Password strength: {strength}'**
+  String passwordStrength(String strength);
+
+  /// No description provided for @passwordHelperSignUp.
+  ///
+  /// In en, this message translates to:
+  /// **'8+ characters with a letter and a digit'**
+  String get passwordHelperSignUp;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get confirmPassword;
+
+  /// No description provided for @acceptTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'I accept the terms of use'**
+  String get acceptTerms;
+
+  /// No description provided for @haveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'I already have an account'**
+  String get haveAccount;
+
+  /// No description provided for @resetPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get resetPasswordTitle;
+
+  /// No description provided for @resetIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your account\'s email and we\'ll send a reset link.'**
+  String get resetIntro;
+
+  /// No description provided for @resetSent.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists for {email}, we sent a link to reset the password. Check your inbox.'**
+  String resetSent(String email);
+
+  /// No description provided for @sendResetLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset link'**
+  String get sendResetLink;
+
+  /// No description provided for @backToSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to sign in'**
+  String get backToSignIn;
+
+  /// No description provided for @unlockWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back, {name}'**
+  String unlockWelcome(String name);
+
+  /// No description provided for @unlockTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'The app locked after 5 minutes in the background.'**
+  String get unlockTimedOut;
+
+  /// No description provided for @unlockOnStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric unlock is on for this app.'**
+  String get unlockOnStart;
+
+  /// No description provided for @unlockButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock with biometrics'**
+  String get unlockButton;
+
+  /// No description provided for @unlockPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your fingerprint or face to unlock'**
+  String get unlockPrompt;
+
+  /// No description provided for @unlockFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not recognised. Try again or use your password.'**
+  String get unlockFailed;
+
+  /// No description provided for @usePasswordInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Use password instead'**
+  String get usePasswordInstead;
+
+  /// No description provided for @authTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan, run and report site inspections.'**
+  String get authTagline;
+
+  /// No description provided for @authTaglineSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Same account and data on iOS, Android and the web.'**
+  String get authTaglineSub;
+
+  /// No description provided for @pocBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'v{version} · PoC build'**
+  String pocBuild(String version);
+
+  /// No description provided for @fieldsNeedAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 field needs attention} other{{count} fields need attention}}'**
+  String fieldsNeedAttention(int count);
+
+  /// No description provided for @fieldNeedsAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'1 field needs attention: {error}'**
+  String fieldNeedsAttention(String error);
+
+  /// No description provided for @inProgressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, in progress'**
+  String inProgressLabel(String label);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

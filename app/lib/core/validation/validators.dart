@@ -27,17 +27,23 @@ class ValidationText {
   String get passwordWeak => _t('Use 8+ characters with a letter and a digit', 'Użyj 8+ znaków, w tym litery i cyfry');
   String get emailTaken => _t('An account with this email already exists', 'Konto z tym adresem już istnieje');
   String get mustAccept => _t('Accept the terms to continue', 'Zaakceptuj warunki, aby kontynuować');
+  String get unknownSite => _t('Pick a site from the list', 'Wybierz obiekt z listy');
+  String get checklistIncomplete => _t('Answer every checklist item', 'Odpowiedz na każdy punkt listy kontrolnej');
 
-  /// Maps a server field error code (HTTP 422) to a message.
-  String server(String code) => switch (code) {
+  /// Maps a server field error code (HTTP 422) for [field] to a message. The
+  /// limits are the field's own; the defaults are the API's (password,
+  /// duration, notes).
+  String server(String code, {String field = 'email', int minChars = 8, int maxChars = 500, int min = 15, int max = 480}) => switch (code) {
     'required' => required,
-    'invalid' => email,
-    'tooShort' => minLength(8),
+    'invalid' when field == 'email' => email,
+    'tooShort' => minLength(minChars),
     'weak' => passwordWeak,
     'taken' => emailTaken,
-    'range' => intRange(15, 480),
+    'range' => intRange(min, max),
     'past' => dateInPast,
-    'tooLong' => maxLength(500),
+    'tooLong' => maxLength(maxChars),
+    'unknown' => unknownSite,
+    'incomplete' => checklistIncomplete,
     _ => _t('Check this field', 'Sprawdź to pole'),
   };
 }

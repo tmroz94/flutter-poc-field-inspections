@@ -1,4 +1,6 @@
 import 'package:field_inspections/core/storage/key_value_store.dart';
+import 'package:field_inspections/data/local/local_store.dart';
+import 'package:field_inspections/data/models/draft.dart';
 import 'package:field_inspections/features/auth/auth_screens.dart';
 import 'package:field_inspections/features/home/home_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -134,5 +136,39 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Send reset link'));
     await tester.pumpAndSettle();
     expect(find.textContaining('If an account exists for nobody@example.com'), findsOneWidget);
+  });
+
+  group('sign out (P19)', () {
+    testWidgets('lists unsent work and deletes it on confirm', (tester) async {
+      final local = MemoryLocalStore();
+      await local.saveDraft('new', const InspectionDraft(siteName: 'Depot', notes: 'n'));
+      await local.enqueue(kind: 'create', site: 'Depot', body: {'site': 'Depot'});
+      // Desktop: the whole settings list fits, nothing to scroll past.
+      final app = await pumpApp(tester, store: signedInStore(), localStore: local, initialLocation: '/settings', size: desktopSize);
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+      final dialog = find.byType(AlertDialog);
+      expect(find.descendant(of: dialog, matching: find.textContaining('1 report not sent yet')), findsOneWidget);
+      expect(find.descendant(of: dialog, matching: find.textContaining('1 draft')), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/settings', reason: 'Cancel keeps the session');
+
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign out and delete'));
+      await tester.pumpAndSettle();
+      expect(app.location, startsWith('/sign-in'));
+      expect(local.drafts, isEmpty);
+      expect(local.entries, isEmpty);
+    });
+
+    testWidgets('signs out at once when nothing is waiting', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/settings', size: desktopSize);
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+      expect(app.location, startsWith('/sign-in'));
+    });
   });
 }

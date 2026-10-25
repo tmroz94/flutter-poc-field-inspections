@@ -21,9 +21,12 @@ class FakeBiometrics extends BiometricService {
   @override
   Future<bool> available() async => isAvailable;
 
+  String? lastReason;
+
   @override
-  Future<bool> authenticate() async {
+  Future<bool> authenticate({required String reason}) async {
     calls++;
+    lastReason = reason;
     return ok;
   }
 }
@@ -112,6 +115,7 @@ class FakeNotifications extends NotificationService {
   bool granted;
   final shown = <String>[];
   final scheduled = <(DateTime, String)>[];
+  final scheduledTitles = <String>[];
 
   @override
   Future<String?> init() async => null;
@@ -126,14 +130,26 @@ class FakeNotifications extends NotificationService {
   Future<void> show({required int id, required String title, required String body, required String route}) async => shown.add(route);
 
   @override
-  Future<bool> schedule({required int id, required DateTime at, required String title, required String body, required String route}) async {
+  Future<bool> schedule({
+    required int id,
+    required DateTime at,
+    required String title,
+    required String body,
+    required String route,
+    String? channelName,
+    String? channelDescription,
+  }) async {
     if (isWeb) return false;
     scheduled.add((at, route));
+    scheduledTitles.add(title);
     return true;
   }
 
   @override
-  Future<void> cancelAll() async => scheduled.clear();
+  Future<void> cancelAll() async {
+    scheduled.clear();
+    scheduledTitles.clear();
+  }
 }
 
 /// Bundle of fakes a test can inspect after pumping the app.

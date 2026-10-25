@@ -13,6 +13,7 @@ import '../../core/router/routes.dart';
 import '../../core/validation/form_support.dart';
 import '../../core/validation/validators.dart';
 import '../../data/api/api_exception.dart';
+import '../../data/api/backend_config.dart';
 import '../../data/providers.dart';
 import '../../l10n/l10n.dart';
 import 'auth_controller.dart';
@@ -24,8 +25,8 @@ class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
-    body: Center(child: CircularProgressIndicator(semanticsLabel: 'Loading')),
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(child: CircularProgressIndicator(semanticsLabel: context.l10n.loading)),
   );
 }
 
@@ -38,11 +39,13 @@ void continueToTarget(BuildContext context) {
   Router.neglect(context, () => context.go(target));
 }
 
-String _apiMessage(ApiException e) => switch (e.code) {
-  'invalidCredentials' => 'Email or password is incorrect.',
-  'network' => "Can't reach the server. Check your connection and try again.",
-  'validation' => 'Check the highlighted fields.',
-  _ => 'Something went wrong. Try again.',
+/// Form-level message for a failed auth call; anything that isn't an
+/// [ApiException] (an unreadable answer) gets the generic one.
+String _errorMessage(AppLocalizations l, Object error) => switch (error) {
+  ApiException(code: 'invalidCredentials') => l.authErrorCredentials,
+  ApiException(code: 'network') => l.authErrorNetwork,
+  ApiException(code: 'validation') => l.authErrorValidation,
+  _ => l.authErrorUnknown,
 };
 
 /// Password field with show/hide toggle and a Caps Lock hint (D01). The hint
@@ -52,7 +55,7 @@ class PasswordField extends StatefulWidget {
     required this.controller,
     required this.focusNode,
     required this.validator,
-    this.label = 'Password',
+    this.label,
     this.helper,
     this.autofillHints = const [AutofillHints.password],
     this.textInputAction = TextInputAction.done,
@@ -65,7 +68,9 @@ class PasswordField extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final StringValidator validator;
-  final String label;
+
+  /// Defaults to "Password".
+  final String? label;
   final String? helper;
   final Iterable<String> autofillHints;
   final TextInputAction textInputAction;
@@ -101,6 +106,7 @@ class _PasswordFieldState extends State<PasswordField> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final showCaps = _capsLock && widget.focusNode.hasFocus;
     return TextFormField(
       controller: widget.controller,
@@ -113,13 +119,13 @@ class _PasswordFieldState extends State<PasswordField> {
       onFieldSubmitted: widget.onSubmitted,
       onChanged: widget.onChanged,
       decoration: InputDecoration(
-        labelText: widget.label,
+        labelText: widget.label ?? l.password,
         prefixIcon: const Icon(Symbols.lock),
-        helperText: showCaps ? 'Caps Lock is on' : widget.helper,
+        helperText: showCaps ? l.capsLockOn : widget.helper,
         helperStyle: showCaps ? TextStyle(color: Theme.of(context).colorScheme.tertiary) : null,
         errorText: widget.errorText,
         suffixIcon: IconButton(
-          tooltip: _obscure ? 'Show password' : 'Hide password',
+          tooltip: _obscure ? l.showPassword : l.hidePassword,
           icon: Icon(_obscure ? Symbols.visibility : Symbols.visibility_off),
           onPressed: () => setState(() => _obscure = !_obscure),
         ),
@@ -158,6 +164,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   Future<void> _submit({String? email, String? password}) async {
     final t = ValidationText.of(context);
+    final l = context.l10n;
     setState(() {
       _error = null;
       _serverFields = const {};
@@ -175,11 +182,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       // Lets the platform password manager offer to save the credentials.
       TextInput.finishAutofillContext();
       if (mounted) continueToTarget(context);
-    } on ApiException catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = _apiMessage(e);
-        _serverFields = e.fields;
+        _error = _errorMessage(l, e);
+        _serverFields = e is ApiException ? e.fields : const {};
       });
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -192,9 +199,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final t = ValidationText.of(context);
+    final l = context.l10n;
     final from = GoRouterState.of(context).uri.queryParameters['from'];
     return AuthLayout(
-      title: 'Sign in',
+      title: l.signIn,
       child: AutofillGroup(
         child: Form(
           key: _formKey,
@@ -211,7 +219,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 autovalidateMode: AutovalidateMode.onUnfocus,
                 validator: _emailValidator(t),
                 decoration: InputDecoration(
-                  labelText: context.l10n.email,
+                  labelText: l.email,
                   prefixIcon: const Icon(Symbols.mail),
                   errorText: _serverFields['email'] == null ? null : t.server(_serverFields['email']!),
                 ),
@@ -221,7 +229,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 controller: _password,
                 focusNode: _passwordFocus,
                 validator: _passwordValidator(t),
-                helper: 'Use 8 or more characters',
+                helper: l.passwordHelperSignIn,
                 autofillHints: const [AutofillHints.password],
                 onSubmitted: (_) => _submit(),
                 errorText: _serverFields['password'] == null ? null : t.server(_serverFields['password']!),
@@ -231,16 +239,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  _CheckRow(label: context.l10n.keepSignedIn, value: _remember, onChanged: (v) => setState(() => _remember = v)),
-                  TextButton(onPressed: () => context.go(Routes.forgotPassword), child: Text(context.l10n.forgotPassword)),
+                  _CheckRow(label: l.keepSignedIn, value: _remember, onChanged: (v) => setState(() => _remember = v)),
+                  TextButton(onPressed: () => context.go(Routes.forgotPassword), child: Text(l.forgotPassword)),
                 ],
               ),
               const SizedBox(height: 16),
               if (_error != null) ...[FormErrorBanner(_error!), const SizedBox(height: 16)],
-              BusyButton(label: 'Sign in', busy: _busy, onPressed: _submit),
+              BusyButton(label: l.signIn, busy: _busy, onPressed: _submit),
               const SizedBox(height: 12),
               BusyButton(
-                label: context.l10n.useDemoAccount,
+                label: l.useDemoAccount,
                 outlined: true,
                 busy: false,
                 onPressed: _busy ? null : () => _submit(email: demoEmail, password: demoPassword),
@@ -249,7 +257,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               TextButton(
                 onPressed: () =>
                     context.go(from == null ? Routes.signUp : Uri(path: Routes.signUp, queryParameters: {'from': from}).toString()),
-                child: Text(context.l10n.createAnAccount),
+                child: Text(l.createAnAccount),
               ),
               const _BackendNote(),
             ],
@@ -266,12 +274,13 @@ class _BackendNote extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final fake = ref.watch(authRepositoryProvider).runtimeType.toString().startsWith('Fake');
+    // The config, not the repository's runtimeType: class names are minified in web release builds.
+    final fake = ref.watch(backendConfigProvider).mode == BackendMode.fake;
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Text(
-        fake ? 'Offline demo data (mock server not reachable)' : 'Connected to the mock server',
+        fake ? context.l10n.backendOfflineDemo : context.l10n.backendMockServer,
         textAlign: TextAlign.center,
         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
       ),
@@ -343,13 +352,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   StringValidator _passwordV(ValidationText t) => Validators.all([Validators.required(t), Validators.password(t)]);
   StringValidator _confirmV(ValidationText t) => Validators.all([Validators.required(t), Validators.matches(t, () => _password.text)]);
 
-  /// Async uniqueness check when the email field loses focus.
+  /// Async uniqueness check when the email field loses focus. The answer is
+  /// dropped if the email was edited meanwhile.
   Future<void> _checkEmail() async {
     final t = ValidationText.of(context);
-    if (_emailV(t)(_email.text) != null) return;
+    final email = _email.text;
+    if (_emailV(t)(email) != null) return;
     try {
-      final free = await ref.read(authRepositoryProvider).isEmailAvailable(_email.text);
-      if (mounted) setState(() => _emailTaken = free ? null : t.emailTaken);
+      final free = await ref.read(authRepositoryProvider).isEmailAvailable(email);
+      if (mounted && _email.text == email) setState(() => _emailTaken = free ? null : t.emailTaken);
     } on ApiException {
       // Offline: the server re-checks on submit.
     }
@@ -357,6 +368,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   Future<void> _submit() async {
     final t = ValidationText.of(context);
+    final l = context.l10n;
     setState(() {
       _mode = AutovalidateMode.onUserInteraction;
       _error = null;
@@ -377,11 +389,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       await ref.read(authControllerProvider.notifier).signUp(name: _name.text, email: _email.text, password: _password.text);
       TextInput.finishAutofillContext();
       if (mounted) continueToTarget(context);
-    } on ApiException catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = _apiMessage(e);
-        if (e.fields['email'] == 'taken') _emailTaken = t.emailTaken;
+        _error = _errorMessage(l, e);
+        if (e is ApiException && e.fields['email'] == 'taken') _emailTaken = t.emailTaken;
       });
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -391,11 +403,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     final t = ValidationText.of(context);
+    final l = context.l10n;
     final scheme = Theme.of(context).colorScheme;
-    const strengthLabels = ['Too weak', 'Weak', 'Fair', 'Good', 'Strong'];
+    final strengthLabels = [l.strengthTooWeak, l.strengthWeak, l.strengthFair, l.strengthGood, l.strengthStrong];
     final strengthColors = [scheme.error, scheme.error, scheme.tertiary, scheme.primary, scheme.primary];
     return AuthLayout(
-      title: 'Create account',
+      title: l.createAccountTitle,
       child: AutofillGroup(
         child: Form(
           key: _formKey,
@@ -411,7 +424,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 autofillHints: const [AutofillHints.name],
                 autovalidateMode: AutovalidateMode.onUnfocus,
                 validator: _nameV(t),
-                decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Symbols.person)),
+                decoration: InputDecoration(labelText: l.fullName, prefixIcon: const Icon(Symbols.person)),
               ),
               const SizedBox(height: 16),
               Focus(
@@ -426,7 +439,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   autovalidateMode: AutovalidateMode.onUnfocus,
                   validator: _emailV(t),
                   onChanged: (_) => _emailTaken == null ? null : setState(() => _emailTaken = null),
-                  decoration: InputDecoration(labelText: context.l10n.email, prefixIcon: const Icon(Symbols.mail), errorText: _emailTaken),
+                  decoration: InputDecoration(labelText: l.email, prefixIcon: const Icon(Symbols.mail), errorText: _emailTaken),
                 ),
               ),
               const SizedBox(height: 16),
@@ -434,7 +447,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 controller: _password,
                 focusNode: _focus[2],
                 validator: _passwordV(t),
-                helper: '8+ characters with a letter and a digit',
+                helper: l.passwordHelperSignUp,
                 autofillHints: const [AutofillHints.newPassword],
                 textInputAction: TextInputAction.next,
                 onChanged: (v) => setState(() => _strength = Validators.passwordStrength(v)),
@@ -442,7 +455,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               if (_password.text.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Semantics(
-                  label: 'Password strength: ${strengthLabels[_strength]}',
+                  label: l.passwordStrength(strengthLabels[_strength]),
                   child: ExcludeSemantics(
                     child: Row(
                       children: [
@@ -464,14 +477,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               PasswordField(
                 controller: _confirm,
                 focusNode: _focus[3],
-                label: 'Confirm password',
+                label: l.confirmPassword,
                 validator: _confirmV(t),
                 autofillHints: const [AutofillHints.newPassword],
                 onSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: 8),
               _CheckRow(
-                label: 'I accept the terms of use',
+                label: l.acceptTerms,
                 value: _terms,
                 onChanged: (v) => setState(() {
                   _terms = v;
@@ -485,9 +498,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
               const SizedBox(height: 16),
               if (_error != null) ...[FormErrorBanner(_error!), const SizedBox(height: 16)],
-              BusyButton(label: 'Create account', busy: _busy, onPressed: _submit),
+              BusyButton(label: l.createAccountTitle, busy: _busy, onPressed: _submit),
               const SizedBox(height: 8),
-              TextButton(onPressed: () => context.go(Routes.signIn), child: const Text('I already have an account')),
+              TextButton(onPressed: () => context.go(Routes.signIn), child: Text(l.haveAccount)),
             ],
           ),
         ),
@@ -522,6 +535,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   Future<void> _submit() async {
     final t = ValidationText.of(context);
+    final l = context.l10n;
     if (!_formKey.currentState!.validate()) {
       focusFirstInvalid(context, [FieldCheck(_focus, () => _v(t)(_email.text))]);
       return;
@@ -533,8 +547,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     try {
       await ref.read(authRepositoryProvider).requestPasswordReset(_email.text);
       if (mounted) setState(() => _sent = true);
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _error = _apiMessage(e));
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = _errorMessage(l, e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -543,9 +557,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final t = ValidationText.of(context);
+    final l = context.l10n;
     final theme = Theme.of(context);
     return AuthLayout(
-      title: 'Reset password',
+      title: l.resetPasswordTitle,
       child: _sent
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -553,13 +568,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 Semantics(
                   liveRegion: true,
                   // The same message whether or not the account exists.
-                  child: Text(
-                    'If an account exists for ${_email.text.trim()}, we sent a link to reset the password. Check your inbox.',
-                    style: theme.textTheme.bodyLarge,
-                  ),
+                  child: Text(l.resetSent(_email.text.trim()), style: theme.textTheme.bodyLarge),
                 ),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: () => context.go(Routes.signIn), child: const Text('Back to sign in')),
+                FilledButton(onPressed: () => context.go(Routes.signIn), child: Text(l.backToSignIn)),
               ],
             )
           : Form(
@@ -567,7 +579,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text("Enter your account's email and we'll send a reset link.", style: theme.textTheme.bodyMedium),
+                  Text(l.resetIntro, style: theme.textTheme.bodyMedium),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _email,
@@ -578,13 +590,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     autovalidateMode: AutovalidateMode.onUnfocus,
                     validator: _v(t),
                     onFieldSubmitted: (_) => _submit(),
-                    decoration: InputDecoration(labelText: context.l10n.email, prefixIcon: const Icon(Symbols.mail)),
+                    decoration: InputDecoration(labelText: l.email, prefixIcon: const Icon(Symbols.mail)),
                   ),
                   const SizedBox(height: 16),
                   if (_error != null) ...[FormErrorBanner(_error!), const SizedBox(height: 16)],
-                  BusyButton(label: 'Send reset link', busy: _busy, onPressed: _submit),
+                  BusyButton(label: l.sendResetLink, busy: _busy, onPressed: _submit),
                   const SizedBox(height: 8),
-                  TextButton(onPressed: () => context.go(Routes.signIn), child: const Text('Back to sign in')),
+                  TextButton(onPressed: () => context.go(Routes.signIn), child: Text(l.backToSignIn)),
                 ],
               ),
             ),
@@ -592,8 +604,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 }
 
-/// P26: shown when the app was in the background too long with biometric
-/// lock on. Prompts for biometrics on open; the device PIN is the fallback.
+/// P26: shown on a cold start with biometric unlock on, or after the app was
+/// in the background too long. Prompts for biometrics on open; the device PIN
+/// is the fallback.
 class UnlockScreen extends ConsumerStatefulWidget {
   const UnlockScreen({super.key});
 
@@ -603,7 +616,7 @@ class UnlockScreen extends ConsumerStatefulWidget {
 
 class _UnlockScreenState extends ConsumerState<UnlockScreen> {
   bool _busy = false;
-  String? _message;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -612,12 +625,12 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
   }
 
   Future<void> _unlock() async {
-    if (_busy) return;
+    if (_busy || !mounted) return;
     setState(() {
       _busy = true;
-      _message = null;
+      _failed = false;
     });
-    final ok = await ref.read(biometricServiceProvider).authenticate();
+    final ok = await ref.read(biometricServiceProvider).authenticate(reason: context.l10n.biometricReason);
     if (!mounted) return;
     setState(() => _busy = false);
     if (ok) {
@@ -625,14 +638,16 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
       ref.read(lockControllerProvider.notifier).unlock();
       continueToTarget(context);
     } else {
-      setState(() => _message = 'Not recognised. Try again or use your password.');
+      setState(() => _failed = true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = context.l10n;
     final user = ref.watch(authControllerProvider).user;
+    final timedOut = ref.watch(lockControllerProvider.select((s) => s.timedOut));
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -646,12 +661,12 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                   child: Text(user?.initials ?? '', style: theme.textTheme.titleLarge),
                 ),
                 const SizedBox(height: 16),
-                Text('Welcome back, ${user?.firstName ?? ''}', style: theme.textTheme.headlineSmall),
+                Text(l.unlockWelcome(user?.firstName ?? ''), style: theme.textTheme.headlineSmall),
                 const SizedBox(height: 8),
-                Text('The app locked after 5 minutes in the background.', textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+                Text(timedOut ? l.unlockTimedOut : l.unlockOnStart, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
                 const Spacer(),
                 FloatingActionButton.large(
-                  tooltip: 'Unlock with biometrics',
+                  tooltip: l.unlockButton,
                   onPressed: _busy ? null : _unlock,
                   child: const Icon(Symbols.fingerprint),
                 ),
@@ -659,13 +674,14 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                 Semantics(
                   liveRegion: true,
                   child: Text(
-                    _message ?? 'Use your fingerprint or face to unlock',
+                    _failed ? l.unlockFailed : l.unlockPrompt,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: _message == null ? null : theme.colorScheme.error),
+                    style: TextStyle(color: _failed ? theme.colorScheme.error : null),
                   ),
                 ),
                 const Spacer(),
-                TextButton(onPressed: () => ref.read(authControllerProvider.notifier).signOut(), child: const Text('Use password instead')),
+                // The same user signs in again, so the device's drafts and outbox stay.
+                TextButton(onPressed: () => ref.read(authControllerProvider.notifier).signOut(), child: Text(l.usePasswordInstead)),
               ],
             ),
           ),

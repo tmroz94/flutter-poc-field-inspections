@@ -221,6 +221,8 @@ class ChecklistItem {
   factory ChecklistItem.fromJson(Map<String, Object?> j) =>
       ChecklistItem(id: j['id']! as String, title: j['title']! as String, placeholder: j['placeholder'] == true);
 
+  Map<String, Object?> toJson() => {'id': id, 'title': title, if (placeholder) 'placeholder': true};
+
   final String id;
   final String title;
 

@@ -93,7 +93,7 @@ class HttpInspectionsRepository implements InspectionsRepository {
 
   @override
   Future<List<ChecklistItem>> checklist(String templateId) async {
-    final json = _map(await _api.get('/checklist-templates/$templateId'));
+    final json = _map(await _api.get('/checklist-templates/${Uri.encodeComponent(templateId)}'));
     return [for (final i in json['items']! as List) ChecklistItem.fromJson((i as Map).cast<String, Object?>())];
   }
 

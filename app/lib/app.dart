@@ -9,6 +9,7 @@ import 'data/sync/sync_service.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/auth_models.dart';
 import 'features/auth/auth_screens.dart';
+import 'features/notifications/reminders.dart';
 import 'l10n/l10n.dart';
 
 class FieldInspectionsApp extends ConsumerWidget {
@@ -21,8 +22,10 @@ class FieldInspectionsApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(themeSettingsProvider);
     final router = ref.watch(routerProvider);
-    // Keep the outbox sync running for the app's lifetime.
-    ref.listen(syncServiceProvider, (_, _) {});
+    // Keep the outbox sync and the reminder schedule running for the app's lifetime.
+    ref
+      ..listen(syncServiceProvider, (_, _) {})
+      ..listen(remindersProvider, (_, _) {});
     // Notification taps while the app runs open the notification's route.
     ref.listen(notificationTapsProvider, (_, next) {
       if (next.value case final route?) router.go(route);

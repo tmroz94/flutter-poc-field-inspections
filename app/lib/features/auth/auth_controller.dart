@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/storage/key_value_store.dart';
 import '../../data/api/api_exception.dart';
+import '../../data/local/local_data.dart';
 import '../../data/providers.dart';
 import 'auth_models.dart';
 
@@ -36,16 +38,21 @@ class AuthController extends Notifier<AuthState> {
     try {
       final user = await ref.read(authRepositoryProvider).me(saved.token);
       if (!ref.mounted) return;
-      state = AuthState.signedIn(Session(token: saved.token, user: user));
+      await _activate(Session(token: saved.token, user: user));
     } on ApiException catch (e) {
       if (!ref.mounted) return;
       // Offline-first: a network failure keeps the cached session.
       if (e.code == 'network') {
-        state = AuthState.signedIn(saved);
+        await _activate(saved);
       } else {
         await ref.read(keyValueStoreProvider).remove(_key);
         state = const AuthState.signedOut();
       }
+    } on Object catch (e) {
+      // An answer that isn't the API's (e.g. a captive portal's HTML page):
+      // treat it like no network rather than staying on the splash.
+      debugPrint('Session check failed: $e');
+      if (ref.mounted) await _activate(saved);
     }
   }
 
@@ -65,10 +72,28 @@ class AuthController extends Notifier<AuthState> {
       await store.remove(_key);
     }
     if (!ref.mounted) return;
-    state = AuthState.signedIn(session);
+    await _activate(session);
   }
 
-  Future<void> signOut() async {
+  /// Hands this device's local data to the session's user, then starts the session.
+  Future<void> _activate(Session session) async {
+    await ref.read(localDataProvider).claimFor(session.user.id);
+    if (ref.mounted) state = AuthState.signedIn(session);
+  }
+
+  /// [clearLocalData]: the user chose to sign out (Settings), so this device's
+  /// drafts, outbox, photos and reminders go too. Without it (a rejected
+  /// token, "Use password instead" on the lock screen) they stay for the same
+  /// user's next sign-in.
+  Future<void> signOut({bool clearLocalData = false}) async {
+    if (clearLocalData) {
+      try {
+        await ref.read(localDataProvider).clear();
+      } on Object catch (e) {
+        // Still sign out; the owner check clears it before another account uses it.
+        debugPrint('Sign-out: could not clear local data: $e');
+      }
+    }
     await ref.read(keyValueStoreProvider).remove(_key);
     state = const AuthState.signedOut();
   }

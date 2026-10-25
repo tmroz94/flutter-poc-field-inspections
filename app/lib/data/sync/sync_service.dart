@@ -38,8 +38,12 @@ class SyncState {
 }
 
 /// Sends queued submits in order. Stops at the first network error (still
-/// offline); a server rejection marks that entry failed and moves on.
+/// offline) or a rejected session (401: the entry waits for the next sign-in);
+/// any other failure marks that entry failed and moves on.
 class SyncService extends Notifier<SyncState> {
+  /// The run in progress; callers during a run share it, so one entry is never sent twice.
+  Future<void>? _running;
+
   @override
   SyncState build() {
     ref
@@ -52,37 +56,51 @@ class SyncService extends Notifier<SyncState> {
     return const SyncState();
   }
 
-  Future<void> run() async {
-    if (state.syncing || ref.read(authControllerProvider).status != AuthStatus.signedIn) return;
+  Future<void> run() => _running ??= _run().whenComplete(() => _running = null);
+
+  Future<void> _run() async {
+    if (ref.read(authControllerProvider).status != AuthStatus.signedIn) return;
     final store = ref.read(localStoreProvider);
-    final pending = (await store.outbox()).where((e) => e.lastError == null).toList();
-    if (pending.isEmpty) {
-      state = SyncState(lastSyncAt: state.lastSyncAt);
-      return;
-    }
     state = SyncState(syncing: true, lastSyncAt: state.lastSyncAt);
     var sent = 0;
+    var finished = false;
     var offline = false;
-    for (final entry in pending) {
-      try {
-        await ref.read(inspectionsRepositoryProvider).save(entry.body, id: entry.inspectionId, submit: true);
-        await store.removeFromOutbox(entry.id);
-        sent++;
-      } on ApiException catch (e) {
-        if (e.isNetwork) {
-          offline = true;
-          break;
+    var signedOut = false;
+    try {
+      final pending = (await store.outbox()).where((e) => e.lastError == null).toList();
+      for (final entry in pending) {
+        try {
+          await ref.read(inspectionsRepositoryProvider).save(entry.body, id: entry.inspectionId, submit: true);
+          await store.removeFromOutbox(entry.id);
+          sent++;
+        } on ApiException catch (e) {
+          if (e.isNetwork) {
+            offline = true;
+            break;
+          }
+          // The client signs out on 401; keep the entry for the next sign-in.
+          if (e.code == 'unauthorized') {
+            signedOut = true;
+            break;
+          }
+          await store.markFailed(entry.id, e.fields.isEmpty ? e.code : e.fields.entries.map((f) => '${f.key}: ${f.value}').join(', '));
+        } on Object catch (e) {
+          // An answer the app can't read: park the entry (the user can retry
+          // it from Home) so the rest of the queue still goes.
+          debugPrint('Sync: entry ${entry.id} failed: $e');
+          await store.markFailed(entry.id, 'unknown');
         }
-        await store.markFailed(entry.id, e.fields.isEmpty ? e.code : e.fields.entries.map((f) => '${f.key}: ${f.value}').join(', '));
+      }
+      finished = true;
+    } on Object catch (e) {
+      debugPrint('Sync failed: $e');
+    } finally {
+      if (ref.mounted) {
+        if (sent > 0) ref.read(inspectionsRevisionProvider.notifier).changed();
+        final complete = finished && !offline && !signedOut;
+        state = SyncState(lastSyncAt: complete ? DateTime.now() : state.lastSyncAt, offline: offline);
       }
     }
-    if (!ref.mounted) return;
-    if (sent > 0) {
-      ref
-        ..invalidate(inspectionListProvider)
-        ..invalidate(homeProvider);
-    }
-    state = SyncState(lastSyncAt: offline ? state.lastSyncAt : DateTime.now(), offline: offline);
   }
 }
 

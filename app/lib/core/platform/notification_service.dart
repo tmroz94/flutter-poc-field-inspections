@@ -15,9 +15,10 @@ import 'platform_services.dart';
 /// The web shows notifications only while a tab is open and cannot schedule
 /// them (browser limitation), so [schedule] returns false there.
 class NotificationService {
-  NotificationService({this.isWeb = kIsWeb});
+  NotificationService({this.isWeb = kIsWeb, this._permissions = const PermissionService()});
 
   final bool isWeb;
+  final PermissionService _permissions;
   final _plugin = FlutterLocalNotificationsPlugin();
   late final _taps = StreamController<String>.broadcast(onListen: _flushPending);
   bool _ready = false;
@@ -52,15 +53,20 @@ class NotificationService {
     if (route != null) _emit(route);
   }
 
-  static const _details = NotificationDetails(
+  /// [channelName] and [channelDescription] show in Android's notification
+  /// settings; callers pass them in the app's language.
+  static NotificationDetails _details({
+    String channelName = 'Inspection reminders',
+    String channelDescription = 'Alerts before inspections start',
+  }) => NotificationDetails(
     android: AndroidNotificationDetails(
       'reminders',
-      'Inspection reminders',
-      channelDescription: 'Alerts before inspections start',
+      channelName,
+      channelDescription: channelDescription,
       importance: Importance.high,
       priority: Priority.high,
     ),
-    iOS: DarwinNotificationDetails(),
+    iOS: const DarwinNotificationDetails(),
   );
 
   /// Initialises the plugin. Returns the route of the notification that
@@ -101,10 +107,14 @@ class NotificationService {
         };
       }
       final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      if (android != null) return (await android.areNotificationsEnabled() ?? false) ? PermissionState.granted : PermissionState.denied;
       final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-      final perms = await ios?.checkPermissions();
-      return (perms?.isEnabled ?? false) ? PermissionState.granted : PermissionState.denied;
+      final enabled = android != null ? await android.areNotificationsEnabled() : (await ios?.checkPermissions())?.isEnabled;
+      if (enabled ?? false) return PermissionState.granted;
+      // The plugin can't tell "ask again" from "only in system settings" (after
+      // two denials on Android 13+, one on iOS); permission_handler can.
+      return await _permissions.status(AppPermission.notifications) == PermissionState.permanentlyDenied
+          ? PermissionState.permanentlyDenied
+          : PermissionState.denied;
     } on Object {
       return PermissionState.unsupported;
     }
@@ -135,17 +145,27 @@ class NotificationService {
 
   Future<void> show({required int id, required String title, required String body, required String route}) async {
     if (!_ready) return;
-    await _plugin.show(id: id, title: title, body: body, notificationDetails: _details, payload: route);
+    await _plugin.show(id: id, title: title, body: body, notificationDetails: _details(), payload: route);
   }
 
   /// Schedules a notification at [at]; false where scheduling isn't possible (web).
-  Future<bool> schedule({required int id, required DateTime at, required String title, required String body, required String route}) async {
+  Future<bool> schedule({
+    required int id,
+    required DateTime at,
+    required String title,
+    required String body,
+    required String route,
+    String? channelName,
+    String? channelDescription,
+  }) async {
     if (!_ready || isWeb) return false;
     await _plugin.zonedSchedule(
       id: id,
       // An absolute instant: no time-zone database lookup needed for one-off reminders.
       scheduledDate: tz.TZDateTime.from(at.toUtc(), tz.UTC),
-      notificationDetails: _details,
+      notificationDetails: channelName == null || channelDescription == null
+          ? _details()
+          : _details(channelName: channelName, channelDescription: channelDescription),
       // Inexact: no exact-alarm permission needed; Android may delay a few minutes.
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       title: title,

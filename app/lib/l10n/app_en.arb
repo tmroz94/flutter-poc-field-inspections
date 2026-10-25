@@ -348,5 +348,154 @@
       }
     }
   },
-  "showResultsPlain": "Show results"
+  "showResultsPlain": "Show results",
+  "outboxQueued": "Queued {time} · sends when online",
+  "@outboxQueued": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "outboxRejected": "Rejected by the server: {reason}",
+  "@outboxRejected": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "outboxOptions": "Report options",
+  "delete": "Delete",
+  "outboxEditBusy": "Finish or discard the open draft for this inspection first.",
+  "outboxDeleteTitle": "Delete this report?",
+  "outboxDeleteBody": "It never reached the server, so it can't be recovered.",
+  "signOutTitle": "Sign out?",
+  "signOutLocalData": "These are saved only on this device and will be deleted:",
+  "signOutUnsent": "{count, plural, =1{1 report not sent yet} other{{count} reports not sent yet}}",
+  "@signOutUnsent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "signOutDrafts": "{count, plural, =1{1 draft} other{{count} drafts}}",
+  "@signOutDrafts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "signOutConfirm": "Sign out and delete",
+  "remindersBlocked": "Notifications are blocked for this app. Allow them in the system settings.",
+  "remindersMobileOnly": "Browsers can’t schedule notifications, so reminders are mobile-only.",
+  "remindersScheduleFailed": "Reminders are on, but they couldn't be scheduled yet. They'll be set up when the inspections load.",
+  "biometricNotSetUp": "Set up a fingerprint, face or screen lock on this device first.",
+  "reminderTitle": "{site} at {time}",
+  "@reminderTitle": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "reminderBody": "Starts in 30 minutes",
+  "reminderChannel": "Inspection reminders",
+  "reminderChannelDescription": "Alerts before inspections start",
+  "biometricReason": "Unlock Field Inspections",
+  "loading": "Loading",
+  "passwordHelperSignIn": "Use 8 or more characters",
+  "capsLockOn": "Caps Lock is on",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "backendMockServer": "Connected to the mock server",
+  "backendOfflineDemo": "Offline demo data (mock server not reachable)",
+  "authErrorCredentials": "Email or password is incorrect.",
+  "authErrorNetwork": "Can't reach the server. Check your connection and try again.",
+  "authErrorValidation": "Check the highlighted fields.",
+  "authErrorUnknown": "Something went wrong. Try again.",
+  "createAccountTitle": "Create account",
+  "fullName": "Full name",
+  "strengthTooWeak": "Too weak",
+  "strengthWeak": "Weak",
+  "strengthFair": "Fair",
+  "strengthGood": "Good",
+  "strengthStrong": "Strong",
+  "passwordStrength": "Password strength: {strength}",
+  "@passwordStrength": {
+    "placeholders": {
+      "strength": {
+        "type": "String"
+      }
+    }
+  },
+  "passwordHelperSignUp": "8+ characters with a letter and a digit",
+  "confirmPassword": "Confirm password",
+  "acceptTerms": "I accept the terms of use",
+  "haveAccount": "I already have an account",
+  "resetPasswordTitle": "Reset password",
+  "resetIntro": "Enter your account's email and we'll send a reset link.",
+  "resetSent": "If an account exists for {email}, we sent a link to reset the password. Check your inbox.",
+  "@resetSent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "sendResetLink": "Send reset link",
+  "backToSignIn": "Back to sign in",
+  "unlockWelcome": "Welcome back, {name}",
+  "@unlockWelcome": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "unlockTimedOut": "The app locked after 5 minutes in the background.",
+  "unlockOnStart": "Biometric unlock is on for this app.",
+  "unlockButton": "Unlock with biometrics",
+  "unlockPrompt": "Use your fingerprint or face to unlock",
+  "unlockFailed": "Not recognised. Try again or use your password.",
+  "usePasswordInstead": "Use password instead",
+  "authTagline": "Plan, run and report site inspections.",
+  "authTaglineSub": "Same account and data on iOS, Android and the web.",
+  "pocBuild": "v{version} · PoC build",
+  "@pocBuild": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "fieldsNeedAttention": "{count, plural, =1{1 field needs attention} other{{count} fields need attention}}",
+  "@fieldsNeedAttention": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fieldNeedsAttention": "1 field needs attention: {error}",
+  "@fieldNeedsAttention": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "inProgressLabel": "{label}, in progress",
+  "@inProgressLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  }
 }

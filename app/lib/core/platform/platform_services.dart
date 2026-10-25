@@ -172,10 +172,11 @@ class BiometricService {
     }
   }
 
-  /// True when the user passed biometrics or the device PIN.
-  Future<bool> authenticate() async {
+  /// True when the user passed biometrics or the device PIN. [reason] is shown
+  /// in the system prompt, in the app's language.
+  Future<bool> authenticate({required String reason}) async {
     try {
-      return await _auth.authenticate(localizedReason: 'Unlock Field Inspections', persistAcrossBackgrounding: true);
+      return await _auth.authenticate(localizedReason: reason, persistAcrossBackgrounding: true);
     } on Object {
       return false;
     }

@@ -18,35 +18,82 @@ import '../auth/lock_controller.dart';
 import '../notifications/reminders.dart';
 import 'appearance_screen.dart';
 
-/// P19: profile, reminders, biometric lock, offline data and the PoC tools.
-/// The tablet two-pane version (T03) and appearance (P20) arrive in M4.
+/// P19: profile, reminders, biometric lock, offline data and the PoC tools;
+/// from 840 px the appearance pane sits beside the list (T03).
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   Future<void> _setReminders(BuildContext context, WidgetRef ref, bool on) async {
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final canOpenSettings = ref.read(capabilitiesProvider).openSystemSettings;
+    final permissions = ref.read(permissionServiceProvider);
     final result = await ref.read(remindersProvider.notifier).setEnabled(on);
-    if (!context.mounted) return;
     final message = switch (result) {
-      RemindersResult.permissionDenied => 'Notifications are blocked for this app. Allow them in the system settings.',
-      RemindersResult.unsupportedOnWeb => 'Browsers can’t schedule notifications, so reminders are mobile-only.',
-      _ => null,
+      RemindersResult.permissionDenied => l.remindersBlocked,
+      RemindersResult.unsupportedOnWeb => l.remindersMobileOnly,
+      RemindersResult.scheduleFailed => l.remindersScheduleFailed,
+      RemindersResult.on || RemindersResult.off => null,
     };
-    if (message != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    if (message == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: result == RemindersResult.permissionDenied && canOpenSettings
+            ? SnackBarAction(label: l.openSettings, onPressed: () => unawaited(permissions.openSettings()))
+            : null,
+      ),
+    );
   }
 
   Future<void> _setBiometric(BuildContext context, WidgetRef ref, bool on) async {
     final lock = ref.read(lockControllerProvider.notifier);
     if (!on) return lock.setEnabled(false);
     final bio = ref.read(biometricServiceProvider);
+    final reason = context.l10n.biometricReason;
+    final notSetUp = context.l10n.biometricNotSetUp;
+    final messenger = ScaffoldMessenger.of(context);
     if (!await bio.available()) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Set up a fingerprint, face or screen lock on this device first.')));
-      }
+      messenger.showSnackBar(SnackBar(content: Text(notSetUp)));
       return;
     }
     // Confirm once so the user knows what they're turning on.
-    if (await bio.authenticate()) await lock.setEnabled(true);
+    if (await bio.authenticate(reason: reason)) await lock.setEnabled(true);
+  }
+
+  /// Signing out deletes this device's drafts, outbox, photos and reminders
+  /// (another account may sign in next); unsent work is listed first.
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    final auth = ref.read(authControllerProvider.notifier);
+    final drafts = ref.read(draftsProvider).value?.length ?? 0;
+    final unsent = ref.read(outboxProvider).value?.length ?? 0;
+    if (drafts + unsent > 0) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (dialog) {
+          final l = dialog.l10n;
+          return AlertDialog(
+            title: Text(l.signOutTitle),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.signOutLocalData),
+                const SizedBox(height: 8),
+                if (unsent > 0) Text('• ${l.signOutUnsent(unsent)}'),
+                if (drafts > 0) Text('• ${l.signOutDrafts(drafts)}'),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l.cancel)),
+              TextButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l.signOutConfirm)),
+            ],
+          );
+        },
+      );
+      if (!(ok ?? false)) return;
+    }
+    await auth.signOut(clearLocalData: true);
   }
 
   @override
@@ -104,7 +151,7 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               Icon(Symbols.science, size: 20, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text('PoC tools', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+              Text(context.l10n.pocTools, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
             ],
           ),
         ),
@@ -123,8 +170,8 @@ class SettingsScreen extends ConsumerWidget {
         ListTile(leading: const Icon(Symbols.link), title: Text(context.l10n.deepLinkTester), onTap: () => context.go(Routes.deepLinks)),
         ListTile(
           leading: Icon(Symbols.logout, color: theme.colorScheme.error),
-          title: Text('Sign out', style: TextStyle(color: theme.colorScheme.error)),
-          onTap: () => ref.read(authControllerProvider.notifier).signOut(),
+          title: Text(context.l10n.signOut, style: TextStyle(color: theme.colorScheme.error)),
+          onTap: () => _signOut(context, ref),
         ),
       ],
     );

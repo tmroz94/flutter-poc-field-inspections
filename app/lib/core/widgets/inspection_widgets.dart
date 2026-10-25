@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -29,21 +28,6 @@ IconData siteIcon(String name) => switch (name) {
   'task_alt' => Symbols.task_alt,
   _ => Symbols.location_on,
 };
-
-/// "Today 09:30", "Yesterday 14:00", "Wed 11:00" (within a week), else "14 Oct".
-String relativeWhen(DateTime at, DateTime now, {String? locale}) {
-  final today = DateTime(now.year, now.month, now.day);
-  final day = DateTime(at.year, at.month, at.day);
-  final diff = day.difference(today).inDays;
-  final time = DateFormat.Hm(locale).format(at);
-  return switch (diff) {
-    0 => 'Today $time',
-    -1 => 'Yesterday $time',
-    1 => 'Tomorrow $time',
-    > 1 && < 7 => '${DateFormat.E(locale).format(at)} $time',
-    _ => DateFormat.MMMd(locale).format(at),
-  };
-}
 
 /// Status pill from the boards: container colour + icon + label.
 class StatusChip extends StatelessWidget {

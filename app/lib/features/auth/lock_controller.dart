@@ -8,11 +8,14 @@ import 'auth_models.dart';
 
 @immutable
 class LockState {
-  const LockState({required this.enabled, required this.locked});
+  const LockState({required this.enabled, required this.locked, this.timedOut = false});
 
   /// The "Biometric unlock" setting (P19). Always false where unsupported (web).
   final bool enabled;
   final bool locked;
+
+  /// Locked after [LockController.timeout] in the background (else: a cold start).
+  final bool timedOut;
 }
 
 /// Locks the app after [timeout] in the background, and on a cold start with
@@ -51,7 +54,7 @@ class LockController extends Notifier<LockState> {
     _hiddenAt = null;
     final signedIn = ref.read(authControllerProvider).status == AuthStatus.signedIn;
     if (state.enabled && signedIn && hiddenAt != null && clock().difference(hiddenAt) >= timeout) {
-      state = const LockState(enabled: true, locked: true);
+      state = const LockState(enabled: true, locked: true, timedOut: true);
     }
   }
 

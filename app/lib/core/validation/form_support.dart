@@ -1,6 +1,8 @@
 import 'package:flutter/semantics.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../l10n/l10n.dart';
+
 /// One validated field: its focus node and a check of its current value.
 class FieldCheck {
   const FieldCheck(this.focusNode, this.error);
@@ -18,7 +20,7 @@ void focusFirstInvalid(BuildContext context, List<FieldCheck> fields) {
   final count = invalid.length;
   SemanticsService.sendAnnouncement(
     View.of(context),
-    count == 1 ? '1 field needs attention: ${invalid.first.error()}' : '$count fields need attention',
+    count == 1 ? context.l10n.fieldNeedsAttention(invalid.first.error()!) : context.l10n.fieldsNeedAttention(count),
     Directionality.of(context),
     assertiveness: Assertiveness.assertive,
   );
@@ -68,7 +70,7 @@ class BusyButton extends StatelessWidget {
     final style = ButtonStyle(minimumSize: WidgetStateProperty.all(const Size.fromHeight(48)));
     final press = busy ? null : onPressed;
     return Semantics(
-      label: busy ? '$label, in progress' : null,
+      label: busy ? context.l10n.inProgressLabel(label) : null,
       child: outlined
           ? OutlinedButton(style: style, onPressed: press, child: child)
           : FilledButton(style: style, onPressed: press, child: child),

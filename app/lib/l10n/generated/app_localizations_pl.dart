@@ -639,4 +639,239 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get showResultsPlain => 'Pokaż wyniki';
+
+  @override
+  String outboxQueued(String time) {
+    return 'W kolejce od $time · wyśle się po połączeniu';
+  }
+
+  @override
+  String outboxRejected(String reason) {
+    return 'Odrzucony przez serwer: $reason';
+  }
+
+  @override
+  String get outboxOptions => 'Opcje raportu';
+
+  @override
+  String get delete => 'Usuń';
+
+  @override
+  String get outboxEditBusy => 'Najpierw dokończ lub odrzuć otwarty szkic tej inspekcji.';
+
+  @override
+  String get outboxDeleteTitle => 'Usunąć ten raport?';
+
+  @override
+  String get outboxDeleteBody => 'Nie dotarł na serwer, więc nie da się go odzyskać.';
+
+  @override
+  String get signOutTitle => 'Wylogować się?';
+
+  @override
+  String get signOutLocalData => 'Te dane są zapisane tylko na tym urządzeniu i zostaną usunięte:';
+
+  @override
+  String signOutUnsent(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count niewysłanego raportu',
+      many: '$count niewysłanych raportów',
+      few: '$count niewysłane raporty',
+      one: '1 niewysłany raport',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String signOutDrafts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count szkicu',
+      many: '$count szkiców',
+      few: '$count szkice',
+      one: '1 szkic',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get signOutConfirm => 'Wyloguj i usuń';
+
+  @override
+  String get remindersBlocked => 'Powiadomienia są zablokowane dla tej aplikacji. Zezwól na nie w ustawieniach systemu.';
+
+  @override
+  String get remindersMobileOnly => 'Przeglądarki nie planują powiadomień, więc przypomnienia działają tylko w aplikacji mobilnej.';
+
+  @override
+  String get remindersScheduleFailed =>
+      'Przypomnienia są włączone, ale nie udało się ich jeszcze zaplanować. Zostaną ustawione po wczytaniu inspekcji.';
+
+  @override
+  String get biometricNotSetUp => 'Najpierw ustaw na tym urządzeniu odcisk palca, twarz lub blokadę ekranu.';
+
+  @override
+  String reminderTitle(String site, String time) {
+    return '$site o $time';
+  }
+
+  @override
+  String get reminderBody => 'Zaczyna się za 30 minut';
+
+  @override
+  String get reminderChannel => 'Przypomnienia o inspekcjach';
+
+  @override
+  String get reminderChannelDescription => 'Alerty przed rozpoczęciem inspekcji';
+
+  @override
+  String get biometricReason => 'Odblokuj Inspekcje terenowe';
+
+  @override
+  String get loading => 'Wczytywanie';
+
+  @override
+  String get passwordHelperSignIn => 'Użyj co najmniej 8 znaków';
+
+  @override
+  String get capsLockOn => 'Caps Lock jest włączony';
+
+  @override
+  String get showPassword => 'Pokaż hasło';
+
+  @override
+  String get hidePassword => 'Ukryj hasło';
+
+  @override
+  String get backendMockServer => 'Połączono z serwerem testowym';
+
+  @override
+  String get backendOfflineDemo => 'Dane demonstracyjne offline (serwer testowy niedostępny)';
+
+  @override
+  String get authErrorCredentials => 'Nieprawidłowy e-mail lub hasło.';
+
+  @override
+  String get authErrorNetwork => 'Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie.';
+
+  @override
+  String get authErrorValidation => 'Sprawdź zaznaczone pola.';
+
+  @override
+  String get authErrorUnknown => 'Coś poszło nie tak. Spróbuj ponownie.';
+
+  @override
+  String get createAccountTitle => 'Utwórz konto';
+
+  @override
+  String get fullName => 'Imię i nazwisko';
+
+  @override
+  String get strengthTooWeak => 'Zbyt słabe';
+
+  @override
+  String get strengthWeak => 'Słabe';
+
+  @override
+  String get strengthFair => 'Średnie';
+
+  @override
+  String get strengthGood => 'Dobre';
+
+  @override
+  String get strengthStrong => 'Silne';
+
+  @override
+  String passwordStrength(String strength) {
+    return 'Siła hasła: $strength';
+  }
+
+  @override
+  String get passwordHelperSignUp => '8+ znaków, w tym litera i cyfra';
+
+  @override
+  String get confirmPassword => 'Powtórz hasło';
+
+  @override
+  String get acceptTerms => 'Akceptuję warunki korzystania';
+
+  @override
+  String get haveAccount => 'Mam już konto';
+
+  @override
+  String get resetPasswordTitle => 'Resetowanie hasła';
+
+  @override
+  String get resetIntro => 'Podaj e-mail swojego konta, a wyślemy link do zresetowania hasła.';
+
+  @override
+  String resetSent(String email) {
+    return 'Jeśli istnieje konto dla $email, wysłaliśmy link do zresetowania hasła. Sprawdź skrzynkę.';
+  }
+
+  @override
+  String get sendResetLink => 'Wyślij link';
+
+  @override
+  String get backToSignIn => 'Wróć do logowania';
+
+  @override
+  String unlockWelcome(String name) {
+    return 'Witaj ponownie, $name';
+  }
+
+  @override
+  String get unlockTimedOut => 'Aplikacja zablokowała się po 5 minutach w tle.';
+
+  @override
+  String get unlockOnStart => 'Odblokowanie biometryczne jest włączone dla tej aplikacji.';
+
+  @override
+  String get unlockButton => 'Odblokuj biometrią';
+
+  @override
+  String get unlockPrompt => 'Użyj odcisku palca lub twarzy, aby odblokować';
+
+  @override
+  String get unlockFailed => 'Nie rozpoznano. Spróbuj ponownie lub użyj hasła.';
+
+  @override
+  String get usePasswordInstead => 'Użyj hasła';
+
+  @override
+  String get authTagline => 'Planuj, prowadź i raportuj inspekcje w terenie.';
+
+  @override
+  String get authTaglineSub => 'To samo konto i dane na iOS, Androidzie i w przeglądarce.';
+
+  @override
+  String pocBuild(String version) {
+    return 'v$version · wersja PoC';
+  }
+
+  @override
+  String fieldsNeedAttention(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pola wymaga uwagi',
+      many: '$count pól wymaga uwagi',
+      few: '$count pola wymagają uwagi',
+      one: '1 pole wymaga uwagi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String fieldNeedsAttention(String error) {
+    return '1 pole wymaga uwagi: $error';
+  }
+
+  @override
+  String inProgressLabel(String label) {
+    return '$label, w toku';
+  }
 }

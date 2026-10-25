@@ -27,10 +27,16 @@ class Outbox extends Table {
   TextColumn get site => text()();
   TextColumn get body => text()();
   DateTimeColumn get createdAt => dateTime()();
+
+  /// Server rejections so far (network errors don't count).
   IntColumn get attempts => integer().withDefault(const Constant(0))();
 
   /// Set when the server rejected the write (not for network errors).
   TextColumn get lastError => text().nullable()();
+
+  /// The wizard draft the entry was made from (schema v3), so a rejected
+  /// report can be reopened and fixed. Null for entries queued before v3.
+  TextColumn get draftJson => text().nullable()();
 }
 
 /// Photo and file bytes for drafts (camera, gallery, file picker, drop, paste).
@@ -51,12 +57,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) await m.createTable(blobs);
+      if (from < 3) await m.addColumn(outbox, outbox.draftJson);
     },
   );
 
