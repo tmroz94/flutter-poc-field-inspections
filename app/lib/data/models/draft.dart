@@ -2,33 +2,21 @@ import 'package:flutter/foundation.dart';
 
 import 'inspection.dart';
 
-/// Extra detail required when a checklist item fails (P11).
-@immutable
-class FailDetail {
-  const FailDetail({this.severity = 3, this.followUp = true, this.note = ''});
-
-  factory FailDetail.fromJson(Map<String, Object?> j) =>
-      FailDetail(severity: (j['severity'] as num?)?.toInt() ?? 3, followUp: j['followUp'] != false, note: j['note'] as String? ?? '');
-
-  /// 1 (minor) … 5 (critical).
-  final int severity;
-  final bool followUp;
-  final String note;
-
-  static const severityLabels = ['Minor', 'Low', 'Major', 'High', 'Critical'];
-  String get severityLabel => '$severity · ${severityLabels[severity - 1]}';
-
-  FailDetail copyWith({int? severity, bool? followUp, String? note}) =>
-      FailDetail(severity: severity ?? this.severity, followUp: followUp ?? this.followUp, note: note ?? this.note);
-
-  Map<String, Object?> toJson() => {'severity': severity, 'followUp': followUp, 'note': note};
-}
+export 'inspection.dart' show FailDetail;
 
 /// A photo or file added in step 4. Its bytes live in the local blob store
-/// under [id]; entries without bytes (fixtures) show a placeholder.
+/// under [id]; entries without bytes (fixtures, ones already on the server)
+/// show a placeholder.
 @immutable
 class DraftAttachment {
-  const DraftAttachment({required this.id, required this.name, required this.sizeBytes, this.isPhoto = true, this.forItem});
+  const DraftAttachment({
+    required this.id,
+    required this.name,
+    required this.sizeBytes,
+    this.isPhoto = true,
+    this.forItem,
+    this.stored = false,
+  });
 
   factory DraftAttachment.fromJson(Map<String, Object?> j) => DraftAttachment(
     id: j['id']! as String,
@@ -36,6 +24,7 @@ class DraftAttachment {
     sizeBytes: (j['sizeBytes'] as num?)?.toInt() ?? 0,
     isPhoto: j['isPhoto'] != false,
     forItem: j['forItem'] as String?,
+    stored: j['stored'] == true,
   );
 
   final String id;
@@ -46,7 +35,18 @@ class DraftAttachment {
   /// Checklist item this photo documents, if any.
   final String? forItem;
 
-  Map<String, Object?> toJson() => {'id': id, 'name': name, 'sizeBytes': sizeBytes, 'isPhoto': isPhoto, 'forItem': forItem};
+  /// Already on the server (an edit started from the inspection): sent back
+  /// by id so the server keeps it, and not re-checked for type or size.
+  final bool stored;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    'sizeBytes': sizeBytes,
+    'isPhoto': isPhoto,
+    'forItem': forItem,
+    if (stored) 'stored': true,
+  };
 }
 
 /// Everything the 5-step wizard collects (P09–P13). Saved on every change, so
@@ -121,6 +121,20 @@ class InspectionDraft {
       duration: d.durationMin == 0 ? '' : '${d.durationMin}',
       notes: d.notes,
       answers: d.answers,
+      // The PUT replaces photos and files with what it sends, so the ones
+      // already on the server come along (by id) or they'd be deleted.
+      failures: d.failures,
+      attachments: [
+        for (final (i, p) in d.photos.indexed)
+          DraftAttachment(
+            id: p.id,
+            name: p.caption.isEmpty ? 'Photo ${i + 1}' : p.caption,
+            sizeBytes: p.sizeBytes,
+            forItem: p.forItem,
+            stored: true,
+          ),
+        for (final f in d.files) DraftAttachment(id: f.id, name: f.name, sizeBytes: f.sizeBytes, isPhoto: false, stored: true),
+      ],
     );
   }
 

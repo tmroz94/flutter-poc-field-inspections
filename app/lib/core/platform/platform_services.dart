@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show TargetPlatform, debugPrint, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -47,6 +47,20 @@ class MediaService {
     if (x == null) return null;
     final bytes = await x.readAsBytes();
     return PickedFile(name: x.name, bytes: bytes, mime: x.mimeType ?? mimeFor(x.name));
+  }
+
+  /// Android can kill the app while the system camera is open; the photo then
+  /// arrives on the next start. Null when there's none (and on other platforms).
+  Future<PickedFile?> lostPhoto() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+    try {
+      final lost = await ImagePicker().retrieveLostData();
+      final x = lost.file;
+      if (lost.isEmpty || x == null) return null;
+      return PickedFile(name: x.name, bytes: await x.readAsBytes(), mime: x.mimeType ?? mimeFor(x.name));
+    } on Object {
+      return null;
+    }
   }
 
   Future<List<PickedFile>> files() async {

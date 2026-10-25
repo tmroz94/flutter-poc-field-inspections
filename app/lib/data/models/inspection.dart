@@ -105,7 +105,7 @@ class Person {
 
 @immutable
 class Photo {
-  const Photo({required this.id, required this.caption, required this.takenAt, this.lat, this.lng, this.sizeBytes = 0});
+  const Photo({required this.id, required this.caption, required this.takenAt, this.lat, this.lng, this.sizeBytes = 0, this.forItem});
 
   factory Photo.fromJson(Map<String, Object?> j) => Photo(
     id: j['id']! as String,
@@ -114,6 +114,7 @@ class Photo {
     lat: (j['lat'] as num?)?.toDouble(),
     lng: (j['lng'] as num?)?.toDouble(),
     sizeBytes: (j['sizeBytes'] as num?)?.toInt() ?? 0,
+    forItem: j['forItem'] as String?,
   );
 
   final String id;
@@ -122,6 +123,9 @@ class Photo {
   final double? lat;
   final double? lng;
   final int sizeBytes;
+
+  /// Checklist item this photo documents, if any.
+  final String? forItem;
 }
 
 @immutable
@@ -149,6 +153,41 @@ enum Answer {
   static Answer? parse(Object? name) => values.asNameMap()[name];
 }
 
+/// Extra detail required when a checklist item fails (P11).
+@immutable
+class FailDetail {
+  const FailDetail({this.severity = 3, this.followUp = true, this.note = ''});
+
+  factory FailDetail.fromJson(Map<String, Object?> j) => FailDetail(
+    severity: ((j['severity'] as num?)?.toInt() ?? 3).clamp(1, 5),
+    followUp: j['followUp'] != false,
+    note: j['note'] as String? ?? '',
+  );
+
+  /// 1 (minor) … 5 (critical).
+  final int severity;
+  final bool followUp;
+  final String note;
+
+  FailDetail copyWith({int? severity, bool? followUp, String? note}) =>
+      FailDetail(severity: severity ?? this.severity, followUp: followUp ?? this.followUp, note: note ?? this.note);
+
+  Map<String, Object?> toJson() => {'severity': severity, 'followUp': followUp, 'note': note};
+}
+
+/// A document attached to an inspection on the server (step 4 files).
+@immutable
+class StoredFile {
+  const StoredFile({required this.id, required this.name, this.sizeBytes = 0});
+
+  factory StoredFile.fromJson(Map<String, Object?> j) =>
+      StoredFile(id: j['id']! as String, name: j['name'] as String? ?? '', sizeBytes: (j['sizeBytes'] as num?)?.toInt() ?? 0);
+
+  final String id;
+  final String name;
+  final int sizeBytes;
+}
+
 @immutable
 class InspectionDetail {
   const InspectionDetail({
@@ -165,6 +204,8 @@ class InspectionDetail {
     required this.failed,
     required this.history,
     this.templateId = '',
+    this.files = const [],
+    this.failures = const {},
   });
 
   factory InspectionDetail.fromJson(Map<String, Object?> j) {
@@ -183,6 +224,11 @@ class InspectionDetail {
       failed: (summary['failed'] as num?)?.toInt() ?? 0,
       templateId: j['templateId'] as String? ?? '',
       history: [for (final h in (j['history'] as List?) ?? const []) HistoryEvent.fromJson((h as Map).cast<String, Object?>())],
+      files: [for (final f in (j['files'] as List?) ?? const []) StoredFile.fromJson((f as Map).cast<String, Object?>())],
+      failures: {
+        for (final e in ((j['failures'] as Map?) ?? const {}).entries)
+          if (e.value is Map) e.key as String: FailDetail.fromJson((e.value as Map).cast<String, Object?>()),
+      },
     );
   }
 
@@ -199,6 +245,10 @@ class InspectionDetail {
   final int failed;
   final List<HistoryEvent> history;
   final String templateId;
+  final List<StoredFile> files;
+
+  /// Severity, follow-up and note per failed checklist item.
+  final Map<String, FailDetail> failures;
 
   String get id => summary.id;
   DateTime get endsAt => summary.scheduledAt.add(Duration(minutes: durationMin));

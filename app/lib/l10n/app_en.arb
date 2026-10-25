@@ -497,5 +497,402 @@
         "type": "String"
       }
     }
-  }
+  },
+  "valRequired": "Required",
+  "valEmail": "Enter a valid email, like name@example.com",
+  "valMinLength": "Use {n} or more characters",
+  "@valMinLength": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "valMaxLength": "Use {n} characters or fewer",
+  "@valMaxLength": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "valInteger": "Enter a whole number",
+  "valIntRange": "Enter a number from {min} to {max}",
+  "@valIntRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "valDateInPast": "Pick today or a later date",
+  "valPasswordsDiffer": "Passwords don't match",
+  "valPasswordWeak": "Use 8+ characters with a letter and a digit",
+  "valEmailTaken": "An account with this email already exists",
+  "valMustAccept": "Accept the terms to continue",
+  "valUnknownSite": "Pick a site from the list",
+  "valChecklistIncomplete": "Answer every checklist item",
+  "valCheckField": "Check this field",
+  "valSiteTooShort": "Pick a site from the list or add a new one (3+ characters)",
+  "valAnswerItem": "Answer this item",
+  "valFailureNeedsDetail": "Add a note or a photo for this failure",
+  "valPhotoForFailure": "Add at least one photo of the failed items",
+  "valTooManyPhotos": "Use {n} photos or fewer",
+  "@valTooManyPhotos": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "valFilesTooBig": "{names}: files must be 20 MB or smaller",
+  "@valFilesTooBig": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "valBadFileType": "{names}: use JPG, PNG, HEIC or PDF",
+  "@valBadFileType": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "valConfirmFindings": "Confirm the findings before submitting",
+  "valChecklistNotLoaded": "The checklist hasn't loaded yet",
+  "wizardDraftSaved": "Draft saved on this device",
+  "wizardProgress": "Wizard progress",
+  "wizardSteps": "Wizard steps",
+  "wizardHintSite": "Choose a site",
+  "wizardHintDetails": "Type, date and time",
+  "wizardHintChecklist": "{answered} of {total} answered",
+  "@wizardHintChecklist": {
+    "placeholders": {
+      "answered": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "wizardHintPhotos": "{photos} photos · {files} files",
+  "@wizardHintPhotos": {
+    "placeholders": {
+      "photos": {
+        "type": "int"
+      },
+      "files": {
+        "type": "int"
+      }
+    }
+  },
+  "wizardHintReview": "Check and send",
+  "stepStateDone": "{step}, done",
+  "@stepStateDone": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "stepStateAttention": "{step}, needs attention",
+  "@stepStateAttention": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "stepStateCurrent": "{step}, current step",
+  "@stepStateCurrent": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "stepStateUpcoming": "{step}, not started",
+  "@stepStateUpcoming": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardLoadFailed": "Couldn't load this inspection to edit it.",
+  "wizardRecoveredPhoto": "A photo taken before the app closed was added.",
+  "siteLabel": "Site",
+  "siteHelper": "Search by name or address",
+  "clear": "Clear",
+  "newSite": "New site: {name}",
+  "@newSite": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "newSiteHint": "It will be created when you submit",
+  "addNewSite": "Add “{name}” as a new site",
+  "@addNewSite": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "yourLocation": "Your location",
+  "locationServiceOff": "Location is turned off on this device.",
+  "locationDenied": "Location permission was not given. The check is optional.",
+  "locationBlocked": "Location is blocked for this app.",
+  "locationUnsupported": "Location is not available here.",
+  "locationError": "Couldn't get a position. Try again outside or near a window.",
+  "locationNotChecked": "Not checked yet",
+  "locationOptional": "Optional: confirms you are on site.",
+  "locationAccuracy": "Accuracy ±{meters} m",
+  "@locationAccuracy": {
+    "placeholders": {
+      "meters": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFromSite": "{distance} from the site",
+  "@locationFromSite": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFar": "You seem to be more than 200 m from the site address.",
+  "checkLocation": "Check location",
+  "updateLocation": "Update location",
+  "inspectionType": "Inspection type",
+  "dateLabel": "Date",
+  "openCalendar": "Open calendar",
+  "startTime": "Start time",
+  "openTimePicker": "Open time picker",
+  "priority": "Priority",
+  "priorityLow": "Low",
+  "priorityNormal": "Normal",
+  "priorityHigh": "High",
+  "durationLabel": "Estimated duration (minutes)",
+  "durationHelper": "From 15 to 480",
+  "notesLabel": "Notes for the site manager",
+  "optional": "Optional",
+  "checklistProgress": "{type} · {answered} of {total} answered",
+  "@checklistProgress": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "answered": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "itemsNeedAttention": "{count, plural, =1{1 item needs attention} other{{count} items need attention}}",
+  "@itemsNeedAttention": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "jumpToFirst": "Jump to the first one",
+  "checklistLoadFailed": "Couldn't load the checklist.",
+  "answerPass": "Pass",
+  "answerFail": "Fail",
+  "answerNa": "N/A",
+  "severity": "Severity",
+  "severityValue": "{level} · {label}",
+  "@severityValue": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "severityMinor": "Minor",
+  "severityLow": "Low",
+  "severityMajor": "Major",
+  "severityHigh": "High",
+  "severityCritical": "Critical",
+  "severitySemantics": "Severity {value}",
+  "@severitySemantics": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "followUpVisit": "Requires follow-up visit",
+  "whatIsWrong": "What is wrong?",
+  "addPhoto": "Add photo",
+  "addPhotoCount": "Add photo ({count})",
+  "@addPhotoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dictateNote": "Dictate note (not in the PoC)",
+  "photoTypeHint": "Use JPG, PNG or HEIC up to 20 MB.",
+  "fileRejected": "{name}: use JPG, PNG, HEIC or PDF up to 20 MB.",
+  "@fileRejected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cameraOpenFailed": "Couldn't open the camera.",
+  "galleryOpenFailed": "Couldn't open the gallery.",
+  "photoN": "Photo {n}",
+  "@photoN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "photoNForFailure": "Photo {n}, for a failed item",
+  "@photoNForFailure": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "removePhotoN": "Remove photo {n}",
+  "@removePhotoN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "useCamera": "Use camera",
+  "takePhoto": "Take photo",
+  "gallery": "Gallery",
+  "dropFiles": "Drop files to upload",
+  "dragOrPaste": "Drag files here, or paste an image",
+  "fileTypesHint": "JPG, PNG, HEIC or PDF, up to 20 MB each.",
+  "photosIntro": "Add photos of the findings and any documents the site gave you.",
+  "cameraOff": "Camera access is off. You can still choose photos from the gallery.",
+  "photosCount": "Photos · {count}",
+  "@photosCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filesCount": "Files · {count}",
+  "@filesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "Attach file",
+  "removeFile": "Remove {name}",
+  "@removeFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fileSavedOnDevice": "{size} KB · saved on this device",
+  "@fileSavedOnDevice": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "fileOnServer": "{size} KB · already sent",
+  "@fileOnServer": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "noDate": "No date",
+  "reviewDetails": "{type} · {when} · {priority} priority · {duration} min",
+  "@reviewDetails": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      },
+      "priority": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewChecklist": "{answered} of {total} answered · {failed} failed",
+  "@reviewChecklist": {
+    "placeholders": {
+      "answered": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewFollowUp": "follow-up visit needed",
+  "reviewOffline": "You're offline. The report is saved on this device and sends automatically when you're back online.",
+  "submitFailed": "Couldn't submit ({code}). Try again.",
+  "@submitFailed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "serverRejected": "The server rejected: {fields}",
+  "@serverRejected": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "fixStepsToSubmit": "Fix the steps marked in red and confirm the findings to submit.",
+  "reportQueuedTitle": "Report saved and queued",
+  "reportSubmittedTitle": "Report submitted",
+  "reportQueuedBody": "It sends automatically when you're back online.",
+  "reportSubmittedBody": "The site manager gets the report now.",
+  "viewInspection": "View inspection",
+  "sharePdfReport": "Share PDF report",
+  "pdfFailed": "Couldn't make the PDF report. Try again when you're online.",
+  "typesLoadFailed": "Couldn't load the inspection types."
 }

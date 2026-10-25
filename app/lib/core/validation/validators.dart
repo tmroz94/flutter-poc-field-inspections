@@ -1,34 +1,45 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Validation messages in English and Polish. Validators take this so tests
-/// can check both languages, and the M4 ARB files can replace it later.
+import '../../l10n/l10n.dart';
+
+/// Validation messages in the app's language (from the ARB files). Validators
+/// take this so tests can check both languages without a widget tree.
 class ValidationText {
-  const ValidationText._(this._pl);
+  const ValidationText(this._l);
 
   factory ValidationText.forLocale(Locale locale) => locale.languageCode == 'pl' ? pl : en;
 
-  static ValidationText of(BuildContext context) => ValidationText.forLocale(Localizations.localeOf(context));
+  static ValidationText of(BuildContext context) => ValidationText(AppLocalizations.of(context));
 
-  static const en = ValidationText._(false);
-  static const pl = ValidationText._(true);
+  static final en = ValidationText(lookupAppLocalizations(const Locale('en')));
+  static final pl = ValidationText(lookupAppLocalizations(const Locale('pl')));
 
-  final bool _pl;
+  final AppLocalizations _l;
 
-  String _t(String en, String pl) => _pl ? pl : en;
+  String get required => _l.valRequired;
+  String get email => _l.valEmail;
+  String minLength(int n) => _l.valMinLength(n);
+  String maxLength(int n) => _l.valMaxLength(n);
+  String get integer => _l.valInteger;
+  String intRange(int min, int max) => _l.valIntRange(min, max);
+  String get dateInPast => _l.valDateInPast;
+  String get passwordsDiffer => _l.valPasswordsDiffer;
+  String get passwordWeak => _l.valPasswordWeak;
+  String get emailTaken => _l.valEmailTaken;
+  String get mustAccept => _l.valMustAccept;
+  String get unknownSite => _l.valUnknownSite;
+  String get checklistIncomplete => _l.valChecklistIncomplete;
 
-  String get required => _t('Required', 'Pole wymagane');
-  String get email => _t('Enter a valid email, like name@example.com', 'Podaj poprawny e-mail, np. imie@example.com');
-  String minLength(int n) => _t('Use $n or more characters', 'Użyj co najmniej $n znaków');
-  String maxLength(int n) => _t('Use $n characters or fewer', 'Użyj najwyżej $n znaków');
-  String get integer => _t('Enter a whole number', 'Podaj liczbę całkowitą');
-  String intRange(int min, int max) => _t('Enter a number from $min to $max', 'Podaj liczbę od $min do $max');
-  String get dateInPast => _t('Pick today or a later date', 'Wybierz dzisiejszą lub późniejszą datę');
-  String get passwordsDiffer => _t("Passwords don't match", 'Hasła się różnią');
-  String get passwordWeak => _t('Use 8+ characters with a letter and a digit', 'Użyj 8+ znaków, w tym litery i cyfry');
-  String get emailTaken => _t('An account with this email already exists', 'Konto z tym adresem już istnieje');
-  String get mustAccept => _t('Accept the terms to continue', 'Zaakceptuj warunki, aby kontynuować');
-  String get unknownSite => _t('Pick a site from the list', 'Wybierz obiekt z listy');
-  String get checklistIncomplete => _t('Answer every checklist item', 'Odpowiedz na każdy punkt listy kontrolnej');
+  // Wizard (P09–P13).
+  String get siteTooShort => _l.valSiteTooShort;
+  String get answerItem => _l.valAnswerItem;
+  String get failureNeedsDetail => _l.valFailureNeedsDetail;
+  String get photoForFailure => _l.valPhotoForFailure;
+  String tooManyPhotos(int n) => _l.valTooManyPhotos(n);
+  String filesTooBig(String names) => _l.valFilesTooBig(names);
+  String badFileType(String names) => _l.valBadFileType(names);
+  String get confirmFindings => _l.valConfirmFindings;
+  String get checklistNotLoaded => _l.valChecklistNotLoaded;
 
   /// Maps a server field error code (HTTP 422) for [field] to a message. The
   /// limits are the field's own; the defaults are the API's (password,
@@ -44,7 +55,7 @@ class ValidationText {
     'tooLong' => maxLength(maxChars),
     'unknown' => unknownSite,
     'incomplete' => checklistIncomplete,
-    _ => _t('Check this field', 'Sprawdź to pole'),
+    _ => _l.valCheckField,
   };
 }
 

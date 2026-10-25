@@ -2,8 +2,8 @@ import 'package:field_inspections/core/validation/validators.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const en = ValidationText.en;
-  const pl = ValidationText.pl;
+  final en = ValidationText.en;
+  final pl = ValidationText.pl;
 
   group('required', () {
     test('rejects null, empty and blank', () {

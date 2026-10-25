@@ -1519,6 +1519,762 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{label}, in progress'**
   String inProgressLabel(String label);
+
+  /// No description provided for @valRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get valRequired;
+
+  /// No description provided for @valEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email, like name@example.com'**
+  String get valEmail;
+
+  /// No description provided for @valMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Use {n} or more characters'**
+  String valMinLength(int n);
+
+  /// No description provided for @valMaxLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Use {n} characters or fewer'**
+  String valMaxLength(int n);
+
+  /// No description provided for @valInteger.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a whole number'**
+  String get valInteger;
+
+  /// No description provided for @valIntRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number from {min} to {max}'**
+  String valIntRange(int min, int max);
+
+  /// No description provided for @valDateInPast.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick today or a later date'**
+  String get valDateInPast;
+
+  /// No description provided for @valPasswordsDiffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords don\'t match'**
+  String get valPasswordsDiffer;
+
+  /// No description provided for @valPasswordWeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 8+ characters with a letter and a digit'**
+  String get valPasswordWeak;
+
+  /// No description provided for @valEmailTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'An account with this email already exists'**
+  String get valEmailTaken;
+
+  /// No description provided for @valMustAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept the terms to continue'**
+  String get valMustAccept;
+
+  /// No description provided for @valUnknownSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a site from the list'**
+  String get valUnknownSite;
+
+  /// No description provided for @valChecklistIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer every checklist item'**
+  String get valChecklistIncomplete;
+
+  /// No description provided for @valCheckField.
+  ///
+  /// In en, this message translates to:
+  /// **'Check this field'**
+  String get valCheckField;
+
+  /// No description provided for @valSiteTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a site from the list or add a new one (3+ characters)'**
+  String get valSiteTooShort;
+
+  /// No description provided for @valAnswerItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer this item'**
+  String get valAnswerItem;
+
+  /// No description provided for @valFailureNeedsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note or a photo for this failure'**
+  String get valFailureNeedsDetail;
+
+  /// No description provided for @valPhotoForFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one photo of the failed items'**
+  String get valPhotoForFailure;
+
+  /// No description provided for @valTooManyPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Use {n} photos or fewer'**
+  String valTooManyPhotos(int n);
+
+  /// No description provided for @valFilesTooBig.
+  ///
+  /// In en, this message translates to:
+  /// **'{names}: files must be 20 MB or smaller'**
+  String valFilesTooBig(String names);
+
+  /// No description provided for @valBadFileType.
+  ///
+  /// In en, this message translates to:
+  /// **'{names}: use JPG, PNG, HEIC or PDF'**
+  String valBadFileType(String names);
+
+  /// No description provided for @valConfirmFindings.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the findings before submitting'**
+  String get valConfirmFindings;
+
+  /// No description provided for @valChecklistNotLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'The checklist hasn\'t loaded yet'**
+  String get valChecklistNotLoaded;
+
+  /// No description provided for @wizardDraftSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft saved on this device'**
+  String get wizardDraftSaved;
+
+  /// No description provided for @wizardProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Wizard progress'**
+  String get wizardProgress;
+
+  /// No description provided for @wizardSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Wizard steps'**
+  String get wizardSteps;
+
+  /// No description provided for @wizardHintSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a site'**
+  String get wizardHintSite;
+
+  /// No description provided for @wizardHintDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Type, date and time'**
+  String get wizardHintDetails;
+
+  /// No description provided for @wizardHintChecklist.
+  ///
+  /// In en, this message translates to:
+  /// **'{answered} of {total} answered'**
+  String wizardHintChecklist(int answered, int total);
+
+  /// No description provided for @wizardHintPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'{photos} photos · {files} files'**
+  String wizardHintPhotos(int photos, int files);
+
+  /// No description provided for @wizardHintReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Check and send'**
+  String get wizardHintReview;
+
+  /// No description provided for @stepStateDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{step}, done'**
+  String stepStateDone(String step);
+
+  /// No description provided for @stepStateAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'{step}, needs attention'**
+  String stepStateAttention(String step);
+
+  /// No description provided for @stepStateCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'{step}, current step'**
+  String stepStateCurrent(String step);
+
+  /// No description provided for @stepStateUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'{step}, not started'**
+  String stepStateUpcoming(String step);
+
+  /// No description provided for @wizardLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this inspection to edit it.'**
+  String get wizardLoadFailed;
+
+  /// No description provided for @wizardRecoveredPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'A photo taken before the app closed was added.'**
+  String get wizardRecoveredPhoto;
+
+  /// No description provided for @siteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Site'**
+  String get siteLabel;
+
+  /// No description provided for @siteHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or address'**
+  String get siteHelper;
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @newSite.
+  ///
+  /// In en, this message translates to:
+  /// **'New site: {name}'**
+  String newSite(String name);
+
+  /// No description provided for @newSiteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'It will be created when you submit'**
+  String get newSiteHint;
+
+  /// No description provided for @addNewSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Add “{name}” as a new site'**
+  String addNewSite(String name);
+
+  /// No description provided for @yourLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your location'**
+  String get yourLocation;
+
+  /// No description provided for @locationServiceOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is turned off on this device.'**
+  String get locationServiceOff;
+
+  /// No description provided for @locationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission was not given. The check is optional.'**
+  String get locationDenied;
+
+  /// No description provided for @locationBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is blocked for this app.'**
+  String get locationBlocked;
+
+  /// No description provided for @locationUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is not available here.'**
+  String get locationUnsupported;
+
+  /// No description provided for @locationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get a position. Try again outside or near a window.'**
+  String get locationError;
+
+  /// No description provided for @locationNotChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'Not checked yet'**
+  String get locationNotChecked;
+
+  /// No description provided for @locationOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional: confirms you are on site.'**
+  String get locationOptional;
+
+  /// No description provided for @locationAccuracy.
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy ±{meters} m'**
+  String locationAccuracy(String meters);
+
+  /// No description provided for @locationFromSite.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} from the site'**
+  String locationFromSite(String distance);
+
+  /// No description provided for @locationFar.
+  ///
+  /// In en, this message translates to:
+  /// **'You seem to be more than 200 m from the site address.'**
+  String get locationFar;
+
+  /// No description provided for @checkLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Check location'**
+  String get checkLocation;
+
+  /// No description provided for @updateLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Update location'**
+  String get updateLocation;
+
+  /// No description provided for @inspectionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection type'**
+  String get inspectionType;
+
+  /// No description provided for @dateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get dateLabel;
+
+  /// No description provided for @openCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Open calendar'**
+  String get openCalendar;
+
+  /// No description provided for @startTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get startTime;
+
+  /// No description provided for @openTimePicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Open time picker'**
+  String get openTimePicker;
+
+  /// No description provided for @priority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get priority;
+
+  /// No description provided for @priorityLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get priorityLow;
+
+  /// No description provided for @priorityNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get priorityNormal;
+
+  /// No description provided for @priorityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get priorityHigh;
+
+  /// No description provided for @durationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated duration (minutes)'**
+  String get durationLabel;
+
+  /// No description provided for @durationHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'From 15 to 480'**
+  String get durationHelper;
+
+  /// No description provided for @notesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes for the site manager'**
+  String get notesLabel;
+
+  /// No description provided for @optional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get optional;
+
+  /// No description provided for @checklistProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} · {answered} of {total} answered'**
+  String checklistProgress(String type, int answered, int total);
+
+  /// No description provided for @itemsNeedAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item needs attention} other{{count} items need attention}}'**
+  String itemsNeedAttention(int count);
+
+  /// No description provided for @jumpToFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to the first one'**
+  String get jumpToFirst;
+
+  /// No description provided for @checklistLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the checklist.'**
+  String get checklistLoadFailed;
+
+  /// No description provided for @answerPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass'**
+  String get answerPass;
+
+  /// No description provided for @answerFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Fail'**
+  String get answerFail;
+
+  /// No description provided for @answerNa.
+  ///
+  /// In en, this message translates to:
+  /// **'N/A'**
+  String get answerNa;
+
+  /// No description provided for @severity.
+  ///
+  /// In en, this message translates to:
+  /// **'Severity'**
+  String get severity;
+
+  /// No description provided for @severityValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{level} · {label}'**
+  String severityValue(int level, String label);
+
+  /// No description provided for @severityMinor.
+  ///
+  /// In en, this message translates to:
+  /// **'Minor'**
+  String get severityMinor;
+
+  /// No description provided for @severityLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get severityLow;
+
+  /// No description provided for @severityMajor.
+  ///
+  /// In en, this message translates to:
+  /// **'Major'**
+  String get severityMajor;
+
+  /// No description provided for @severityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get severityHigh;
+
+  /// No description provided for @severityCritical.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical'**
+  String get severityCritical;
+
+  /// No description provided for @severitySemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Severity {value}'**
+  String severitySemantics(String value);
+
+  /// No description provided for @followUpVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Requires follow-up visit'**
+  String get followUpVisit;
+
+  /// No description provided for @whatIsWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'What is wrong?'**
+  String get whatIsWrong;
+
+  /// No description provided for @addPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photo'**
+  String get addPhoto;
+
+  /// No description provided for @addPhotoCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photo ({count})'**
+  String addPhotoCount(int count);
+
+  /// No description provided for @dictateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Dictate note (not in the PoC)'**
+  String get dictateNote;
+
+  /// No description provided for @photoTypeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use JPG, PNG or HEIC up to 20 MB.'**
+  String get photoTypeHint;
+
+  /// No description provided for @fileRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: use JPG, PNG, HEIC or PDF up to 20 MB.'**
+  String fileRejected(String name);
+
+  /// No description provided for @cameraOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the camera.'**
+  String get cameraOpenFailed;
+
+  /// No description provided for @galleryOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the gallery.'**
+  String get galleryOpenFailed;
+
+  /// No description provided for @photoN.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo {n}'**
+  String photoN(int n);
+
+  /// No description provided for @photoNForFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo {n}, for a failed item'**
+  String photoNForFailure(int n);
+
+  /// No description provided for @removePhotoN.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove photo {n}'**
+  String removePhotoN(int n);
+
+  /// No description provided for @useCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Use camera'**
+  String get useCamera;
+
+  /// No description provided for @takePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take photo'**
+  String get takePhoto;
+
+  /// No description provided for @gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get gallery;
+
+  /// No description provided for @dropFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop files to upload'**
+  String get dropFiles;
+
+  /// No description provided for @dragOrPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag files here, or paste an image'**
+  String get dragOrPaste;
+
+  /// No description provided for @fileTypesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'JPG, PNG, HEIC or PDF, up to 20 MB each.'**
+  String get fileTypesHint;
+
+  /// No description provided for @photosIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photos of the findings and any documents the site gave you.'**
+  String get photosIntro;
+
+  /// No description provided for @cameraOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is off. You can still choose photos from the gallery.'**
+  String get cameraOff;
+
+  /// No description provided for @photosCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos · {count}'**
+  String photosCount(int count);
+
+  /// No description provided for @filesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Files · {count}'**
+  String filesCount(int count);
+
+  /// No description provided for @attachFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach file'**
+  String get attachFile;
+
+  /// No description provided for @removeFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}'**
+  String removeFile(String name);
+
+  /// No description provided for @fileSavedOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} KB · saved on this device'**
+  String fileSavedOnDevice(int size);
+
+  /// No description provided for @fileOnServer.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} KB · already sent'**
+  String fileOnServer(int size);
+
+  /// No description provided for @noDate.
+  ///
+  /// In en, this message translates to:
+  /// **'No date'**
+  String get noDate;
+
+  /// No description provided for @reviewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} · {when} · {priority} priority · {duration} min'**
+  String reviewDetails(String type, String when, String priority, String duration);
+
+  /// No description provided for @reviewChecklist.
+  ///
+  /// In en, this message translates to:
+  /// **'{answered} of {total} answered · {failed} failed'**
+  String reviewChecklist(int answered, int total, int failed);
+
+  /// No description provided for @reviewFollowUp.
+  ///
+  /// In en, this message translates to:
+  /// **'follow-up visit needed'**
+  String get reviewFollowUp;
+
+  /// No description provided for @reviewOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. The report is saved on this device and sends automatically when you\'re back online.'**
+  String get reviewOffline;
+
+  /// No description provided for @submitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t submit ({code}). Try again.'**
+  String submitFailed(String code);
+
+  /// No description provided for @serverRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The server rejected: {fields}'**
+  String serverRejected(String fields);
+
+  /// No description provided for @fixStepsToSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix the steps marked in red and confirm the findings to submit.'**
+  String get fixStepsToSubmit;
+
+  /// No description provided for @reportQueuedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report saved and queued'**
+  String get reportQueuedTitle;
+
+  /// No description provided for @reportSubmittedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report submitted'**
+  String get reportSubmittedTitle;
+
+  /// No description provided for @reportQueuedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It sends automatically when you\'re back online.'**
+  String get reportQueuedBody;
+
+  /// No description provided for @reportSubmittedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The site manager gets the report now.'**
+  String get reportSubmittedBody;
+
+  /// No description provided for @viewInspection.
+  ///
+  /// In en, this message translates to:
+  /// **'View inspection'**
+  String get viewInspection;
+
+  /// No description provided for @sharePdfReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Share PDF report'**
+  String get sharePdfReport;
+
+  /// No description provided for @pdfFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t make the PDF report. Try again when you\'re online.'**
+  String get pdfFailed;
+
+  /// No description provided for @typesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the inspection types.'**
+  String get typesLoadFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

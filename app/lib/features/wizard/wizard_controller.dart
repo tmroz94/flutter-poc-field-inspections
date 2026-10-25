@@ -1,20 +1,40 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/platform/platform_services.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/local/local_store.dart';
 import '../../data/models/draft.dart';
 import '../../data/providers.dart';
 import '../inspections/inspections_controller.dart';
+import 'wizard_validation.dart';
 
 /// Wizard key: `new` for a new inspection, else the inspection id being edited.
 String wizardKey(String? inspectionId) => inspectionId ?? 'new';
 
+final _random = Random();
+
+/// Unique on every platform: the web clock has millisecond resolution, so
+/// several files dropped at once would otherwise share an id (and a blob).
+String newAttachmentId({required bool photo}) =>
+    '${photo ? 'ph' : 'f'}-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${_random.nextInt(1 << 32).toRadixString(36)}';
+
 @immutable
 class WizardState {
-  const WizardState({required this.draft, this.loading = false, this.savedAt, this.submitting = false, this.submitError});
+  const WizardState({
+    required this.draft,
+    this.loading = false,
+    this.savedAt,
+    this.submitting = false,
+    this.submitError,
+    this.loadError,
+    this.changed = false,
+    this.stored = false,
+    this.recoveredPhoto = false,
+  });
 
   final InspectionDraft draft;
   final bool loading;
@@ -24,18 +44,43 @@ class WizardState {
   final bool submitting;
   final ApiException? submitError;
 
+  /// The inspection to edit couldn't be loaded (e.g. offline): the wizard
+  /// shows a retry instead of an empty form that would be saved as a draft.
+  final Object? loadError;
+
+  /// The user changed something since the wizard opened.
+  final bool changed;
+
+  /// A draft of this wizard is saved on the device.
+  final bool stored;
+
+  /// Something to keep or discard when leaving: an untouched wizard (e.g. an
+  /// edit opened from the inspection) closes without asking or saving.
+  bool get hasDraft => changed || stored;
+
+  /// A camera photo from before Android restarted the app was just added.
+  final bool recoveredPhoto;
+
   WizardState copyWith({
     InspectionDraft? draft,
     bool? loading,
     DateTime? savedAt,
     bool? submitting,
     ApiException? Function()? submitError,
+    Object? Function()? loadError,
+    bool? changed,
+    bool? stored,
+    bool? recoveredPhoto,
   }) => WizardState(
     draft: draft ?? this.draft,
     loading: loading ?? this.loading,
     savedAt: savedAt ?? this.savedAt,
     submitting: submitting ?? this.submitting,
     submitError: submitError != null ? submitError() : this.submitError,
+    loadError: loadError != null ? loadError() : this.loadError,
+    changed: changed ?? this.changed,
+    stored: stored ?? this.stored,
+    recoveredPhoto: recoveredPhoto ?? this.recoveredPhoto,
   );
 }
 
@@ -43,8 +88,8 @@ class WizardState {
 enum SubmitOutcome { sent, queued }
 
 /// Loads a saved draft (or prefills from the inspection when editing), saves
-/// every change to the device after a short debounce, and submits online or
-/// into the outbox when offline.
+/// changes to the device after a short debounce, and submits online or into
+/// the outbox when offline.
 class WizardController extends Notifier<WizardState> {
   WizardController(this.key);
 
@@ -55,6 +100,9 @@ class WizardController extends Notifier<WizardState> {
   late LocalStore _store;
   InspectionDraft? _unsaved;
 
+  /// The draft was already on the device when the wizard opened.
+  bool _stored = false;
+
   String? get _inspectionId => key == 'new' ? null : key;
 
   @override
@@ -62,9 +110,10 @@ class WizardController extends Notifier<WizardState> {
     _store = ref.read(localStoreProvider);
     ref.onDispose(() {
       _debounce?.cancel();
-      // Flush a pending save so nothing typed in the last moment is lost.
+      // Flush a pending save so nothing typed in the last moment is lost
+      // ([update] only leaves one when the draft is worth saving).
       final pending = _unsaved;
-      if (pending != null && !(pending.isEmpty && pending.inspectionId == null)) {
+      if (pending != null) {
         unawaited(_store.saveDraft(key, pending.copyWith(updatedAt: DateTime.now())));
       }
     });
@@ -73,23 +122,50 @@ class WizardController extends Notifier<WizardState> {
   }
 
   Future<void> _load() async {
-    var draft = await _store.draft(key);
-    if (draft == null && _inspectionId != null) {
-      try {
+    InspectionDraft? draft;
+    Object? error;
+    try {
+      draft = await _store.draft(key);
+      _stored = draft != null;
+      if (draft == null && _inspectionId != null && ref.mounted) {
         draft = InspectionDraft.fromInspection(await ref.read(inspectionsRepositoryProvider).get(_inspectionId!));
-      } on ApiException {
-        draft = InspectionDraft(inspectionId: _inspectionId);
       }
+    } on Object catch (e) {
+      error = e;
     }
     if (!ref.mounted) return;
-    state = WizardState(draft: draft ?? const InspectionDraft(), savedAt: draft?.updatedAt);
+    state = WizardState(
+      draft: draft ?? InspectionDraft(inspectionId: _inspectionId),
+      savedAt: _stored ? draft?.updatedAt : null,
+      loadError: error,
+      stored: _stored,
+    );
+    if (error == null) await _recoverLostPhoto();
   }
 
-  /// Applies [change] and schedules a save.
-  void update(InspectionDraft Function(InspectionDraft d) change) {
-    state = state.copyWith(draft: change(state.draft), submitError: () => null);
-    _unsaved = state.draft;
+  /// After [WizardState.loadError]: try loading the inspection again.
+  Future<void> reload() async {
+    state = state.copyWith(loading: true, loadError: () => null);
+    await _load();
+  }
+
+  Future<void> _recoverLostPhoto() async {
+    final file = await ref.read(mediaServiceProvider).lostPhoto();
+    if (file == null || !ref.mounted) return;
+    if (await addFile(file) && ref.mounted) state = state.copyWith(recoveredPhoto: true);
+  }
+
+  /// A draft is kept once the user changed something, or when it was already
+  /// stored; never an untouched new one.
+  bool _worthSaving(InspectionDraft d) => (state.changed || _stored) && !(d.isEmpty && d.inspectionId == null);
+
+  /// Applies [change] and schedules a save. [byUser] false (step bookkeeping)
+  /// doesn't count as a change on its own.
+  void update(InspectionDraft Function(InspectionDraft d) change, {bool byUser = true}) {
+    state = state.copyWith(draft: change(state.draft), submitError: () => null, changed: state.changed || byUser);
     _debounce?.cancel();
+    if (!_worthSaving(state.draft)) return;
+    _unsaved = state.draft;
     _debounce = Timer(const Duration(milliseconds: 400), () => _persist(state.draft));
   }
 
@@ -99,41 +175,75 @@ class WizardController extends Notifier<WizardState> {
   }
 
   Future<void> _persist(InspectionDraft draft) async {
-    if (draft.isEmpty && draft.inspectionId == null) return;
+    if (!_worthSaving(draft)) return;
     final now = DateTime.now();
     _unsaved = null;
     await _store.saveDraft(key, draft.copyWith(updatedAt: now));
-    if (ref.mounted) state = state.copyWith(savedAt: now);
+    _stored = true;
+    if (ref.mounted) state = state.copyWith(savedAt: now, stored: true);
   }
 
   void reachStep(int step) {
-    if (step > state.draft.lastStep) update((d) => d.copyWith(lastStep: step));
+    if (step > state.draft.lastStep) update((d) => d.copyWith(lastStep: step), byUser: false);
   }
 
+  /// Saves picked bytes on the device (SQLite blob) and adds the attachment.
+  /// False when the type or size isn't allowed, or the wizard closed meanwhile.
+  Future<bool> addFile(PickedFile file, {String? forItem}) async {
+    final ext = file.name.split('.').last.toLowerCase();
+    if (!WizardValidator.allowedExtensions.contains(ext) || file.bytes.length > WizardValidator.maxFileBytes) return false;
+    final id = newAttachmentId(photo: file.isImage);
+    await _store.putBlob(id, file.bytes, file.mime);
+    if (!ref.mounted) {
+      await _store.deleteBlob(id);
+      return false;
+    }
+    update(
+      (d) => d.copyWith(
+        attachments: [
+          ...d.attachments,
+          DraftAttachment(id: id, name: file.name, sizeBytes: file.bytes.length, isPhoto: file.isImage, forItem: forItem),
+        ],
+      ),
+    );
+    return true;
+  }
+
+  void removeAttachment(DraftAttachment a) {
+    update((d) => d.copyWith(attachments: d.attachments.where((x) => x.id != a.id).toList()));
+    // Bytes only exist for files added on this device.
+    if (!a.stored) unawaited(_store.deleteBlob(a.id));
+  }
+
+  /// Deletes the draft and its stored files. The wizard is closing, so the
+  /// state is left as it is (an emptied draft would re-run the step guard).
   Future<void> discard() async {
     _debounce?.cancel();
     _unsaved = null;
+    final attachments = state.draft.attachments;
     await _store.deleteDraft(key);
-    if (ref.mounted) state = WizardState(draft: InspectionDraft(inspectionId: _inspectionId));
+    for (final a in attachments) {
+      if (!a.stored) await _store.deleteBlob(a.id);
+    }
+    _stored = false;
   }
 
   /// Sends the inspection. Offline (network error) it goes to the outbox and
-  /// returns [SubmitOutcome.queued]; the draft is removed either way.
-  /// Server validation errors are kept in [WizardState.submitError].
+  /// returns [SubmitOutcome.queued]; the draft is removed either way. Server
+  /// validation errors are kept in [WizardState.submitError]. Safe to leave
+  /// the wizard while it runs.
   Future<({SubmitOutcome outcome, String? id})?> submit() async {
     _debounce?.cancel();
     _unsaved = null;
     final draft = state.draft;
-    state = state.copyWith(submitting: true, submitError: () => null);
     final store = _store;
+    final repository = ref.read(inspectionsRepositoryProvider);
+    final revision = ref.read(inspectionsRevisionProvider.notifier);
+    state = state.copyWith(submitting: true, submitError: () => null);
     try {
-      final saved = await ref.read(inspectionsRepositoryProvider).save(draft.toApiBody(), id: draft.inspectionId, submit: true);
+      final saved = await repository.save(draft.toApiBody(), id: draft.inspectionId, submit: true);
       await store.deleteDraft(key);
-      ref
-        ..invalidate(inspectionListProvider)
-        ..invalidate(homeProvider);
-      if (draft.inspectionId != null) ref.invalidate(inspectionDetailProvider(draft.inspectionId!));
-      if (ref.mounted) state = state.copyWith(submitting: false);
+      revision.changed();
       return (outcome: SubmitOutcome.sent, id: saved.id);
     } on ApiException catch (e) {
       if (e.isNetwork) {
@@ -142,13 +252,19 @@ class WizardController extends Notifier<WizardState> {
           inspectionId: draft.inspectionId,
           site: draft.siteName,
           body: draft.toApiBody(),
+          draft: draft,
         );
         await store.deleteDraft(key);
-        if (ref.mounted) state = state.copyWith(submitting: false);
         return (outcome: SubmitOutcome.queued, id: draft.inspectionId);
       }
-      if (ref.mounted) state = state.copyWith(submitting: false, submitError: () => e);
+      if (ref.mounted) state = state.copyWith(submitError: () => e);
       return null;
+    } on Object catch (e) {
+      debugPrint('Submit failed: $e');
+      if (ref.mounted) state = state.copyWith(submitError: () => const ApiException('unknown'));
+      return null;
+    } finally {
+      if (ref.mounted) state = state.copyWith(submitting: false);
     }
   }
 }

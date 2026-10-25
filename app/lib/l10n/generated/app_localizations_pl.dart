@@ -874,4 +874,458 @@ class AppLocalizationsPl extends AppLocalizations {
   String inProgressLabel(String label) {
     return '$label, w toku';
   }
+
+  @override
+  String get valRequired => 'Pole wymagane';
+
+  @override
+  String get valEmail => 'Podaj poprawny e-mail, np. imie@example.com';
+
+  @override
+  String valMinLength(int n) {
+    return 'Użyj co najmniej $n znaków';
+  }
+
+  @override
+  String valMaxLength(int n) {
+    return 'Użyj najwyżej $n znaków';
+  }
+
+  @override
+  String get valInteger => 'Podaj liczbę całkowitą';
+
+  @override
+  String valIntRange(int min, int max) {
+    return 'Podaj liczbę od $min do $max';
+  }
+
+  @override
+  String get valDateInPast => 'Wybierz dzisiejszą lub późniejszą datę';
+
+  @override
+  String get valPasswordsDiffer => 'Hasła się różnią';
+
+  @override
+  String get valPasswordWeak => 'Użyj 8+ znaków, w tym litery i cyfry';
+
+  @override
+  String get valEmailTaken => 'Konto z tym adresem już istnieje';
+
+  @override
+  String get valMustAccept => 'Zaakceptuj warunki, aby kontynuować';
+
+  @override
+  String get valUnknownSite => 'Wybierz obiekt z listy';
+
+  @override
+  String get valChecklistIncomplete => 'Odpowiedz na każdy punkt listy kontrolnej';
+
+  @override
+  String get valCheckField => 'Sprawdź to pole';
+
+  @override
+  String get valSiteTooShort => 'Wybierz obiekt z listy lub dodaj nowy (min. 3 znaki)';
+
+  @override
+  String get valAnswerItem => 'Odpowiedz na ten punkt';
+
+  @override
+  String get valFailureNeedsDetail => 'Dodaj notatkę lub zdjęcie do tej niezgodności';
+
+  @override
+  String get valPhotoForFailure => 'Dodaj co najmniej jedno zdjęcie niespełnionych punktów';
+
+  @override
+  String valTooManyPhotos(int n) {
+    return 'Dodaj najwyżej $n zdjęć';
+  }
+
+  @override
+  String valFilesTooBig(String names) {
+    return '$names: pliki mogą mieć najwyżej 20 MB';
+  }
+
+  @override
+  String valBadFileType(String names) {
+    return '$names: użyj JPG, PNG, HEIC lub PDF';
+  }
+
+  @override
+  String get valConfirmFindings => 'Potwierdź ustalenia przed wysłaniem';
+
+  @override
+  String get valChecklistNotLoaded => 'Lista kontrolna jeszcze się nie wczytała';
+
+  @override
+  String get wizardDraftSaved => 'Szkic zapisany na tym urządzeniu';
+
+  @override
+  String get wizardProgress => 'Postęp kreatora';
+
+  @override
+  String get wizardSteps => 'Kroki kreatora';
+
+  @override
+  String get wizardHintSite => 'Wybierz obiekt';
+
+  @override
+  String get wizardHintDetails => 'Rodzaj, data i godzina';
+
+  @override
+  String wizardHintChecklist(int answered, int total) {
+    return 'Odpowiedzi: $answered z $total';
+  }
+
+  @override
+  String wizardHintPhotos(int photos, int files) {
+    return 'Zdjęcia: $photos · pliki: $files';
+  }
+
+  @override
+  String get wizardHintReview => 'Sprawdź i wyślij';
+
+  @override
+  String stepStateDone(String step) {
+    return '$step, gotowe';
+  }
+
+  @override
+  String stepStateAttention(String step) {
+    return '$step, wymaga uwagi';
+  }
+
+  @override
+  String stepStateCurrent(String step) {
+    return '$step, bieżący krok';
+  }
+
+  @override
+  String stepStateUpcoming(String step) {
+    return '$step, nierozpoczęty';
+  }
+
+  @override
+  String get wizardLoadFailed => 'Nie udało się wczytać tej inspekcji do edycji.';
+
+  @override
+  String get wizardRecoveredPhoto => 'Dodano zdjęcie zrobione przed zamknięciem aplikacji.';
+
+  @override
+  String get siteLabel => 'Obiekt';
+
+  @override
+  String get siteHelper => 'Szukaj po nazwie lub adresie';
+
+  @override
+  String get clear => 'Wyczyść';
+
+  @override
+  String newSite(String name) {
+    return 'Nowy obiekt: $name';
+  }
+
+  @override
+  String get newSiteHint => 'Zostanie utworzony po wysłaniu';
+
+  @override
+  String addNewSite(String name) {
+    return 'Dodaj „$name” jako nowy obiekt';
+  }
+
+  @override
+  String get yourLocation => 'Twoja lokalizacja';
+
+  @override
+  String get locationServiceOff => 'Lokalizacja jest wyłączona na tym urządzeniu.';
+
+  @override
+  String get locationDenied => 'Nie udzielono zgody na lokalizację. Sprawdzenie jest opcjonalne.';
+
+  @override
+  String get locationBlocked => 'Lokalizacja jest zablokowana dla tej aplikacji.';
+
+  @override
+  String get locationUnsupported => 'Lokalizacja nie jest tu dostępna.';
+
+  @override
+  String get locationError => 'Nie udało się ustalić pozycji. Spróbuj na zewnątrz lub przy oknie.';
+
+  @override
+  String get locationNotChecked => 'Jeszcze nie sprawdzono';
+
+  @override
+  String get locationOptional => 'Opcjonalnie: potwierdza, że jesteś na miejscu.';
+
+  @override
+  String locationAccuracy(String meters) {
+    return 'Dokładność ±$meters m';
+  }
+
+  @override
+  String locationFromSite(String distance) {
+    return '$distance od obiektu';
+  }
+
+  @override
+  String get locationFar => 'Wygląda na to, że jesteś ponad 200 m od adresu obiektu.';
+
+  @override
+  String get checkLocation => 'Sprawdź lokalizację';
+
+  @override
+  String get updateLocation => 'Odśwież lokalizację';
+
+  @override
+  String get inspectionType => 'Rodzaj inspekcji';
+
+  @override
+  String get dateLabel => 'Data';
+
+  @override
+  String get openCalendar => 'Otwórz kalendarz';
+
+  @override
+  String get startTime => 'Godzina rozpoczęcia';
+
+  @override
+  String get openTimePicker => 'Wybierz godzinę';
+
+  @override
+  String get priority => 'Priorytet';
+
+  @override
+  String get priorityLow => 'Niski';
+
+  @override
+  String get priorityNormal => 'Normalny';
+
+  @override
+  String get priorityHigh => 'Wysoki';
+
+  @override
+  String get durationLabel => 'Szacowany czas (minuty)';
+
+  @override
+  String get durationHelper => 'Od 15 do 480';
+
+  @override
+  String get notesLabel => 'Uwagi dla kierownika obiektu';
+
+  @override
+  String get optional => 'Opcjonalnie';
+
+  @override
+  String checklistProgress(String type, int answered, int total) {
+    return '$type · odpowiedzi: $answered z $total';
+  }
+
+  @override
+  String itemsNeedAttention(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count punktu wymaga uwagi',
+      many: '$count punktów wymaga uwagi',
+      few: '$count punkty wymagają uwagi',
+      one: '1 punkt wymaga uwagi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get jumpToFirst => 'Przejdź do pierwszego';
+
+  @override
+  String get checklistLoadFailed => 'Nie udało się wczytać listy kontrolnej.';
+
+  @override
+  String get answerPass => 'Spełnia';
+
+  @override
+  String get answerFail => 'Nie spełnia';
+
+  @override
+  String get answerNa => 'Nie dotyczy';
+
+  @override
+  String get severity => 'Waga';
+
+  @override
+  String severityValue(int level, String label) {
+    return '$level · $label';
+  }
+
+  @override
+  String get severityMinor => 'Drobna';
+
+  @override
+  String get severityLow => 'Niska';
+
+  @override
+  String get severityMajor => 'Istotna';
+
+  @override
+  String get severityHigh => 'Wysoka';
+
+  @override
+  String get severityCritical => 'Krytyczna';
+
+  @override
+  String severitySemantics(String value) {
+    return 'Waga $value';
+  }
+
+  @override
+  String get followUpVisit => 'Wymaga ponownej wizyty';
+
+  @override
+  String get whatIsWrong => 'Co jest nie tak?';
+
+  @override
+  String get addPhoto => 'Dodaj zdjęcie';
+
+  @override
+  String addPhotoCount(int count) {
+    return 'Dodaj zdjęcie ($count)';
+  }
+
+  @override
+  String get dictateNote => 'Dyktuj notatkę (poza PoC)';
+
+  @override
+  String get photoTypeHint => 'Użyj JPG, PNG lub HEIC do 20 MB.';
+
+  @override
+  String fileRejected(String name) {
+    return '$name: użyj JPG, PNG, HEIC lub PDF do 20 MB.';
+  }
+
+  @override
+  String get cameraOpenFailed => 'Nie udało się otworzyć aparatu.';
+
+  @override
+  String get galleryOpenFailed => 'Nie udało się otworzyć galerii.';
+
+  @override
+  String photoN(int n) {
+    return 'Zdjęcie $n';
+  }
+
+  @override
+  String photoNForFailure(int n) {
+    return 'Zdjęcie $n, do niespełnionego punktu';
+  }
+
+  @override
+  String removePhotoN(int n) {
+    return 'Usuń zdjęcie $n';
+  }
+
+  @override
+  String get useCamera => 'Użyj kamery';
+
+  @override
+  String get takePhoto => 'Zrób zdjęcie';
+
+  @override
+  String get gallery => 'Galeria';
+
+  @override
+  String get dropFiles => 'Upuść pliki, aby je dodać';
+
+  @override
+  String get dragOrPaste => 'Przeciągnij tu pliki lub wklej obraz';
+
+  @override
+  String get fileTypesHint => 'JPG, PNG, HEIC lub PDF, do 20 MB każdy.';
+
+  @override
+  String get photosIntro => 'Dodaj zdjęcia ustaleń i dokumenty otrzymane na obiekcie.';
+
+  @override
+  String get cameraOff => 'Dostęp do aparatu jest wyłączony. Nadal możesz wybrać zdjęcia z galerii.';
+
+  @override
+  String photosCount(int count) {
+    return 'Zdjęcia · $count';
+  }
+
+  @override
+  String filesCount(int count) {
+    return 'Pliki · $count';
+  }
+
+  @override
+  String get attachFile => 'Dołącz plik';
+
+  @override
+  String removeFile(String name) {
+    return 'Usuń $name';
+  }
+
+  @override
+  String fileSavedOnDevice(int size) {
+    return '$size KB · zapisano na tym urządzeniu';
+  }
+
+  @override
+  String fileOnServer(int size) {
+    return '$size KB · już wysłany';
+  }
+
+  @override
+  String get noDate => 'Brak daty';
+
+  @override
+  String reviewDetails(String type, String when, String priority, String duration) {
+    return '$type · $when · priorytet: $priority · $duration min';
+  }
+
+  @override
+  String reviewChecklist(int answered, int total, int failed) {
+    return 'Odpowiedzi: $answered z $total · niespełnione: $failed';
+  }
+
+  @override
+  String get reviewFollowUp => 'potrzebna ponowna wizyta';
+
+  @override
+  String get reviewOffline => 'Jesteś offline. Raport zostanie zapisany na tym urządzeniu i wysłany automatycznie po powrocie sieci.';
+
+  @override
+  String submitFailed(String code) {
+    return 'Nie udało się wysłać ($code). Spróbuj ponownie.';
+  }
+
+  @override
+  String serverRejected(String fields) {
+    return 'Serwer odrzucił: $fields';
+  }
+
+  @override
+  String get fixStepsToSubmit => 'Popraw kroki oznaczone na czerwono i potwierdź ustalenia, aby wysłać.';
+
+  @override
+  String get reportQueuedTitle => 'Raport zapisany w kolejce';
+
+  @override
+  String get reportSubmittedTitle => 'Raport wysłany';
+
+  @override
+  String get reportQueuedBody => 'Zostanie wysłany automatycznie po powrocie sieci.';
+
+  @override
+  String get reportSubmittedBody => 'Kierownik obiektu otrzymuje teraz raport.';
+
+  @override
+  String get viewInspection => 'Zobacz inspekcję';
+
+  @override
+  String get sharePdfReport => 'Udostępnij raport PDF';
+
+  @override
+  String get pdfFailed => 'Nie udało się utworzyć raportu PDF. Spróbuj ponownie, gdy będziesz online.';
+
+  @override
+  String get typesLoadFailed => 'Nie udało się wczytać rodzajów inspekcji.';
 }

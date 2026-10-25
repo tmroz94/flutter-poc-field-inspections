@@ -4,8 +4,9 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/router/routes.dart';
+import '../../data/providers.dart';
+import '../../l10n/l10n.dart';
 import '../inspections/inspection_actions.dart';
-import '../inspections/inspections_controller.dart';
 
 /// P16: shown after submit. Sent → "Report submitted"; offline → "saved and
 /// queued". The badge pops and the text rises (explicit animation), unless
@@ -58,14 +59,28 @@ class _SubmittedScreenState extends ConsumerState<SubmittedScreen> with SingleTi
     super.dispose();
   }
 
+  Future<void> _sharePdf() async {
+    final actions = InspectionActions(ref, context);
+    final messenger = ScaffoldMessenger.of(context);
+    final failed = context.l10n.pdfFailed;
+    try {
+      await actions.exportPdf(await ref.read(inspectionsRepositoryProvider).get(widget.id));
+    } on Object {
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l = context.l10n;
     final known = widget.id != 'queued';
-    final title = widget.queued ? 'Report saved and queued' : 'Report submitted';
+    // A queued edit has an id, but the server doesn't have the new version yet.
+    final sent = known && !widget.queued;
+    final title = widget.queued ? l.reportQueuedTitle : l.reportSubmittedTitle;
     final detail = [if (known) widget.id, if (widget.site.isNotEmpty) widget.site].join(' · ');
-    final body = widget.queued ? "It sends automatically when you're back online." : 'The site manager gets the report now.';
+    final body = widget.queued ? l.reportQueuedBody : l.reportSubmittedBody;
 
     return Scaffold(
       body: SafeArea(
@@ -108,25 +123,22 @@ class _SubmittedScreenState extends ConsumerState<SubmittedScreen> with SingleTi
                     ),
                   ),
                   const Spacer(),
-                  if (known) ...[
+                  if (sent) ...[
                     FilledButton(
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                       onPressed: () => context.go(Routes.inspection(widget.id)),
-                      child: const Text('View inspection'),
+                      child: Text(l.viewInspection),
                     ),
                     const SizedBox(height: 8),
-                  ],
-                  if (known) ...[
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                      onPressed: () async =>
-                          InspectionActions(ref, context).exportPdf(await ref.read(inspectionDetailProvider(widget.id).future)),
+                      onPressed: _sharePdf,
                       icon: const Icon(Symbols.picture_as_pdf),
-                      label: const Text('Share PDF report'),
+                      label: Text(l.sharePdfReport),
                     ),
                     const SizedBox(height: 8),
                   ],
-                  TextButton(onPressed: () => context.go(Routes.inspections), child: const Text('Back to inspections')),
+                  TextButton(onPressed: () => context.go(Routes.inspections), child: Text(l.backToInspections)),
                 ],
               ),
             ),

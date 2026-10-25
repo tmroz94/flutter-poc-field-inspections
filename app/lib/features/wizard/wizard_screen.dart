@@ -16,10 +16,8 @@ import '../../l10n/l10n.dart';
 import '../inspections/inspections_controller.dart';
 import 'wizard_controller.dart';
 import 'wizard_steps.dart';
+import 'wizard_text.dart';
 import 'wizard_validation.dart';
-
-/// Template every new inspection uses in the PoC (see fixtures).
-const fireSafetyTemplateId = 'tpl-fire-annual-v3';
 
 /// Lets the wizard route's `onExit` (browser back, links) skip the
 /// unsaved-changes dialog after the user already chose to leave or submitted.
@@ -89,6 +87,10 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
   /// Guard redirect scheduled; avoids one replace per rebuild.
   bool _redirecting = false;
 
+  /// Close was chosen: the page is going away, so the step guard must not
+  /// send it back to an earlier step.
+  bool _leaving = false;
+
   /// Why the step guard sent the user back; shown above the step, cleared on
   /// the next move. Inline rather than a snackbar, which would cover the footer.
   String? _notice;
@@ -139,7 +141,7 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
       // footer buttons, so screen-reader users get an announcement instead.
       SemanticsService.sendAnnouncement(
         View.of(context),
-        errors.length == 1 ? errors.values.first : '${errors.length} fields need attention',
+        errors.length == 1 ? errors.values.first : context.l10n.fieldsNeedAttention(errors.length),
         Directionality.of(context),
         assertiveness: Assertiveness.assertive,
       );
@@ -152,10 +154,11 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
 
   Future<void> _close() async {
     final controller = ref.read(wizardControllerProvider(_key).notifier);
-    final draft = ref.read(wizardControllerProvider(_key)).draft;
+    // An untouched wizard with no saved draft has nothing to lose: no question.
     var choice = LeaveChoice.leave;
-    if (!draft.isEmpty) choice = await showLeaveDialog(context);
+    if (ref.read(wizardControllerProvider(_key)).hasDraft) choice = await showLeaveDialog(context);
     if (!mounted || choice == LeaveChoice.stay) return;
+    _leaving = true;
     if (choice == LeaveChoice.discard) await controller.discard();
     if (choice == LeaveChoice.leave) await controller.saveNow();
     if (!mounted) return;
@@ -170,42 +173,69 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
   }
 
   Future<void> _saveDraft() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final saved = context.l10n.wizardDraftSaved;
     await ref.read(wizardControllerProvider(_key).notifier).saveNow();
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Draft saved on this device')));
+    messenger.showSnackBar(SnackBar(content: Text(saved)));
   }
 
   Future<void> _submit() async {
+    final site = ref.read(wizardControllerProvider(_key)).draft.siteName;
     final result = await ref.read(wizardControllerProvider(_key).notifier).submit();
     if (!mounted || result == null) return;
+    _leaving = true;
     ref.read(wizardExitApprovedProvider.notifier).approve();
     final queued = result.outcome == SubmitOutcome.queued;
-    final draft = ref.read(wizardControllerProvider(_key)).draft;
-    context.go(
-      Uri(path: Routes.submitted(result.id ?? 'queued'), queryParameters: {if (queued) 'queued': '1', 'site': draft.siteName}).toString(),
-    );
+    context.go(Uri(path: Routes.submitted(result.id ?? 'queued'), queryParameters: {if (queued) 'queued': '1', 'site': site}).toString());
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(wizardControllerProvider(_key));
     // Load the checklist early: steps 3–5 validate against it.
-    ref.watch(checklistProvider(fireSafetyTemplateId));
+    final checklist = ref.watch(checklistProvider(fireSafetyTemplateId));
+    ref.listen(wizardControllerProvider(_key).select((s) => s.recoveredPhoto), (_, recovered) {
+      if (recovered) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.wizardRecoveredPhoto)));
+    });
     final size = context.windowSize;
-    final title = widget.inspectionId == null ? context.l10n.newInspection : context.l10n.editInspection(widget.inspectionId!);
+    final l = context.l10n;
+    final title = widget.inspectionId == null ? l.newInspection : l.editInspection(widget.inspectionId!);
 
-    if (state.loading) {
+    if (state.loading || state.loadError != null) {
       return Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: const Center(child: CircularProgressIndicator()),
+        appBar: AppBar(
+          leading: IconButton(tooltip: l.close, onPressed: _close, icon: const Icon(Symbols.close)),
+          title: Text(title),
+        ),
+        body: Center(
+          child: state.loading
+              ? const CircularProgressIndicator()
+              : Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(l.wizardLoadFailed, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      FilledButton.tonal(onPressed: ref.read(wizardControllerProvider(_key).notifier).reload, child: Text(l.tryAgain)),
+                    ],
+                  ),
+                ),
+        ),
       );
     }
 
     // Step guard: a step can't be opened while an earlier step is invalid.
-    final blockedAt = _validator().firstInvalidBefore(_step, state.draft);
+    // Not before the checklist has loaded (step 3 depends on it), and not
+    // while the wizard is closing.
+    final blockedAt = checklist.isLoading || _leaving ? null : _validator().firstInvalidBefore(_step, state.draft);
     if (blockedAt != null && !_redirecting) {
       _redirecting = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
+        if (!mounted || _leaving || !(ModalRoute.of(context)?.isCurrent ?? false)) {
+          _redirecting = false;
+          return;
+        }
         final notice = context.l10n.completeStepFirst(stepTitle(context, blockedAt));
         setState(() {
           _attempted.add(blockedAt);
@@ -224,10 +254,12 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
         ? stepView
         : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [_Notice(_notice!), const SizedBox(height: 16), stepView]);
     final savedAt = state.savedAt;
-    final savedText = savedAt == null ? null : context.l10n.draftSavedAt(DateFormat.Hm().format(savedAt));
+    final savedText = savedAt == null
+        ? null
+        : l.draftSavedAt(DateFormat.Hm(Localizations.localeOf(context).toLanguageTag()).format(savedAt));
 
     final appBar = AppBar(
-      leading: IconButton(tooltip: 'Close', onPressed: _close, icon: const Icon(Symbols.close)),
+      leading: IconButton(tooltip: l.close, onPressed: _close, icon: const Icon(Symbols.close)),
       title: Text(title),
       actions: [
         if (size.isTwoPane && savedText != null)
@@ -352,7 +384,7 @@ class _PhoneStepHeader extends StatelessWidget {
             duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : Durations.medium2,
             curve: Easing.emphasizedDecelerate,
             builder: (_, value, _) =>
-                LinearProgressIndicator(value: value, borderRadius: BorderRadius.circular(4), semanticsLabel: 'Wizard progress'),
+                LinearProgressIndicator(value: value, borderRadius: BorderRadius.circular(4), semanticsLabel: context.l10n.wizardProgress),
           ),
         ],
       ),
@@ -390,6 +422,18 @@ _StepState _stateOf(WizardStep s, WizardStep current, InspectionDraft draft, Wiz
   if (s == current) return _StepState.current;
   if (s.number > draft.lastStep) return _StepState.upcoming;
   return v.step(s, draft).isEmpty ? _StepState.done : _StepState.attention;
+}
+
+/// "Details, done": the state the dot shows only by icon and colour.
+String _stepSemantics(BuildContext context, WizardStep s, _StepState state) {
+  final l = context.l10n;
+  final title = stepTitle(context, s);
+  return switch (state) {
+    _StepState.done => l.stepStateDone(title),
+    _StepState.attention => l.stepStateAttention(title),
+    _StepState.current => l.stepStateCurrent(title),
+    _StepState.upcoming => l.stepStateUpcoming(title),
+  };
 }
 
 class _StepDot extends StatelessWidget {
@@ -435,17 +479,16 @@ class _VerticalSteps extends StatelessWidget {
   final WizardValidator validator;
   final ValueChanged<int> onTap;
 
-  String _hint(WizardStep s) {
+  String _hint(BuildContext context, WizardStep s) {
+    final l = context.l10n;
     final errors = validator.step(s, draft).length;
-    if (errors > 0 && s.number <= draft.lastStep && s != current) {
-      return errors == 1 ? '1 field needs attention' : '$errors fields need attention';
-    }
+    if (errors > 0 && s.number <= draft.lastStep && s != current) return l.fieldsNeedAttention(errors);
     return switch (s) {
-      WizardStep.site => draft.siteName.isEmpty ? 'Choose a site' : draft.siteName,
-      WizardStep.details => draft.type ?? 'Type, date and time',
-      WizardStep.checklist => '${draft.answers.length} of ${validator.checklist.length} answered',
-      WizardStep.photos => '${draft.photos.length} photos · ${draft.files.length} files',
-      WizardStep.review => 'Check and send',
+      WizardStep.site => draft.siteName.isEmpty ? l.wizardHintSite : draft.siteName,
+      WizardStep.details => draft.type ?? l.wizardHintDetails,
+      WizardStep.checklist => l.wizardHintChecklist(draft.answers.length, validator.checklist.length),
+      WizardStep.photos => l.wizardHintPhotos(draft.photos.length, draft.files.length),
+      WizardStep.review => l.wizardHintReview,
     };
   }
 
@@ -462,15 +505,20 @@ class _VerticalSteps extends StatelessWidget {
             for (final s in WizardStep.values)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: ListTile(
-                  selected: s == current,
-                  selectedTileColor: theme.colorScheme.secondaryContainer,
-                  shape: const StadiumBorder(),
-                  enabled: s.number <= draft.lastStep || s == current,
-                  onTap: () => onTap(s.number),
-                  leading: _StepDot(step: s, state: _stateOf(s, current, draft, validator)),
-                  title: Text(stepTitle(context, s), style: theme.textTheme.titleSmall),
-                  subtitle: Text(_hint(s), maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Semantics(
+                  label: _stepSemantics(context, s, _stateOf(s, current, draft, validator)),
+                  child: ListTile(
+                    selected: s == current,
+                    selectedTileColor: theme.colorScheme.secondaryContainer,
+                    shape: const StadiumBorder(),
+                    enabled: s.number <= draft.lastStep || s == current,
+                    onTap: () => onTap(s.number),
+                    leading: ExcludeSemantics(
+                      child: _StepDot(step: s, state: _stateOf(s, current, draft, validator)),
+                    ),
+                    title: ExcludeSemantics(child: Text(stepTitle(context, s), style: theme.textTheme.titleSmall)),
+                    subtitle: Text(_hint(context, s), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
                 ),
               ),
           ],
@@ -494,7 +542,7 @@ class _HorizontalSteps extends StatelessWidget {
     final theme = Theme.of(context);
     return Semantics(
       container: true,
-      label: 'Wizard steps',
+      label: context.l10n.wizardSteps,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Wrap(
@@ -504,23 +552,29 @@ class _HorizontalSteps extends StatelessWidget {
           runSpacing: 8,
           children: [
             for (final s in WizardStep.values) ...[
-              InkWell(
-                borderRadius: BorderRadius.circular(24),
-                onTap: s.number <= draft.lastStep ? () => onTap(s.number) : null,
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _StepDot(step: s, state: _stateOf(s, current, draft, validator), size: 28),
-                      const SizedBox(width: 8),
-                      Text(
-                        stepTitle(context, s),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: s == current ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+              Semantics(
+                button: s.number <= draft.lastStep,
+                selected: s == current,
+                label: _stepSemantics(context, s, _stateOf(s, current, draft, validator)),
+                excludeSemantics: true,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: s.number <= draft.lastStep ? () => onTap(s.number) : null,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _StepDot(step: s, state: _stateOf(s, current, draft, validator), size: 28),
+                        const SizedBox(width: 8),
+                        Text(
+                          stepTitle(context, s),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: s == current ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -615,12 +669,3 @@ class _Footer extends StatelessWidget {
     );
   }
 }
-
-/// Localized step names.
-String stepTitle(BuildContext context, WizardStep s) => switch (s) {
-  WizardStep.site => context.l10n.stepSite,
-  WizardStep.details => context.l10n.stepDetails,
-  WizardStep.checklist => context.l10n.stepChecklist,
-  WizardStep.photos => context.l10n.stepPhotos,
-  WizardStep.review => context.l10n.stepReview,
-};

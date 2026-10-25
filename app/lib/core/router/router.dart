@@ -67,7 +67,8 @@ Future<bool> _confirmWizardExit(BuildContext context, GoRouterState state) async
   final container = ProviderScope.containerOf(context, listen: false);
   if (container.read(wizardExitApprovedProvider)) return true;
   final key = wizardKey(state.pathParameters['id']);
-  if (container.read(wizardControllerProvider(key)).draft.isEmpty) return true;
+  // An untouched wizard with no saved draft has nothing to lose.
+  if (!container.read(wizardControllerProvider(key)).hasDraft) return true;
   final choice = await showLeaveDialog(context);
   if (choice == LeaveChoice.discard) await container.read(wizardControllerProvider(key).notifier).discard();
   if (choice == LeaveChoice.leave) await container.read(wizardControllerProvider(key).notifier).saveNow();

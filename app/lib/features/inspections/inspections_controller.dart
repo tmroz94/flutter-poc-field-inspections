@@ -185,7 +185,9 @@ class InspectionsRevision extends Notifier<int> {
   /// [lists]: also reload every inspections list (archive updates its own list in place).
   void changed({bool lists = true}) {
     if (lists) ref.invalidate(inspectionListProvider);
-    ref.invalidate(homeProvider);
+    ref
+      ..invalidate(inspectionDetailProvider)
+      ..invalidate(homeProvider);
     state++;
   }
 }

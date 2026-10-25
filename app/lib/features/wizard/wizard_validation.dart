@@ -2,16 +2,13 @@ import '../../core/validation/validators.dart';
 import '../../data/models/draft.dart';
 import '../../data/models/inspection.dart';
 
-/// The five steps (P09–P13).
+/// The five steps (P09–P13). Titles are localized (`stepTitle`).
 enum WizardStep {
-  site('Site'),
-  details('Details'),
-  checklist('Checklist'),
-  photos('Photos and files'),
-  review('Review and submit');
-
-  const WizardStep(this.title);
-  final String title;
+  site,
+  details,
+  checklist,
+  photos,
+  review;
 
   int get number => index + 1;
 
@@ -25,6 +22,8 @@ class WizardValidator {
 
   final ValidationText t;
   final DateTime today;
+
+  /// Empty until the template loads; step 3 is invalid until then.
   final List<ChecklistItem> checklist;
 
   static const maxPhotos = 20;
@@ -39,9 +38,7 @@ class WizardValidator {
     WizardStep.review => review(d),
   };
 
-  Map<String, String> site(InspectionDraft d) => {
-    if (!d.hasSite) 'site': d.siteName.trim().isEmpty ? t.required : 'Pick a site from the list or add a new one (3+ characters)',
-  };
+  Map<String, String> site(InspectionDraft d) => {if (!d.hasSite) 'site': d.siteName.trim().isEmpty ? t.required : t.siteTooShort};
 
   Map<String, String> details(InspectionDraft d) {
     final duration = Validators.all([Validators.required(t), Validators.intRange(t, 15, 480)])(d.duration);
@@ -55,17 +52,20 @@ class WizardValidator {
     };
   }
 
-  /// Every item answered; each Fail needs a note or a photo.
+  /// Every item answered; each Fail needs a note or a photo. Without the
+  /// template nothing can be checked, so the step can't pass (submitting
+  /// with no answers would only be rejected later, from the outbox).
   Map<String, String> checklistErrors(InspectionDraft d) {
+    if (checklist.isEmpty) return {'checklist': t.checklistNotLoaded};
     final errors = <String, String>{};
     for (final item in checklist) {
       final answer = d.answers[item.id];
       if (answer == null) {
-        errors[item.id] = 'Answer this item';
+        errors[item.id] = t.answerItem;
       } else if (answer == Answer.fail) {
         final detail = d.failures[item.id] ?? const FailDetail();
         final hasPhoto = d.attachments.any((a) => a.forItem == item.id);
-        if (detail.note.trim().isEmpty && !hasPhoto) errors[item.id] = 'Add a note or a photo for this failure';
+        if (detail.note.trim().isEmpty && !hasPhoto) errors[item.id] = t.failureNeedsDetail;
       }
     }
     return errors;
@@ -73,17 +73,19 @@ class WizardValidator {
 
   Map<String, String> photos(InspectionDraft d) {
     final anyFail = d.answers.values.contains(Answer.fail);
-    final tooBig = d.attachments.where((a) => a.sizeBytes > maxFileBytes).map((a) => a.name);
-    final badType = d.attachments.where((a) => !allowedExtensions.contains(a.name.split('.').last.toLowerCase())).map((a) => a.name);
+    // Attachments already on the server were checked when they were added.
+    final added = d.attachments.where((a) => !a.stored);
+    final tooBig = added.where((a) => a.sizeBytes > maxFileBytes).map((a) => a.name);
+    final badType = added.where((a) => !allowedExtensions.contains(a.name.split('.').last.toLowerCase())).map((a) => a.name);
     return {
-      if (anyFail && d.photos.isEmpty) 'photos': 'Add at least one photo of the failed items',
-      if (d.photos.length > maxPhotos) 'photos': 'Use $maxPhotos photos or fewer',
-      if (tooBig.isNotEmpty) 'size': '${tooBig.join(', ')}: files must be 20 MB or smaller',
-      if (badType.isNotEmpty) 'type': '${badType.join(', ')}: use JPG, PNG, HEIC or PDF',
+      if (anyFail && d.photos.isEmpty) 'photos': t.photoForFailure,
+      if (d.photos.length > maxPhotos) 'photos': t.tooManyPhotos(maxPhotos),
+      if (tooBig.isNotEmpty) 'size': t.filesTooBig(tooBig.join(', ')),
+      if (badType.isNotEmpty) 'type': t.badFileType(badType.join(', ')),
     };
   }
 
-  Map<String, String> review(InspectionDraft d) => {if (!d.confirmed) 'confirmed': 'Confirm the findings before submitting'};
+  Map<String, String> review(InspectionDraft d) => {if (!d.confirmed) 'confirmed': t.confirmFindings};
 
   /// The first step with errors before [upTo] (exclusive), or null.
   WizardStep? firstInvalidBefore(WizardStep upTo, InspectionDraft d) {

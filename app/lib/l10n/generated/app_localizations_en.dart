@@ -814,4 +814,451 @@ class AppLocalizationsEn extends AppLocalizations {
   String inProgressLabel(String label) {
     return '$label, in progress';
   }
+
+  @override
+  String get valRequired => 'Required';
+
+  @override
+  String get valEmail => 'Enter a valid email, like name@example.com';
+
+  @override
+  String valMinLength(int n) {
+    return 'Use $n or more characters';
+  }
+
+  @override
+  String valMaxLength(int n) {
+    return 'Use $n characters or fewer';
+  }
+
+  @override
+  String get valInteger => 'Enter a whole number';
+
+  @override
+  String valIntRange(int min, int max) {
+    return 'Enter a number from $min to $max';
+  }
+
+  @override
+  String get valDateInPast => 'Pick today or a later date';
+
+  @override
+  String get valPasswordsDiffer => 'Passwords don\'t match';
+
+  @override
+  String get valPasswordWeak => 'Use 8+ characters with a letter and a digit';
+
+  @override
+  String get valEmailTaken => 'An account with this email already exists';
+
+  @override
+  String get valMustAccept => 'Accept the terms to continue';
+
+  @override
+  String get valUnknownSite => 'Pick a site from the list';
+
+  @override
+  String get valChecklistIncomplete => 'Answer every checklist item';
+
+  @override
+  String get valCheckField => 'Check this field';
+
+  @override
+  String get valSiteTooShort => 'Pick a site from the list or add a new one (3+ characters)';
+
+  @override
+  String get valAnswerItem => 'Answer this item';
+
+  @override
+  String get valFailureNeedsDetail => 'Add a note or a photo for this failure';
+
+  @override
+  String get valPhotoForFailure => 'Add at least one photo of the failed items';
+
+  @override
+  String valTooManyPhotos(int n) {
+    return 'Use $n photos or fewer';
+  }
+
+  @override
+  String valFilesTooBig(String names) {
+    return '$names: files must be 20 MB or smaller';
+  }
+
+  @override
+  String valBadFileType(String names) {
+    return '$names: use JPG, PNG, HEIC or PDF';
+  }
+
+  @override
+  String get valConfirmFindings => 'Confirm the findings before submitting';
+
+  @override
+  String get valChecklistNotLoaded => 'The checklist hasn\'t loaded yet';
+
+  @override
+  String get wizardDraftSaved => 'Draft saved on this device';
+
+  @override
+  String get wizardProgress => 'Wizard progress';
+
+  @override
+  String get wizardSteps => 'Wizard steps';
+
+  @override
+  String get wizardHintSite => 'Choose a site';
+
+  @override
+  String get wizardHintDetails => 'Type, date and time';
+
+  @override
+  String wizardHintChecklist(int answered, int total) {
+    return '$answered of $total answered';
+  }
+
+  @override
+  String wizardHintPhotos(int photos, int files) {
+    return '$photos photos · $files files';
+  }
+
+  @override
+  String get wizardHintReview => 'Check and send';
+
+  @override
+  String stepStateDone(String step) {
+    return '$step, done';
+  }
+
+  @override
+  String stepStateAttention(String step) {
+    return '$step, needs attention';
+  }
+
+  @override
+  String stepStateCurrent(String step) {
+    return '$step, current step';
+  }
+
+  @override
+  String stepStateUpcoming(String step) {
+    return '$step, not started';
+  }
+
+  @override
+  String get wizardLoadFailed => 'Couldn\'t load this inspection to edit it.';
+
+  @override
+  String get wizardRecoveredPhoto => 'A photo taken before the app closed was added.';
+
+  @override
+  String get siteLabel => 'Site';
+
+  @override
+  String get siteHelper => 'Search by name or address';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String newSite(String name) {
+    return 'New site: $name';
+  }
+
+  @override
+  String get newSiteHint => 'It will be created when you submit';
+
+  @override
+  String addNewSite(String name) {
+    return 'Add “$name” as a new site';
+  }
+
+  @override
+  String get yourLocation => 'Your location';
+
+  @override
+  String get locationServiceOff => 'Location is turned off on this device.';
+
+  @override
+  String get locationDenied => 'Location permission was not given. The check is optional.';
+
+  @override
+  String get locationBlocked => 'Location is blocked for this app.';
+
+  @override
+  String get locationUnsupported => 'Location is not available here.';
+
+  @override
+  String get locationError => 'Couldn\'t get a position. Try again outside or near a window.';
+
+  @override
+  String get locationNotChecked => 'Not checked yet';
+
+  @override
+  String get locationOptional => 'Optional: confirms you are on site.';
+
+  @override
+  String locationAccuracy(String meters) {
+    return 'Accuracy ±$meters m';
+  }
+
+  @override
+  String locationFromSite(String distance) {
+    return '$distance from the site';
+  }
+
+  @override
+  String get locationFar => 'You seem to be more than 200 m from the site address.';
+
+  @override
+  String get checkLocation => 'Check location';
+
+  @override
+  String get updateLocation => 'Update location';
+
+  @override
+  String get inspectionType => 'Inspection type';
+
+  @override
+  String get dateLabel => 'Date';
+
+  @override
+  String get openCalendar => 'Open calendar';
+
+  @override
+  String get startTime => 'Start time';
+
+  @override
+  String get openTimePicker => 'Open time picker';
+
+  @override
+  String get priority => 'Priority';
+
+  @override
+  String get priorityLow => 'Low';
+
+  @override
+  String get priorityNormal => 'Normal';
+
+  @override
+  String get priorityHigh => 'High';
+
+  @override
+  String get durationLabel => 'Estimated duration (minutes)';
+
+  @override
+  String get durationHelper => 'From 15 to 480';
+
+  @override
+  String get notesLabel => 'Notes for the site manager';
+
+  @override
+  String get optional => 'Optional';
+
+  @override
+  String checklistProgress(String type, int answered, int total) {
+    return '$type · $answered of $total answered';
+  }
+
+  @override
+  String itemsNeedAttention(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count items need attention', one: '1 item needs attention');
+    return '$_temp0';
+  }
+
+  @override
+  String get jumpToFirst => 'Jump to the first one';
+
+  @override
+  String get checklistLoadFailed => 'Couldn\'t load the checklist.';
+
+  @override
+  String get answerPass => 'Pass';
+
+  @override
+  String get answerFail => 'Fail';
+
+  @override
+  String get answerNa => 'N/A';
+
+  @override
+  String get severity => 'Severity';
+
+  @override
+  String severityValue(int level, String label) {
+    return '$level · $label';
+  }
+
+  @override
+  String get severityMinor => 'Minor';
+
+  @override
+  String get severityLow => 'Low';
+
+  @override
+  String get severityMajor => 'Major';
+
+  @override
+  String get severityHigh => 'High';
+
+  @override
+  String get severityCritical => 'Critical';
+
+  @override
+  String severitySemantics(String value) {
+    return 'Severity $value';
+  }
+
+  @override
+  String get followUpVisit => 'Requires follow-up visit';
+
+  @override
+  String get whatIsWrong => 'What is wrong?';
+
+  @override
+  String get addPhoto => 'Add photo';
+
+  @override
+  String addPhotoCount(int count) {
+    return 'Add photo ($count)';
+  }
+
+  @override
+  String get dictateNote => 'Dictate note (not in the PoC)';
+
+  @override
+  String get photoTypeHint => 'Use JPG, PNG or HEIC up to 20 MB.';
+
+  @override
+  String fileRejected(String name) {
+    return '$name: use JPG, PNG, HEIC or PDF up to 20 MB.';
+  }
+
+  @override
+  String get cameraOpenFailed => 'Couldn\'t open the camera.';
+
+  @override
+  String get galleryOpenFailed => 'Couldn\'t open the gallery.';
+
+  @override
+  String photoN(int n) {
+    return 'Photo $n';
+  }
+
+  @override
+  String photoNForFailure(int n) {
+    return 'Photo $n, for a failed item';
+  }
+
+  @override
+  String removePhotoN(int n) {
+    return 'Remove photo $n';
+  }
+
+  @override
+  String get useCamera => 'Use camera';
+
+  @override
+  String get takePhoto => 'Take photo';
+
+  @override
+  String get gallery => 'Gallery';
+
+  @override
+  String get dropFiles => 'Drop files to upload';
+
+  @override
+  String get dragOrPaste => 'Drag files here, or paste an image';
+
+  @override
+  String get fileTypesHint => 'JPG, PNG, HEIC or PDF, up to 20 MB each.';
+
+  @override
+  String get photosIntro => 'Add photos of the findings and any documents the site gave you.';
+
+  @override
+  String get cameraOff => 'Camera access is off. You can still choose photos from the gallery.';
+
+  @override
+  String photosCount(int count) {
+    return 'Photos · $count';
+  }
+
+  @override
+  String filesCount(int count) {
+    return 'Files · $count';
+  }
+
+  @override
+  String get attachFile => 'Attach file';
+
+  @override
+  String removeFile(String name) {
+    return 'Remove $name';
+  }
+
+  @override
+  String fileSavedOnDevice(int size) {
+    return '$size KB · saved on this device';
+  }
+
+  @override
+  String fileOnServer(int size) {
+    return '$size KB · already sent';
+  }
+
+  @override
+  String get noDate => 'No date';
+
+  @override
+  String reviewDetails(String type, String when, String priority, String duration) {
+    return '$type · $when · $priority priority · $duration min';
+  }
+
+  @override
+  String reviewChecklist(int answered, int total, int failed) {
+    return '$answered of $total answered · $failed failed';
+  }
+
+  @override
+  String get reviewFollowUp => 'follow-up visit needed';
+
+  @override
+  String get reviewOffline => 'You\'re offline. The report is saved on this device and sends automatically when you\'re back online.';
+
+  @override
+  String submitFailed(String code) {
+    return 'Couldn\'t submit ($code). Try again.';
+  }
+
+  @override
+  String serverRejected(String fields) {
+    return 'The server rejected: $fields';
+  }
+
+  @override
+  String get fixStepsToSubmit => 'Fix the steps marked in red and confirm the findings to submit.';
+
+  @override
+  String get reportQueuedTitle => 'Report saved and queued';
+
+  @override
+  String get reportSubmittedTitle => 'Report submitted';
+
+  @override
+  String get reportQueuedBody => 'It sends automatically when you\'re back online.';
+
+  @override
+  String get reportSubmittedBody => 'The site manager gets the report now.';
+
+  @override
+  String get viewInspection => 'View inspection';
+
+  @override
+  String get sharePdfReport => 'Share PDF report';
+
+  @override
+  String get pdfFailed => 'Couldn\'t make the PDF report. Try again when you\'re online.';
+
+  @override
+  String get typesLoadFailed => 'Couldn\'t load the inspection types.';
 }

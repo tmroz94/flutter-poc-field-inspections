@@ -57,6 +57,16 @@ class FakeMedia extends MediaService {
   @override
   Future<List<PickedFile>> files() async => nextFiles;
 
+  /// A camera photo that Android delivered after restarting the app.
+  PickedFile? lost;
+
+  @override
+  Future<PickedFile?> lostPhoto() async {
+    final file = lost;
+    lost = null;
+    return file;
+  }
+
   String? nextJson;
 
   @override
