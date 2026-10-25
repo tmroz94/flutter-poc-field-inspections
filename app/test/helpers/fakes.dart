@@ -125,6 +125,9 @@ class FakeNotifications extends NotificationService {
   FakeNotifications({this.granted = true, super.isWeb = false});
 
   bool granted;
+
+  /// Denied so that only the system settings can turn notifications on.
+  bool permanentlyDenied = false;
   final shown = <String>[];
   final scheduled = <(DateTime, String)>[];
   final scheduledTitles = <String>[];
@@ -133,7 +136,11 @@ class FakeNotifications extends NotificationService {
   Future<String?> init() async => null;
 
   @override
-  Future<PermissionState> permission() async => granted ? PermissionState.granted : PermissionState.denied;
+  Future<PermissionState> permission() async => granted
+      ? PermissionState.granted
+      : permanentlyDenied
+      ? PermissionState.permanentlyDenied
+      : PermissionState.denied;
 
   @override
   Future<bool> requestPermission() async => granted;

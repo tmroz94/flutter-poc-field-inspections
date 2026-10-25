@@ -1472,4 +1472,74 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pdfResult => 'Result';
+
+  @override
+  String get todaySection => 'Today';
+
+  @override
+  String get noNotificationsTitle => 'No notifications';
+
+  @override
+  String get noNotificationsBody => 'You\'re all caught up.';
+
+  @override
+  String get notificationsLoadFailed => 'Couldn\'t load notifications.';
+
+  @override
+  String get dismiss => 'Dismiss';
+
+  @override
+  String get unread => 'Unread';
+
+  @override
+  String get remindersOnMessage => 'Reminders are on: 30 minutes before each inspection.';
+
+  @override
+  String get remindersWebTest => 'Browsers can’t schedule notifications. Test ones work from the deep-link tester while this tab is open.';
+
+  @override
+  String get mapLocationDenied => 'Location permission was not given.';
+
+  @override
+  String get mapLocationBlocked => 'Location is blocked for this app. Turn it on in settings.';
+
+  @override
+  String get mapLocationErrorWeb => 'Couldn\'t get your location. The browser needs HTTPS and your permission.';
+
+  @override
+  String get mapLocationError => 'Couldn\'t get your location.';
+
+  @override
+  String noSiteMatches(String q) {
+    return 'No site matches “$q”.';
+  }
+
+  @override
+  String get searchSites => 'Search sites';
+
+  @override
+  String get showMyLocation => 'Show my location';
+
+  @override
+  String distanceAway(String distance) {
+    return '$distance away';
+  }
+
+  @override
+  String get openInspection => 'Open inspection';
+
+  @override
+  String get mapLoadFailed => 'Couldn\'t load the inspections for the map.';
+
+  @override
+  String get goHome => 'Go to home';
+
+  @override
+  String get pageNotFound => 'Page not found';
+
+  @override
+  String get pageNotFoundBody => 'Nothing lives at this address. The link may be old, or the inspection was deleted.';
+
+  @override
+  String get openInspections => 'Open inspections';
 }

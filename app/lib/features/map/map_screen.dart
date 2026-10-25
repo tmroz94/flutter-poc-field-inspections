@@ -1,6 +1,7 @@
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
@@ -22,10 +23,11 @@ import '../inspections/inspections_controller.dart';
 final mapTilesEnabledProvider = Provider<bool>((ref) => true);
 
 /// Open inspections with a location, for the map pins.
+/// No automatic retry (like the other screens): an offline map says so and offers Try again.
 final mapInspectionsProvider = FutureProvider.autoDispose<List<InspectionSummary>>((ref) async {
   final page = await ref.watch(inspectionsRepositoryProvider).list(const ListQuery(statuses: openStatuses), pageSize: 100);
   return page.items.where((i) => i.lat != null && i.lng != null).toList();
-});
+}, retry: (_, _) => null);
 
 /// P18: OpenStreetMap via flutter_map (no API keys; same code on iOS, Android
 /// and web). Pins coloured by status, `?site=` selects one, "my location"
@@ -46,8 +48,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   LocationFix? _me;
   bool _locating = false;
 
-  /// Zoom to `?site=` once, when the pins first arrive (a cold-start link).
+  /// Zoom to `?site=` once per site, when its pin is there (a cold-start
+  /// link waits for the pins).
   bool _centred = false;
+
+  @override
+  void didUpdateWidget(MapScreen old) {
+    super.didUpdateWidget(old);
+    // The map tab keeps its page: "Show on map" for another site lands here.
+    if (old.siteId != widget.siteId) _centred = false;
+  }
 
   @override
   void dispose() {
@@ -74,18 +84,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       return;
     }
     final caps = ref.read(capabilitiesProvider);
+    final l = context.l10n;
     final message = switch (fix.status) {
-      LocationStatus.serviceOff => 'Location is turned off on this device.',
-      LocationStatus.denied => 'Location permission was not given.',
-      LocationStatus.deniedForever => 'Location is blocked for this app. Turn it on in settings.',
-      LocationStatus.unsupported => 'Location is not available here.',
-      _ => caps.isWeb ? "Couldn't get your location. The browser needs HTTPS and your permission." : "Couldn't get your location.",
+      LocationStatus.serviceOff => l.locationServiceOff,
+      LocationStatus.denied => l.mapLocationDenied,
+      LocationStatus.deniedForever => l.mapLocationBlocked,
+      LocationStatus.unsupported => l.locationUnsupported,
+      _ => caps.isWeb ? l.mapLocationErrorWeb : l.mapLocationError,
     };
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         action: fix.status == LocationStatus.deniedForever && caps.openSystemSettings
-            ? SnackBarAction(label: 'Settings', onPressed: () => ref.read(permissionServiceProvider).openSettings())
+            ? SnackBarAction(label: l.openSettings, onPressed: () => ref.read(permissionServiceProvider).openSettings())
             : null,
       ),
     );
@@ -98,14 +109,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (hit != null) {
       _select(hit);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No site matches “$q”.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.noSiteMatches(q))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final items = ref.watch(mapInspectionsProvider).value ?? const <InspectionSummary>[];
+    final l = context.l10n;
+    final pins = ref.watch(mapInspectionsProvider);
+    final items = pins.value ?? const <InspectionSummary>[];
     final selected = items.where((i) => i.siteId == widget.siteId).firstOrNull;
     if (selected != null && !_centred) {
       _centred = true;
@@ -141,18 +154,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
                 MarkerLayer(
                   markers: [
+                    // 48 dp tap target for every pin (decision 13); the icon tip stays on the point.
                     for (final i in items)
                       Marker(
                         point: LatLng(i.lat!, i.lng!),
-                        width: i == selected ? 48 : 36,
-                        height: i == selected ? 48 : 36,
+                        width: 48,
+                        height: 48,
                         alignment: Alignment.topCenter,
                         child: Semantics(
                           button: true,
-                          label: '${i.site}, ${i.status.localized(context.l10n)}',
+                          label: '${i.site}, ${i.status.localized(l)}',
                           child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () => _select(i),
-                            child: Icon(Symbols.location_on, fill: 1, size: i == selected ? 48 : 36, color: pinColor(i)),
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Icon(Symbols.location_on, fill: 1, size: i == selected ? 48 : 36, color: pinColor(i)),
+                            ),
                           ),
                         ),
                       ),
@@ -162,7 +180,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         width: 28,
                         height: 28,
                         child: Semantics(
-                          label: 'Your location',
+                          label: l.yourLocation,
                           child: Container(
                             decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.primary.withValues(alpha: 0.24)),
                             alignment: Alignment.center,
@@ -200,7 +218,31 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
-                  child: SearchField(controller: _search, hintText: 'Search sites', elevation: 2, onSubmitted: (q) => _onSearch(q, items)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SearchField(controller: _search, hintText: l.searchSites, elevation: 2, onSubmitted: (q) => _onSearch(q, items)),
+                      // Without this an offline map is just empty.
+                      if (pins.hasError && items.isEmpty) ...[
+                        const SizedBox(height: 8),
+                        Material(
+                          color: scheme.errorContainer,
+                          borderRadius: BorderRadius.circular(AppRadii.medium),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(l.mapLoadFailed, style: TextStyle(color: scheme.onErrorContainer)),
+                                ),
+                                TextButton(onPressed: () => ref.invalidate(mapInspectionsProvider), child: Text(l.tryAgain)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -218,7 +260,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   padding: const EdgeInsets.all(16),
                   child: FloatingActionButton.small(
                     heroTag: 'map-locate',
-                    tooltip: 'Show my location',
+                    tooltip: l.showMyLocation,
                     onPressed: _locating ? null : _locate,
                     child: _locating
                         ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
@@ -248,9 +290,13 @@ class _PeekSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final away = distance == null
-        ? null
-        : (distance! >= 1000 ? '${(distance! / 1000).toStringAsFixed(1)} km away' : '${distance!.round()} m away');
+    final l = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final away = switch (distance) {
+      null => null,
+      final d when d >= 1000 => l.distanceAway('${NumberFormat('0.0', locale).format(d / 1000)} km'),
+      final d => l.distanceAway('${d.round()} m'),
+    };
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 560),
       child: Material(
@@ -281,11 +327,11 @@ class _PeekSheet extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  FilledButton(onPressed: () => context.go(Routes.inspection(item.id)), child: const Text('Open inspection')),
+                  FilledButton(onPressed: () => context.go(Routes.inspection(item.id)), child: Text(l.openInspection)),
                   OutlinedButton.icon(
                     onPressed: () => InspectionActions(ref, context).directions(item),
                     icon: const Icon(Symbols.directions),
-                    label: const Text('Directions'),
+                    label: Text(l.directions),
                   ),
                 ],
               ),

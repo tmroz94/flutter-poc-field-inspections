@@ -1539,4 +1539,74 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get pdfResult => 'Wynik';
+
+  @override
+  String get todaySection => 'Dzisiaj';
+
+  @override
+  String get noNotificationsTitle => 'Brak powiadomień';
+
+  @override
+  String get noNotificationsBody => 'Wszystko przeczytane.';
+
+  @override
+  String get notificationsLoadFailed => 'Nie udało się wczytać powiadomień.';
+
+  @override
+  String get dismiss => 'Odrzuć';
+
+  @override
+  String get unread => 'Nieprzeczytane';
+
+  @override
+  String get remindersOnMessage => 'Przypomnienia włączone: 30 minut przed każdą inspekcją.';
+
+  @override
+  String get remindersWebTest => 'Przeglądarki nie planują powiadomień. Testowe działają z testera linków, gdy ta karta jest otwarta.';
+
+  @override
+  String get mapLocationDenied => 'Nie udzielono zgody na lokalizację.';
+
+  @override
+  String get mapLocationBlocked => 'Lokalizacja jest zablokowana dla tej aplikacji. Włącz ją w ustawieniach.';
+
+  @override
+  String get mapLocationErrorWeb => 'Nie udało się ustalić lokalizacji. Przeglądarka wymaga HTTPS i twojej zgody.';
+
+  @override
+  String get mapLocationError => 'Nie udało się ustalić lokalizacji.';
+
+  @override
+  String noSiteMatches(String q) {
+    return 'Żaden obiekt nie pasuje do „$q”.';
+  }
+
+  @override
+  String get searchSites => 'Szukaj obiektów';
+
+  @override
+  String get showMyLocation => 'Pokaż moją lokalizację';
+
+  @override
+  String distanceAway(String distance) {
+    return '$distance stąd';
+  }
+
+  @override
+  String get openInspection => 'Otwórz inspekcję';
+
+  @override
+  String get mapLoadFailed => 'Nie udało się wczytać inspekcji na mapę.';
+
+  @override
+  String get goHome => 'Przejdź do strony głównej';
+
+  @override
+  String get pageNotFound => 'Nie znaleziono strony';
+
+  @override
+  String get pageNotFoundBody => 'Pod tym adresem nic nie ma. Link może być nieaktualny albo inspekcja została usunięta.';
+
+  @override
+  String get openInspections => 'Otwórz inspekcje';
 }

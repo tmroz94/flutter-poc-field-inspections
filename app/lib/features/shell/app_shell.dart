@@ -6,34 +6,31 @@ import '../../core/layout/window_size.dart';
 import '../../core/router/routes.dart';
 import '../../l10n/l10n.dart';
 
-class _Destination {
-  const _Destination(this.label, this.icon, {this.branch, this.location});
+enum _Destination {
+  home(Symbols.home, branch: 0),
+  inspections(Symbols.assignment, branch: 1),
+  map(Symbols.map, branch: 2),
+  settings(Symbols.settings, branch: 3),
 
-  final String label;
+  /// Desktop (D02) adds a direct link to the results tracker.
+  results(Symbols.fact_check, location: Routes.results);
+
+  const _Destination(this.icon, {this.branch, this.location});
+
   final IconData icon;
 
   /// Shell branch this destination switches to, or null for a plain link.
   final int? branch;
   final String? location;
+
+  String label(AppLocalizations l) => switch (this) {
+    home => l.navHome,
+    inspections => l.navInspections,
+    map => l.navMap,
+    settings => l.navSettings,
+    results => l.navPocResults,
+  };
 }
-
-const _branchDestinations = [
-  _Destination('Home', Symbols.home, branch: 0),
-  _Destination('Inspections', Symbols.assignment, branch: 1),
-  _Destination('Map', Symbols.map, branch: 2),
-  _Destination('Settings', Symbols.settings, branch: 3),
-];
-
-String _label(BuildContext context, _Destination d) => switch (d.label) {
-  'Home' => context.l10n.navHome,
-  'Inspections' => context.l10n.navInspections,
-  'Map' => context.l10n.navMap,
-  'Settings' => context.l10n.navSettings,
-  _ => context.l10n.navPocResults,
-};
-
-/// Desktop (D02) adds a direct link to the results tracker.
-const _resultsDestination = _Destination('PoC results', Symbols.fact_check, location: Routes.results);
 
 /// Adaptive app shell: navigation bar under 600, collapsed rail 600–1199,
 /// extended rail with a "New inspection" FAB from 1200 (boards P02, T01, D02).
@@ -46,16 +43,25 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = context.windowSize;
+    final l = context.l10n;
     final location = GoRouterState.of(context).uri.path;
-    final destinations = [..._branchDestinations, if (size == WindowSize.large) _resultsDestination];
+    final destinations = [
+      _Destination.home,
+      _Destination.inspections,
+      _Destination.map,
+      _Destination.settings,
+      if (size == WindowSize.large) _Destination.results,
+    ];
     final onResults = location.startsWith(Routes.results);
     final selected = size == WindowSize.large && onResults ? destinations.length - 1 : navigationShell.currentIndex;
 
     void select(int index) {
       final d = destinations[index];
       if (d.branch != null) {
-        // Re-selecting the current tab pops it back to its root, as on iOS and Android.
-        navigationShell.goBranch(d.branch!, initialLocation: d.branch == navigationShell.currentIndex && !onResults);
+        // Selecting the current branch again pops it back to its root, as on
+        // iOS and Android. That includes Settings while the results tracker
+        // (inside the Settings branch) is open.
+        navigationShell.goBranch(d.branch!, initialLocation: d.branch == navigationShell.currentIndex);
       } else {
         context.go(d.location!);
       }
@@ -68,8 +74,7 @@ class AppShell extends StatelessWidget {
           selectedIndex: selected,
           onDestinationSelected: select,
           destinations: [
-            for (final d in destinations)
-              NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.icon, fill: 1), label: _label(context, d)),
+            for (final d in destinations) NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.icon, fill: 1), label: d.label(l)),
           ],
         ),
       );
@@ -92,18 +97,18 @@ class AppShell extends StatelessWidget {
                       heroTag: 'rail-fab',
                       onPressed: () => _newInspection(context),
                       icon: const Icon(Symbols.add),
-                      label: Text(context.l10n.newInspection),
+                      label: Text(l.newInspection),
                     )
                   : FloatingActionButton(
                       heroTag: 'rail-fab',
-                      tooltip: context.l10n.newInspection,
+                      tooltip: l.newInspection,
                       onPressed: () => _newInspection(context),
                       child: const Icon(Symbols.add),
                     ),
             ),
             destinations: [
               for (final d in destinations)
-                NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.icon, fill: 1), label: Text(_label(context, d))),
+                NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.icon, fill: 1), label: Text(d.label(l))),
             ],
           ),
           Expanded(child: navigationShell),

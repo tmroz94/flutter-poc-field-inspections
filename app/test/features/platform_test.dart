@@ -97,7 +97,7 @@ void main() {
       await tester.tap(find.byTooltip('Show my location'));
       await tester.pumpAndSettle();
       expect(find.text('Location is blocked for this app. Turn it on in settings.'), findsOneWidget);
-      await tester.tap(find.widgetWithText(SnackBarAction, 'Settings'));
+      await tester.tap(find.widgetWithText(SnackBarAction, 'Open settings'));
       expect(fakes.permissions.settingsOpened, 1);
     });
 

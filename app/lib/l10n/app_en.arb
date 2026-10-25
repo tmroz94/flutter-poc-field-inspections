@@ -1118,5 +1118,41 @@
     }
   },
   "pdfItem": "Item",
-  "pdfResult": "Result"
+  "pdfResult": "Result",
+  "todaySection": "Today",
+  "noNotificationsTitle": "No notifications",
+  "noNotificationsBody": "You're all caught up.",
+  "notificationsLoadFailed": "Couldn't load notifications.",
+  "dismiss": "Dismiss",
+  "unread": "Unread",
+  "remindersOnMessage": "Reminders are on: 30 minutes before each inspection.",
+  "remindersWebTest": "Browsers can’t schedule notifications. Test ones work from the deep-link tester while this tab is open.",
+  "mapLocationDenied": "Location permission was not given.",
+  "mapLocationBlocked": "Location is blocked for this app. Turn it on in settings.",
+  "mapLocationErrorWeb": "Couldn't get your location. The browser needs HTTPS and your permission.",
+  "mapLocationError": "Couldn't get your location.",
+  "noSiteMatches": "No site matches “{q}”.",
+  "@noSiteMatches": {
+    "placeholders": {
+      "q": {
+        "type": "String"
+      }
+    }
+  },
+  "searchSites": "Search sites",
+  "showMyLocation": "Show my location",
+  "distanceAway": "{distance} away",
+  "@distanceAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "openInspection": "Open inspection",
+  "mapLoadFailed": "Couldn't load the inspections for the map.",
+  "goHome": "Go to home",
+  "pageNotFound": "Page not found",
+  "pageNotFoundBody": "Nothing lives at this address. The link may be old, or the inspection was deleted.",
+  "openInspections": "Open inspections"
 }

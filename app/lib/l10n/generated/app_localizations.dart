@@ -2617,6 +2617,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Result'**
   String get pdfResult;
+
+  /// No description provided for @todaySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get todaySection;
+
+  /// No description provided for @noNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications'**
+  String get noNotificationsTitle;
+
+  /// No description provided for @noNotificationsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re all caught up.'**
+  String get noNotificationsBody;
+
+  /// No description provided for @notificationsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load notifications.'**
+  String get notificationsLoadFailed;
+
+  /// No description provided for @dismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// No description provided for @unread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get unread;
+
+  /// No description provided for @remindersOnMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders are on: 30 minutes before each inspection.'**
+  String get remindersOnMessage;
+
+  /// No description provided for @remindersWebTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsers can’t schedule notifications. Test ones work from the deep-link tester while this tab is open.'**
+  String get remindersWebTest;
+
+  /// No description provided for @mapLocationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission was not given.'**
+  String get mapLocationDenied;
+
+  /// No description provided for @mapLocationBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is blocked for this app. Turn it on in settings.'**
+  String get mapLocationBlocked;
+
+  /// No description provided for @mapLocationErrorWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get your location. The browser needs HTTPS and your permission.'**
+  String get mapLocationErrorWeb;
+
+  /// No description provided for @mapLocationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get your location.'**
+  String get mapLocationError;
+
+  /// No description provided for @noSiteMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No site matches “{q}”.'**
+  String noSiteMatches(String q);
+
+  /// No description provided for @searchSites.
+  ///
+  /// In en, this message translates to:
+  /// **'Search sites'**
+  String get searchSites;
+
+  /// No description provided for @showMyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Show my location'**
+  String get showMyLocation;
+
+  /// No description provided for @distanceAway.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} away'**
+  String distanceAway(String distance);
+
+  /// No description provided for @openInspection.
+  ///
+  /// In en, this message translates to:
+  /// **'Open inspection'**
+  String get openInspection;
+
+  /// No description provided for @mapLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the inspections for the map.'**
+  String get mapLoadFailed;
+
+  /// No description provided for @goHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to home'**
+  String get goHome;
+
+  /// No description provided for @pageNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not found'**
+  String get pageNotFound;
+
+  /// No description provided for @pageNotFoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing lives at this address. The link may be old, or the inspection was deleted.'**
+  String get pageNotFoundBody;
+
+  /// No description provided for @openInspections.
+  ///
+  /// In en, this message translates to:
+  /// **'Open inspections'**
+  String get openInspections;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
