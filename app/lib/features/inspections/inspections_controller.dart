@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/widgets/inspection_widgets.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
@@ -157,7 +158,7 @@ final homeProvider = FutureProvider.autoDispose<({List<InspectionSummary> today,
   final repo = ref.watch(inspectionsRepositoryProvider);
   final today = await repo.list(const ListQuery(statuses: openStatuses, due: DueWindow.today), pageSize: 10);
   final open = await repo.list(const ListQuery(statuses: openStatuses), pageSize: 50);
-  final now = DateTime.now();
+  final now = ref.read(clockProvider)();
   final weekEnd = DateTime(now.year, now.month, now.day + 7);
   final todayIds = today.items.map((i) => i.id).toSet();
   final week = open.items.where((i) => i.scheduledAt.isBefore(weekEnd) && !todayIds.contains(i.id)).take(5).toList();

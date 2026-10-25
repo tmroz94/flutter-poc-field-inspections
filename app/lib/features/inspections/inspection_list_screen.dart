@@ -299,7 +299,7 @@ class _Filters extends StatelessWidget {
   }
 }
 
-class _ListBody extends StatelessWidget {
+class _ListBody extends ConsumerWidget {
   const _ListBody({
     required this.state,
     required this.query,
@@ -327,7 +327,7 @@ class _ListBody extends StatelessWidget {
   final bool table;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final error = state.error;
     if (state.loading) return const SingleChildScrollView(child: SkeletonList());
     if (error != null && state.items.isEmpty) {
@@ -371,7 +371,7 @@ class _ListBody extends StatelessWidget {
         onLoadMore: onLoadMore,
       );
     }
-    final now = DateTime.now();
+    final now = ref.watch(clockProvider)();
     final extra = state.hasMore || state.loadingMore ? 1 : 0;
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -508,7 +508,7 @@ class _InspectionTile extends StatelessWidget {
 }
 
 /// D03: sortable data table with a row menu and "Load more".
-class _InspectionsTable extends StatelessWidget {
+class _InspectionsTable extends ConsumerWidget {
   const _InspectionsTable({
     required this.state,
     required this.query,
@@ -530,9 +530,9 @@ class _InspectionsTable extends StatelessWidget {
   static const _minWidth = 560.0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final now = DateTime.now();
+    final now = ref.watch(clockProvider)();
     final sortAsc = query.sort != SortOrder.dueDesc;
 
     void sortBy(SortOrder s) => context.go(query.copyWith(sort: s).toLocation(Routes.inspections));
