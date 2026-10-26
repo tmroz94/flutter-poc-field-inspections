@@ -55,8 +55,13 @@ class DiagnosticsScreen extends ConsumerWidget {
     PermissionState.unsupported => ('Handled by the browser', _Tone.normal),
   };
 
+  // Frame numbers change while the screen is open: rebuild (at most once a
+  // second) so the rows and Copy report show current values.
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ListenableBuilder(listenable: FrameStats.instance, builder: (context, _) => _build(context, ref));
+
+  Widget _build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final caps = ref.watch(capabilitiesProvider);
     final summary = ref.watch(deviceSummaryProvider).value;
@@ -92,7 +97,7 @@ class DiagnosticsScreen extends ConsumerWidget {
             _Tone.normal,
           ),
           (
-            'Over 16 ms',
+            'Over the ${frames.budgetMs.toStringAsFixed(1)} ms frame budget',
             frames.frames == 0 ? '–' : '${frames.slowPercent.toStringAsFixed(1)}%',
             frames.slowPercent > 5 ? _Tone.bad : _Tone.normal,
           ),

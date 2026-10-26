@@ -34,6 +34,10 @@ class _AdaptiveWidgetsScreenState extends ConsumerState<AdaptiveWidgetsScreen> {
   double _slider = 60;
   DateTime _date = DateTime.now();
 
+  // One range for both pickers (the Material one asserts on a date outside it).
+  static final _first = DateTime(2020);
+  static final _last = DateTime(2035, 12, 31);
+
   bool get _cupertino => _style == _Style.cupertino;
 
   void _report(String action) {
@@ -76,6 +80,8 @@ class _AdaptiveWidgetsScreenState extends ConsumerState<AdaptiveWidgetsScreen> {
             top: false,
             child: CupertinoDatePicker(
               mode: CupertinoDatePickerMode.date,
+              minimumDate: _first,
+              maximumDate: _last,
               initialDateTime: _date,
               onDateTimeChanged: (d) => setState(() => _date = d),
             ),
@@ -84,7 +90,8 @@ class _AdaptiveWidgetsScreenState extends ConsumerState<AdaptiveWidgetsScreen> {
       );
       return;
     }
-    final picked = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2035));
+    final initial = _date.isBefore(_first) ? _first : (_date.isAfter(_last) ? _last : _date);
+    final picked = await showDatePicker(context: context, initialDate: initial, firstDate: _first, lastDate: _last);
     if (picked != null) setState(() => _date = picked);
   }
 

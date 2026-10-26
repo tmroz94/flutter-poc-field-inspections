@@ -1559,4 +1559,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dragFiles => 'Drag files here';
+
+  @override
+  String get mapLabel => 'Map of inspection sites';
 }

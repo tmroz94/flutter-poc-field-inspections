@@ -129,13 +129,22 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Row(
-      children: [
-        Expanded(
-          child: Semantics(header: true, child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
-        ),
-        ?action,
-      ],
+    // The action keeps its natural size at the end of the row, capped at half
+    // the width so a long label at large text sizes (e.g. Polish at 200%)
+    // wraps instead of overflowing.
+    child: LayoutBuilder(
+      builder: (context, c) => Row(
+        children: [
+          Expanded(
+            child: Semantics(header: true, child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
+          ),
+          if (action != null)
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: c.maxWidth / 2),
+              child: action,
+            ),
+        ],
+      ),
     ),
   );
 }

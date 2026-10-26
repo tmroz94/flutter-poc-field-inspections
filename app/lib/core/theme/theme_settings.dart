@@ -51,7 +51,10 @@ class ThemeSettings {
   factory ThemeSettings.fromJson(Map<String, Object?> json) => ThemeSettings(
     mode: ThemeMode.values.asNameMap()[json['mode']] ?? ThemeMode.system,
     contrast: AppContrast.values.asNameMap()[json['contrast']],
-    textScale: (json['textScale'] as num?)?.toDouble().clamp(minTextScale, maxTextScale),
+    textScale: switch (json['textScale']) {
+      final num n => n.toDouble().clamp(minTextScale, maxTextScale),
+      _ => null,
+    },
     reduceMotion: json['reduceMotion'] == true,
     locale: json['locale'] is String ? Locale(json['locale']! as String) : null,
   );
@@ -70,9 +73,11 @@ class ThemeSettingsController extends Notifier<ThemeSettings> {
   ThemeSettings build() {
     final raw = ref.watch(keyValueStoreProvider).getString(_key);
     if (raw == null) return const ThemeSettings();
+    // Anything unreadable (not JSON, not an object) falls back to the defaults
+    // instead of failing the app root on every start.
     try {
       return ThemeSettings.fromJson(jsonDecode(raw) as Map<String, Object?>);
-    } on FormatException {
+    } on Object {
       return const ThemeSettings();
     }
   }

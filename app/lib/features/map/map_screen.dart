@@ -139,76 +139,83 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: FlutterMap(
-              mapController: _map,
-              options: MapOptions(
-                initialCenter: selected != null ? LatLng(selected.lat!, selected.lng!) : _warsaw,
-                initialZoom: selected != null ? 14 : 11,
-                backgroundColor: scheme.surfaceContainer,
-              ),
-              children: [
-                if (tiles)
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'dev.flutterpoc.field_inspections',
-                  ),
-                MarkerLayer(
-                  markers: [
-                    // 48 dp tap target for every pin (decision 13); the icon tip stays on the point.
-                    for (final i in items)
-                      Marker(
-                        point: LatLng(i.lat!, i.lng!),
-                        width: 48,
-                        height: 48,
-                        alignment: Alignment.topCenter,
-                        child: Semantics(
-                          button: true,
-                          label: '${i.site}, ${i.status.localized(l)}',
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => _select(i),
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              child: Icon(Symbols.location_on, fill: 1, size: i == selected ? 48 : 36, color: pinColor(i)),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (_me case LocationFix(:final lat?, :final lng?))
-                      Marker(
-                        point: LatLng(lat, lng),
-                        width: 28,
-                        height: 28,
-                        child: Semantics(
-                          label: l.yourLocation,
-                          child: Container(
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.primary.withValues(alpha: 0.24)),
-                            alignment: Alignment.center,
-                            child: Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: scheme.primary,
-                                border: Border.all(color: scheme.onPrimary, width: 2),
+            // Labels the map's own (pan, zoom, tap) node; pins and "your
+            // location" are containers, so they stay nodes of their own.
+            child: Semantics(
+              label: l.mapLabel,
+              child: FlutterMap(
+                mapController: _map,
+                options: MapOptions(
+                  initialCenter: selected != null ? LatLng(selected.lat!, selected.lng!) : _warsaw,
+                  initialZoom: selected != null ? 14 : 11,
+                  backgroundColor: scheme.surfaceContainer,
+                ),
+                children: [
+                  if (tiles)
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'dev.flutterpoc.field_inspections',
+                    ),
+                  MarkerLayer(
+                    markers: [
+                      // 48 dp tap target for every pin (decision 13); the icon tip stays on the point.
+                      for (final i in items)
+                        Marker(
+                          point: LatLng(i.lat!, i.lng!),
+                          width: 48,
+                          height: 48,
+                          alignment: Alignment.topCenter,
+                          child: Semantics(
+                            container: true,
+                            button: true,
+                            label: '${i.site}, ${i.status.localized(l)}',
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => _select(i),
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Icon(Symbols.location_on, fill: 1, size: i == selected ? 48 : 36, color: pinColor(i)),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-                if (tiles)
-                  RichAttributionWidget(
-                    alignment: AttributionAlignment.bottomLeft,
-                    attributions: [
-                      TextSourceAttribution(
-                        'OpenStreetMap contributors',
-                        onTap: () => ref.read(launcherServiceProvider).open(Uri.parse('https://openstreetmap.org/copyright')),
-                      ),
+                      if (_me case LocationFix(:final lat?, :final lng?))
+                        Marker(
+                          point: LatLng(lat, lng),
+                          width: 28,
+                          height: 28,
+                          child: Semantics(
+                            container: true,
+                            label: l.yourLocation,
+                            child: Container(
+                              decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.primary.withValues(alpha: 0.24)),
+                              alignment: Alignment.center,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: scheme.primary,
+                                  border: Border.all(color: scheme.onPrimary, width: 2),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-              ],
+                  if (tiles)
+                    RichAttributionWidget(
+                      alignment: AttributionAlignment.bottomLeft,
+                      attributions: [
+                        TextSourceAttribution(
+                          'OpenStreetMap contributors',
+                          onTap: () => ref.read(launcherServiceProvider).open(Uri.parse('https://openstreetmap.org/copyright')),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
           SafeArea(

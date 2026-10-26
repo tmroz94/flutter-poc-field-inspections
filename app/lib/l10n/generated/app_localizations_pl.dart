@@ -606,7 +606,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get device => 'Urządzenie i wersja';
 
   @override
-  String get notes => 'Uwagi';
+  String get notes => 'Notatki';
 
   @override
   String get platform => 'Platforma';
@@ -1626,4 +1626,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get dragFiles => 'Przeciągnij tu pliki';
+
+  @override
+  String get mapLabel => 'Mapa obiektów inspekcji';
 }

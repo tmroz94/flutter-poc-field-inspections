@@ -11,7 +11,7 @@ enum PocPlatform {
   ios('iOS'),
   android('Android', short: 'Andr.'),
   web('Web'),
-  macos('macOS'),
+  macos('macOS', short: 'Mac'),
   windows('Windows', short: 'Win.'),
   linux('Linux');
 
@@ -53,11 +53,19 @@ enum ResultStatus {
 class PlatformResult {
   const PlatformResult({this.status = ResultStatus.notTested, this.device = '', this.notes = ''});
 
-  factory PlatformResult.fromJson(Map<String, Object?> j) => PlatformResult(
-    status: ResultStatus.fromCode(j['s'] as String? ?? 'U'),
-    device: j['device'] as String? ?? '',
-    notes: j['notes'] as String? ?? '',
-  );
+  /// Tolerates wrong types (imported files): they read as empty.
+  factory PlatformResult.fromJson(Map<String, Object?> j) {
+    String text(Object? v) => v is String ? v : '';
+    final notes = text(j['notes']);
+    return PlatformResult(
+      status: ResultStatus.fromCode(text(j['s'])),
+      device: text(j['device']),
+      notes: notes.length > maxNotes ? notes.substring(0, maxNotes) : notes,
+    );
+  }
+
+  /// Notes limit from the result sheet (decision 58), also applied to imports.
+  static const maxNotes = 1000;
 
   final ResultStatus status;
   final String device;
@@ -264,7 +272,13 @@ class ResultsController extends Notifier<ResultsState> {
   };
 
   static ResultsState _fromJson(Map<String, Object?> j) {
-    final rows = {for (final r in (j['results'] as List?) ?? const []) (r as Map)['id']: r.cast<String, Object?>()};
+    final rows = {
+      for (final r in switch (j['results']) {
+        final List<Object?> list => list,
+        _ => const <Object?>[],
+      })
+        if (r is Map) r['id']: r.cast<String, Object?>(),
+    };
     return ResultsState(
       dataset: ResultsDataset.values.asNameMap()[j['dataset']] ?? ResultsDataset.custom,
       results: [
@@ -282,20 +296,33 @@ class ResultsController extends Notifier<ResultsState> {
     );
   }
 
-  /// Imports a JSON export. Throws [FormatException] for other files.
+  /// Imports a JSON export. Throws [FormatException] for other files,
+  /// including ones with the right format tag but the wrong shape.
   void importJson(String text) {
     final j = jsonDecode(text);
     if (j is! Map<String, Object?> || j['format'] != 'field-inspections-poc-results/1') {
       throw const FormatException('Not a PoC results export');
     }
+    final results = j['results'];
+    final shapeOk =
+        results is List &&
+        results.every((r) => r is Map && r['id'] is String && PocPlatform.values.every((p) => r[p.name] == null || r[p.name] is Map));
+    if (!shapeOk) throw const FormatException('Results have the wrong shape');
     final imported = _fromJson(j);
     final next = ResultsState(dataset: ResultsDataset.custom, results: imported.results);
     _save(next);
     state = next;
   }
 
+  /// CSV per RFC 4180 (CRLF lines) with a UTF-8 byte order mark, so Excel
+  /// opens Polish letters correctly. Cells starting with = + - @ are prefixed
+  /// with ' so spreadsheets don't run them as formulas.
   static String toCsv(ResultsState s) {
-    String cell(String v) => v.contains(RegExp(r'[",\n]')) ? '"${v.replaceAll('"', '""')}"' : v;
+    String cell(String raw) {
+      final v = raw.startsWith(RegExp(r'[=+\-@\t\r]')) ? "'$raw" : raw;
+      return v.contains(RegExp(r'[",\r\n]')) ? '"${v.replaceAll('"', '""')}"' : v;
+    }
+
     final header = [
       'group',
       'scenario',
@@ -310,7 +337,7 @@ class ResultsController extends Notifier<ResultsState> {
           for (final p in PocPlatform.values) ...[r.of(p).status.name, r.of(p).device, r.of(p).notes],
         ].map(cell).join(','),
     ];
-    return '${lines.join('\n')}\n';
+    return '\uFEFF${lines.join('\r\n')}\r\n';
   }
 }
 

@@ -74,9 +74,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
   Future<void> _import() async {
-    final text = await ref.read(mediaServiceProvider).jsonText();
-    if (text == null) return;
     try {
+      // Reading is inside the try too: a file that isn't UTF-8 fails here.
+      final text = await ref.read(mediaServiceProvider).jsonText();
+      if (text == null) return;
       ref.read(resultsProvider.notifier).importJson(text);
       _say('Results imported.');
     } on FormatException {
@@ -154,11 +155,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             padding: const EdgeInsets.all(12),
             child: LayoutBuilder(
               builder: (context, c) {
-                final w = c.maxWidth >= 720
-                    ? (c.maxWidth - 16) / 3
-                    : c.maxWidth >= 360
-                    ? (c.maxWidth - 16) / 3
-                    : c.maxWidth;
+                final w = c.maxWidth >= 360 ? (c.maxWidth - 16) / 3 : c.maxWidth;
                 return Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -290,7 +287,16 @@ class _Group extends StatelessWidget {
               for (final p in PocPlatform.values)
                 SizedBox(
                   width: _phoneColumn,
-                  child: Text(p.short, textAlign: TextAlign.center, style: theme.textTheme.labelSmall),
+                  // One line (the column is 36 dp); screen readers get the full name.
+                  child: Text(
+                    p.short,
+                    semanticsLabel: p.label,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelSmall,
+                  ),
                 ),
             ],
           ),
@@ -528,11 +534,13 @@ class _ResultSheetState extends ConsumerState<ResultSheet> {
                 validator: (v) => needsNotes && (v == null || v.trim().isEmpty) ? 'Describe what failed or only partly worked' : null,
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              // Wraps at large text sizes instead of overflowing.
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   TextButton(onPressed: () => context.pop(), child: Text(l.cancel)),
-                  const SizedBox(width: 8),
                   FilledButton(onPressed: _save, child: Text(l.save)),
                 ],
               ),

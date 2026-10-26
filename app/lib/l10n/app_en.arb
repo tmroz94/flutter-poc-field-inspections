@@ -1166,5 +1166,6 @@
   "remindersUnsupported": "This platform can’t schedule notifications, so reminders are off here.",
   "remindersOffLinux": "Linux shows notifications only while the app is open and can’t schedule them.",
   "remindersLinuxTest": "Linux can’t schedule notifications. Test ones work from the deep-link tester while the app is open.",
-  "dragFiles": "Drag files here"
+  "dragFiles": "Drag files here",
+  "mapLabel": "Map of inspection sites"
 }

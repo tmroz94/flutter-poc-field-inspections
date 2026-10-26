@@ -165,7 +165,7 @@
   "exportResults": "Eksportuj wyniki",
   "importResults": "Importuj",
   "device": "Urządzenie i wersja",
-  "notes": "Uwagi",
+  "notes": "Notatki",
   "platform": "Platforma",
   "dueAny": "Dowolny",
   "dueToday": "Dziś",
@@ -447,5 +447,6 @@
   "remindersUnsupported": "Ta platforma nie planuje powiadomień, więc przypomnienia są tu wyłączone.",
   "remindersOffLinux": "Linux pokazuje powiadomienia tylko przy otwartej aplikacji i nie umie ich planować.",
   "remindersLinuxTest": "Linux nie planuje powiadomień. Testowe działają z testera linków, gdy aplikacja jest otwarta.",
-  "dragFiles": "Przeciągnij tu pliki"
+  "dragFiles": "Przeciągnij tu pliki",
+  "mapLabel": "Mapa obiektów inspekcji"
 }

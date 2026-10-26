@@ -14,6 +14,8 @@ const _screens = [
   '/inspections/new?step=1',
   '/inspections/new?step=2',
   '/notifications',
+  '/map',
+  '/map?site=s-riverside-office',
   '/settings',
   '/settings/appearance',
   '/settings/poc/results',
@@ -41,6 +43,14 @@ void main() {
   for (final location in _screens) {
     testWidgets('200% text: $location', (tester) async {
       await pumpApp(tester, store: signedInStore(), initialLocation: location, textScale: 2);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  // Polish labels run longer than English; the same screens at 200% in Polish.
+  for (final location in _screens) {
+    testWidgets('200% text in Polish: $location', (tester) async {
+      await pumpApp(tester, store: {...signedInStore(), 'theme_settings': '{"locale":"pl"}'}, initialLocation: location, textScale: 2);
       expect(tester.takeException(), isNull);
     });
   }

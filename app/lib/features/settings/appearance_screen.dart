@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_settings.dart';
+import '../../core/widgets/adaptive_segments.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/models/inspection.dart';
 import '../../l10n/l10n.dart';
@@ -19,20 +21,53 @@ class AppearanceScreen extends StatelessWidget {
   );
 }
 
-class AppearanceView extends ConsumerWidget {
+class AppearanceView extends ConsumerStatefulWidget {
   const AppearanceView({this.twoColumns = false, super.key});
 
   /// T03 lays the controls out in two columns.
   final bool twoColumns;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppearanceView> createState() => _AppearanceViewState();
+}
+
+class _AppearanceViewState extends ConsumerState<AppearanceView> {
+  /// Text size while the slider moves. Saving it on every tick re-laid out
+  /// the whole app under the finger and wrote to storage each time.
+  double? _dragScale;
+  Timer? _commit;
+
+  @override
+  void dispose() {
+    _commit?.cancel();
+    super.dispose();
+  }
+
+  void _setScale(double percent) {
+    final scale = (percent / 5).round() * 5 / 100;
+    setState(() => _dragScale = scale);
+    // Keyboard and screen-reader steps don't always end with onChangeEnd.
+    _commit?.cancel();
+    _commit = Timer(const Duration(milliseconds: 600), _saveScale);
+  }
+
+  void _saveScale() {
+    _commit?.cancel();
+    final scale = _dragScale;
+    if (scale == null || !mounted) return;
+    ref.read(themeSettingsProvider.notifier).update((x) => x.copyWith(textScale: () => scale));
+    setState(() => _dragScale = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final twoColumns = widget.twoColumns;
     final l = context.l10n;
     final theme = Theme.of(context);
     final s = ref.watch(themeSettingsProvider);
     final controller = ref.read(themeSettingsProvider.notifier);
     final systemScale = MediaQuery.of(context).textScaler.scale(1);
-    final scale = s.textScale ?? systemScale.clamp(ThemeSettings.minTextScale, ThemeSettings.maxTextScale);
+    final scale = _dragScale ?? s.textScale ?? systemScale.clamp(ThemeSettings.minTextScale, ThemeSettings.maxTextScale);
     final locale = s.locale?.languageCode;
     final label = theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
 
@@ -47,29 +82,28 @@ class AppearanceView extends ConsumerWidget {
       ],
     );
 
+    // Segments that turn into wrapping chips at large text sizes (decision 64).
     final themeMode = section(
       l.theme,
-      SegmentedButton<ThemeMode>(
-        segments: [
-          ButtonSegment(value: ThemeMode.system, label: Text(l.themeSystem), icon: twoColumns ? null : const Icon(Symbols.brightness_auto)),
-          ButtonSegment(value: ThemeMode.light, label: Text(l.themeLight), icon: twoColumns ? null : const Icon(Symbols.light_mode)),
-          ButtonSegment(value: ThemeMode.dark, label: Text(l.themeDark), icon: twoColumns ? null : const Icon(Symbols.dark_mode)),
-        ],
-        selected: {s.mode},
-        onSelectionChanged: (v) => controller.update((x) => x.copyWith(mode: v.first)),
+      AdaptiveSegments<ThemeMode>(
+        segments: [(ThemeMode.system, l.themeSystem), (ThemeMode.light, l.themeLight), (ThemeMode.dark, l.themeDark)],
+        selected: s.mode,
+        onChanged: (v) => controller.update((x) => x.copyWith(mode: v)),
       ),
     );
 
+    // System follows the OS high-contrast setting (null in the settings).
     final contrast = section(
       l.contrast,
-      SegmentedButton<AppContrast>(
+      AdaptiveSegments<AppContrast?>(
         segments: [
-          ButtonSegment(value: AppContrast.standard, label: Text(l.contrastStandard)),
-          ButtonSegment(value: AppContrast.medium, label: Text(l.contrastMedium)),
-          ButtonSegment(value: AppContrast.high, label: Text(l.contrastHigh)),
+          (null, l.themeSystem),
+          (AppContrast.standard, l.contrastStandard),
+          (AppContrast.medium, l.contrastMedium),
+          (AppContrast.high, l.contrastHigh),
         ],
-        selected: {s.contrast ?? AppContrast.standard},
-        onSelectionChanged: (v) => controller.update((x) => x.copyWith(contrast: () => v.first)),
+        selected: s.contrast,
+        onChanged: (v) => controller.update((x) => x.copyWith(contrast: () => v)),
       ),
     );
 
@@ -91,7 +125,8 @@ class AppearanceView extends ConsumerWidget {
             divisions: 23,
             label: '${(scale * 100).round()}%',
             semanticFormatterCallback: (v) => '${v.round()}%',
-            onChanged: (v) => controller.update((x) => x.copyWith(textScale: () => (v / 5).round() * 5 / 100)),
+            onChanged: _setScale,
+            onChangeEnd: (_) => _saveScale(),
           ),
           if (s.textScale != null)
             Align(

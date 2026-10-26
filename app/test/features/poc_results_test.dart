@@ -91,9 +91,42 @@ void main() {
             const PlatformResult(status: ResultStatus.partial, device: 'Chrome', notes: 'Slow, "laggy"\nzoom'),
           );
       final csv = ResultsController.toCsv(c.read(resultsProvider));
-      final lines = const LineSplitter().convert(csv);
-      expect(lines.first, startsWith('group,scenario,ios_status'));
+      // UTF-8 byte order mark for Excel, then CRLF lines (RFC 4180).
+      expect(csv, startsWith('\uFEFFgroup,scenario,ios_status'));
+      expect(csv.split('\r\n').first, isNot(contains('\n')));
       expect(csv, contains('"Slow, ""laggy""\nzoom"'));
+    });
+
+    test('CSV keeps spreadsheets from running cells as formulas', () {
+      final c = _container();
+      c
+          .read(resultsProvider.notifier)
+          .setResult('maps', PocPlatform.web, const PlatformResult(status: ResultStatus.fail, notes: '=HYPERLINK("x")'));
+      expect(ResultsController.toCsv(c.read(resultsProvider)), contains('"\'=HYPERLINK(""x"")"'));
+    });
+
+    test('a file with the right format tag but the wrong shape is rejected, not a crash', () {
+      final c = _container();
+      final notifier = c.read(resultsProvider.notifier);
+      for (final bad in [
+        '{"format":"field-inspections-poc-results/1","results":{}}',
+        '{"format":"field-inspections-poc-results/1","results":[1]}',
+        '{"format":"field-inspections-poc-results/1","results":[{"id":"maps","web":"P"}]}',
+      ]) {
+        expect(() => notifier.importJson(bad), throwsFormatException, reason: bad);
+      }
+    });
+
+    test('imported notes are cut to the 1000-character limit; wrong field types read as empty', () {
+      final c = _container();
+      final long = 'x' * 1200;
+      c
+          .read(resultsProvider.notifier)
+          .importJson('{"format":"field-inspections-poc-results/1","results":[{"id":"maps","web":{"s":1,"device":2,"notes":"$long"}}]}');
+      final web = c.read(resultsProvider).results.firstWhere((r) => r.id == 'maps').of(PocPlatform.web);
+      expect(web.notes, hasLength(1000));
+      expect(web.device, '');
+      expect(web.status, ResultStatus.notTested);
     });
   });
 

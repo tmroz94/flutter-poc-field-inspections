@@ -2779,6 +2779,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Drag files here'**
   String get dragFiles;
+
+  /// No description provided for @mapLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Map of inspection sites'**
+  String get mapLabel;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
