@@ -18,9 +18,10 @@ class Capabilities {
   bool get isDesktop =>
       !isWeb && (platform == TargetPlatform.macOS || platform == TargetPlatform.windows || platform == TargetPlatform.linux);
 
-  /// Biometric lock (P26) exists on iOS and Android only; web has no equivalent,
-  /// and desktop isn't wired up (Touch ID / Windows Hello would be the next step).
-  bool get biometricLock => isMobile;
+  /// Biometric lock (P26): Face ID / Touch ID / fingerprint on phones, Touch ID
+  /// on macOS and Windows Hello on Windows (local_auth; the device password is
+  /// the fallback). The web has no equivalent and local_auth has no Linux plugin.
+  bool get biometricLock => isMobile || (!isWeb && (platform == TargetPlatform.macOS || platform == TargetPlatform.windows));
 
   /// Taking a photo: the phone camera, or the browser's camera input. Desktop
   /// apps have no camera picker, so they offer files and drag and drop instead.

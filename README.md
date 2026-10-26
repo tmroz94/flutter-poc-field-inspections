@@ -81,4 +81,4 @@ CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run 
 | M2 | Wizard, validators, drafts, outbox | done |
 | M3 | Camera, files, maps, notifications, biometrics, permissions | done |
 | M4 | Appearance, EN/PL, a11y, adaptive widgets, diagnostics, results tracker, goldens, integration tests, wasm build | done (iOS: simulator checks done, a physical iPhone still to do) |
-| Desktop | macOS, Windows and Linux apps: desktop capabilities (no camera, Save for exports, Linux can't schedule notifications), CI builds | macOS: integration flows pass; Windows, Linux: CI only, not yet run |
+| Desktop | macOS, Windows and Linux apps: desktop capabilities (no camera, Save for exports, Linux can't schedule notifications), deep links, Touch ID / Windows Hello, desktop columns in the Results tracker, CI builds | macOS: integration flows and deep links pass; Windows, Linux: CI only, not yet run |

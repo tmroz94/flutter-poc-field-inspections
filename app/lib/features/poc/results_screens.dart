@@ -24,6 +24,10 @@ enum _Filter { all, failing, notTested }
   ResultStatus.na => (Symbols.block, c.onSurfaceVariant, l.resultNa),
 };
 
+/// Width of each platform's status column in the phone list: six of them still
+/// leave the scenario name about 140 dp on a 390 dp phone.
+const _phoneColumn = 36.0;
+
 class _StatusIcon extends StatelessWidget {
   const _StatusIcon(this.status, this.platform);
 
@@ -207,6 +211,9 @@ class _PlatformCard extends StatelessWidget {
       PocPlatform.ios => Symbols.phone_iphone,
       PocPlatform.android => Symbols.android,
       PocPlatform.web => Symbols.language,
+      PocPlatform.macos => Symbols.laptop_mac,
+      PocPlatform.windows => Symbols.desktop_windows,
+      PocPlatform.linux => Symbols.computer,
     };
     return Card.filled(
       margin: EdgeInsets.zero,
@@ -282,8 +289,8 @@ class _Group extends StatelessWidget {
               ),
               for (final p in PocPlatform.values)
                 SizedBox(
-                  width: 40,
-                  child: Text(p == PocPlatform.android ? 'Andr.' : p.label, textAlign: TextAlign.center, style: theme.textTheme.labelSmall),
+                  width: _phoneColumn,
+                  child: Text(p.short, textAlign: TextAlign.center, style: theme.textTheme.labelSmall),
                 ),
             ],
           ),
@@ -298,7 +305,7 @@ class _Group extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(child: Text(r.name)),
-                    for (final p in PocPlatform.values) SizedBox(width: 40, child: _StatusIcon(r.of(p).status, p)),
+                    for (final p in PocPlatform.values) SizedBox(width: _phoneColumn, child: _StatusIcon(r.of(p).status, p)),
                   ],
                 ),
               ),
@@ -331,19 +338,17 @@ class _ResultsTable extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Table(
-        columnWidths: const {
-          0: FlexColumnWidth(2),
-          1: FixedColumnWidth(80),
-          2: FixedColumnWidth(80),
-          3: FixedColumnWidth(80),
-          4: FlexColumnWidth(3),
+        columnWidths: {
+          0: const FlexColumnWidth(2),
+          for (var i = 1; i <= PocPlatform.values.length; i++) i: const FixedColumnWidth(76),
+          PocPlatform.values.length + 1: const FlexColumnWidth(3),
         },
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
           TableRow(
             decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerLow),
             children: [
-              for (final h in ['Scenario', 'iOS', 'Android', 'Web', context.l10n.notes])
+              for (final h in ['Scenario', for (final p in PocPlatform.values) p.label, context.l10n.notes])
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(h, style: theme.textTheme.labelLarge),
@@ -357,7 +362,7 @@ class _ResultsTable extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(12, 16, 12, 4),
                   child: Text(g.key, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
                 ),
-                for (var i = 0; i < 4; i++) const SizedBox.shrink(),
+                for (var i = 0; i <= PocPlatform.values.length; i++) const SizedBox.shrink(),
               ],
             ),
             for (final r in g.value)
@@ -427,9 +432,7 @@ class ResultSheet extends ConsumerStatefulWidget {
 
 class _ResultSheetState extends ConsumerState<ResultSheet> {
   final _form = GlobalKey<FormState>();
-  late PocPlatform _platform = ref.read(capabilitiesProvider).isWeb
-      ? PocPlatform.web
-      : (ref.read(capabilitiesProvider).platform == TargetPlatform.iOS ? PocPlatform.ios : PocPlatform.android);
+  late PocPlatform _platform = PocPlatform.of(ref.read(capabilitiesProvider));
   late final _device = TextEditingController();
   late final _notes = TextEditingController();
   ResultStatus _status = ResultStatus.notTested;

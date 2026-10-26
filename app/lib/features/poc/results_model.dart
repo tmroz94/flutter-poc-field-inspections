@@ -4,15 +4,33 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mock_data/mock_data.dart';
 
+import '../../core/platform/capabilities.dart';
 import '../../core/storage/key_value_store.dart';
 
 enum PocPlatform {
   ios('iOS'),
-  android('Android'),
-  web('Web');
+  android('Android', short: 'Andr.'),
+  web('Web'),
+  macos('macOS'),
+  windows('Windows', short: 'Win.'),
+  linux('Linux');
 
-  const PocPlatform(this.label);
+  const PocPlatform(this.label, {String? short}) : short = short ?? label;
   final String label;
+
+  /// For the narrow status columns of the phone list.
+  final String short;
+
+  /// The platform this app is running on.
+  static PocPlatform of(Capabilities caps) => caps.isWeb
+      ? web
+      : switch (caps.platform) {
+          TargetPlatform.iOS => ios,
+          TargetPlatform.macOS => macos,
+          TargetPlatform.windows => windows,
+          TargetPlatform.linux => linux,
+          _ => android,
+        };
 }
 
 /// Pass, partial, fail, not tested, not applicable (codes P/H/F/U/N as on D05).

@@ -125,13 +125,23 @@ What differs from the phones is in `Capabilities` and summed up in
 | App and window name "Field Inspections" | `macos/Runner/Configs/AppInfo.xcconfig`, `linux/runner/my_application.cc`, `windows/runner/main.cpp`, `Runner.rc` |
 | macOS window opens at 1280 × 720 like the other two, with restoration off (it otherwise brought back the template's 800 × 600) | `macos/Runner/MainFlutterWindow.swift` |
 | Notification settings for macOS, Linux and Windows (Windows needs an app ID and a GUID) | `lib/core/platform/notification_service.dart` |
+| Deep links through `app_links`: macOS `fieldinspections` scheme; Windows registers the scheme for the user at start and forwards links to the open window; Linux runs single-instance and passes links on, plus a `.desktop` file to register | `macos/Runner/Info.plist`, `windows/runner/main.cpp`, `linux/runner/my_application.cc`, `linux/dev.flutterpoc.field_inspections.desktop` |
+| Biometric lock: Touch ID (macOS) and Windows Hello through local_auth; not on Linux | `lib/core/platform/capabilities.dart` |
 
 Verified on macOS 27 (Apple silicon): the 7 shared integration flows pass
 (`app_test` and `ui_flows_test`, one file per `flutter test` run: a second
 launch in the same run lost its debug connection), and the sandboxed app
-reaches the mock API. Not checked by hand there yet: the notification and
-location prompts, map tiles, file dialogs and Save. Windows and Linux: CI only
-(`desktop.yml`), not yet run.
+reaches the mock API. `fieldinspections://` links open the right page in the
+running app and from a cold start (release build). Not checked by hand there
+yet: Touch ID, the notification and location prompts, map tiles, file dialogs
+and Save. Windows and Linux: CI only (`desktop.yml`), not yet run; their
+runner changes for links compile there first.
+
+Adding `app_links` didn't change the phones: on the iPhone simulator a link
+still opens its page while the app runs, after sign-in and from a cold start
+(the plugin reports iOS links as unhandled, so Flutter's deep linking keeps
+them). On Android, Flutter pushes the intent's route whatever plugins return
+(read in the embedding's source, not run: no emulator on the Mac).
 
 ## Verified so far
 

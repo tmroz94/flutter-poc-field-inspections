@@ -48,6 +48,12 @@ Web: open or refresh any URL on a host that rewrites unknown paths to
 `index.html`. Locally: `fvm flutter build web` then `python tool/serve_web.py`.
 `/settings/poc/deep-links` in the app lists every route and opens it.
 
+### Desktop apps
+
+macOS, Windows and Linux open `fieldinspections://` links through `app_links`
+(Linux needs its `.desktop` file registered first). Setup and commands:
+[setup.md](setup.md#desktop-deep-links).
+
 ## Hosting checklist (not needed for local testing)
 
 - SPA rewrite: every path that is not a file → `/index.html` (Firebase `rewrites`, Netlify `_redirects`, nginx `try_files $uri /index.html`).

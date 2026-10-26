@@ -175,19 +175,46 @@ One codebase, with these platform differences (all in
 | Export PDF | Save dialog | same | same |
 | Notifications | ✓ (asks for permission) | ✓ | shown, but can't be scheduled: reminders are off, test notifications use a timer |
 | Location | ✓ (asks for permission) | ✓ (Windows location services) | not available (geolocator has no Linux plugin) |
-| Biometric lock | not offered | not offered | not offered |
-| Deep links (`fieldinspections://`) | not supported (the macOS embedder hands opened URLs only to plugins; `app_links` would add it) | not supported | not supported |
+| Biometric lock | Touch ID (or the Mac's password) | Windows Hello | not offered (local_auth has no Linux plugin) |
+| Deep links (`fieldinspections://`) | ✓ via `app_links` (scheme in `Info.plist`) | ✓ via `app_links` (the app registers the scheme for the user at start) | ✓ via `app_links` once the `.desktop` file is registered (below) |
 
 The macOS app runs in the App Sandbox; `macos/Runner/*.entitlements` allow
 outgoing network (map tiles, mock API), user-selected files (pickers, Save)
 and location.
 
-So far only the macOS app has been run (26 October 2026: the 7 shared
-integration flows pass, and it talks to the mock API from the sandbox). The
-Windows and Linux columns describe what the code and the plugins do; the
-`desktop.yml` workflow is the first place they build and run. Share links
-from a desktop app use the `fieldinspections://` scheme, which only the phone
-apps open.
+So far only the macOS app has been run (26 October 2026): the 7 shared
+integration flows pass, it talks to the mock API from the sandbox, and
+`fieldinspections://` links open the right page both in the running app and
+from a cold start. Touch ID hasn't been tried yet (it needs a finger on the
+sensor). The Windows and Linux columns describe what the code and the plugins
+do; the `desktop.yml` workflow is the first place they build and run.
+
+### Desktop deep links
+
+Phones get links from Flutter's own deep linking; the desktop apps get them
+from `app_links` (`lib/core/platform/desktop_links.dart`). A link that starts
+the app opens its page directly; one that arrives while the app runs goes to
+the open window (Windows and Linux forward it from the second process, which
+then exits).
+
+- **macOS**: nothing to do; the scheme is in `macos/Runner/Info.plist`. Try
+  `open "fieldinspections://app/inspections/INS-1042"`.
+- **Windows**: each start writes `HKEY_CURRENT_USER\Software\Classes\fieldinspections`
+  pointing at the running `.exe` (`windows/runner/main.cpp`). Try
+  `start fieldinspections://app/inspections/INS-1042` in `cmd`. An MSIX package
+  would declare the scheme instead.
+- **Linux**: register `linux/dev.flutterpoc.field_inspections.desktop` once,
+  with `Exec=` set to the built binary's absolute path:
+
+  ```bash
+  cp app/linux/dev.flutterpoc.field_inspections.desktop ~/.local/share/applications/
+  ```
+
+  ```bash
+  xdg-mime default dev.flutterpoc.field_inspections.desktop x-scheme-handler/fieldinspections
+  ```
+
+  Then `xdg-open fieldinspections://app/inspections/INS-1042`.
 
 ## Check
 

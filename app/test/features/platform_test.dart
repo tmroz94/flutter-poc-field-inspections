@@ -234,12 +234,26 @@ void main() {
       expect(tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Inspection reminders')).onChanged, isNull);
     });
 
-    testWidgets('desktop: no biometric unlock; reminders on macOS, not on Linux', (tester) async {
-      await pumpApp(tester, initialLocation: '/settings', store: signedInStore(), capabilities: macos);
-      expect(find.text('Biometric unlock'), findsNothing);
+    testWidgets('macOS: Touch ID lock and reminders', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/settings', store: signedInStore(), capabilities: macos);
       expect(tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Inspection reminders')).onChanged, isNotNull);
+      await tester.tap(find.text('Biometric unlock'));
+      await tester.pumpAndSettle();
+      expect(app.fakes.biometrics.calls, 1);
+      expect(app.container.read(lockControllerProvider).enabled, isTrue);
+    });
+
+    testWidgets('Windows offers the lock (Windows Hello); Linux has neither lock nor reminders', (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        store: signedInStore(),
+        capabilities: const Capabilities(isWeb: false, platform: TargetPlatform.windows),
+      );
+      expect(find.text('Biometric unlock'), findsOneWidget);
 
       await pumpApp(tester, initialLocation: '/settings', store: signedInStore(), capabilities: linux);
+      expect(find.text('Biometric unlock'), findsNothing);
       expect(find.text('Not available on Linux'), findsOneWidget);
       expect(tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Inspection reminders')).onChanged, isNull);
     });

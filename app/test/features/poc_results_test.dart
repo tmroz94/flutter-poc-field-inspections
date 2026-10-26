@@ -72,6 +72,15 @@ void main() {
       expect(() => c.read(resultsProvider.notifier).importJson('not json'), throwsFormatException);
     });
 
+    test('the running platform maps to its column; exports have one per platform', () {
+      expect(PocPlatform.of(web), PocPlatform.web);
+      expect(PocPlatform.of(android), PocPlatform.android);
+      expect(PocPlatform.of(macos), PocPlatform.macos);
+      expect(PocPlatform.of(linux), PocPlatform.linux);
+      final header = ResultsController.toCsv(const ResultsState(dataset: ResultsDataset.blank, results: [])).trim();
+      expect(header.split(',').where((h) => h.endsWith('_status')), [for (final p in PocPlatform.values) '${p.name}_status']);
+    });
+
     test('CSV quotes commas, quotes and newlines', () {
       final c = _container();
       c
@@ -94,7 +103,8 @@ void main() {
       await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
       expect(find.byType(ResultsScreen), findsOneWidget);
       expect(find.text('Findings so far'), findsOneWidget);
-      expect(find.text('0 of 44 tested'), findsOneWidget);
+      // iOS and the three desktop apps have no findings yet.
+      expect(find.text('0 of 44 tested'), findsNWidgets(4));
       expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
 
       final all = find.byType(InkWell).evaluate().length;
@@ -106,6 +116,8 @@ void main() {
 
     testWidgets('row opens the result sheet at its URL; validators guard Save', (tester) async {
       final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
+      await tester.ensureVisible(find.text('Back navigation'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Back navigation'));
       await tester.pumpAndSettle();
       expect(app.location, '/settings/poc/results/back-navigation');
@@ -126,6 +138,7 @@ void main() {
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       expect(app.location, '/settings/poc/results');
+      await tester.dragUntilVisible(find.text('Your results'), find.byType(Scrollable).first, const Offset(0, 300));
       expect(find.text('Your results'), findsOneWidget);
       final row = app.container.read(resultsProvider).results.firstWhere((r) => r.id == 'back-navigation');
       expect(row.of(PocPlatform.ios).status, ResultStatus.fail);
@@ -185,7 +198,22 @@ void main() {
       await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results', size: desktopSize, capabilities: web);
       expect(find.byType(Table), findsOneWidget);
       expect(find.text('Scenario'), findsOneWidget);
+      for (final p in PocPlatform.values) {
+        expect(find.text(p.label), findsWidgets, reason: '${p.label} column');
+      }
       expect(find.textContaining('flutter_map + OSM tiles'), findsOneWidget);
+    });
+
+    testWidgets('a result sheet opened on macOS starts on macOS', (tester) async {
+      await pumpApp(
+        tester,
+        store: signedInStore(),
+        initialLocation: '/settings/poc/results/back-navigation',
+        size: desktopSize,
+        capabilities: macos,
+      );
+      final segments = tester.widget<SegmentedButton<PocPlatform>>(find.byType(SegmentedButton<PocPlatform>));
+      expect(segments.selected, {PocPlatform.macos});
     });
   });
 }
