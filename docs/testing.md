@@ -228,6 +228,34 @@ headless. Results so far: "Web builds" in `platform-setup.md`.
 To compare by hand instead, open **Settings › Diagnostics** in each build, tap
 **Reset frame stats**, use the screen you want to measure, then come back.
 
+## Desktop apps
+
+The shared flows (`app_test`, `ui_flows_test`) run on the desktop apps too, one
+file per run (a second launch in the same `flutter test` call can lose its
+debug connection):
+
+```bash
+cd app && fvm flutter test integration_test/app_test.dart -d macos
+```
+
+`integration_test/platform_probe_test.dart` asks the real plugins what they can
+do, without showing system prompts, and prints a `PROBE` line for each: device
+info, notification and location permission state, the biometrics the lock
+could use, and map tiles loaded over the network. It runs on any target and
+fails only when a plugin is missing or broken.
+
+The Linux app can be built and tested from a Mac with Docker running:
+
+```bash
+tool/linux_container/test.sh
+```
+
+It builds the image in `tool/linux_container/` (Ubuntu 24.04, Flutter from
+`.fvmrc`, a virtual display and a session bus), copies the tracked files in,
+builds the release app and runs both flow files and the probe. On Apple
+silicon the container is arm64, so it checks the Linux code rather than CI's
+x64 binary.
+
 ## CI (GitHub Actions)
 
 | Workflow | When | What |
@@ -235,7 +263,7 @@ To compare by hand instead, open **Settings › Diagnostics** in each build, tap
 | `ci.yml` | every push and pull request | quality gate (`tool/check.sh --coverage`; goldens skip on Linux), both web builds as artifacts, the integration flows in headless Chrome (`flutter drive`), the Playwright prompt tests |
 | `android.yml` | by hand only | emulator with the local image (API 37, Google Play): `tool/android_device_tests.dart` (including airplane mode and GPS), then `--patrol` (native UI, notification after kill) |
 | `ios.yml` | by hand only | iPhone simulator on a macOS runner: builds for iOS and runs the integration flows |
-| `desktop.yml` | Linux: every push and pull request; Windows and macOS: by hand | builds each desktop app (Linux bundle and Windows release as artifacts) and runs `app_test` and `ui_flows_test` on it, one file per run (Linux under `xvfb-run`) |
+| `desktop.yml` | Linux: every push and pull request; Windows and macOS: by hand | builds each desktop app (Linux bundle and Windows release as artifacts) and runs `app_test`, `ui_flows_test` and the platform probe on it, one file per run (Linux under `xvfb-run` with a session bus) |
 
 Every job installs the Flutter version from `.fvmrc`; `tool/check.sh` and the
 host helper use FVM when it's installed and the plain `flutter`/`dart` on PATH

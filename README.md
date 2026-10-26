@@ -13,7 +13,7 @@ Claude Design canvas "Flutter PoC – Field Inspections" (Material 3).
 | `design/` | Design tokens copied from the canvas |
 | `docs/` | `setup.md` (machine setup on macOS, Linux and Windows; running every target), `decisions.md` (how mock gaps were resolved), `deep-links.md`, `platform-setup.md` (Android/iOS/web/desktop specifics, what's verified), `testing.md` (tests, goldens, integration tests, JS vs wasm) |
 | `web_e2e/` | Playwright tests of the web builds: browser prompts (notifications, location, camera) and JS vs WebAssembly frame timings |
-| `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py` (SPA host, optional COOP/COEP), `code_stats.dart` (shared-code ratio for Diagnostics), `android_device_tests.dart` (device tests with adb-driven steps), `gen_color_schemes.py` |
+| `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py` (SPA host, optional COOP/COEP), `code_stats.dart` (shared-code ratio for Diagnostics), `android_device_tests.dart` (device tests with adb-driven steps), `linux_container/` (build and test the Linux app in Docker), `gen_color_schemes.py` |
 
 ## Setup
 
@@ -81,4 +81,4 @@ CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run 
 | M2 | Wizard, validators, drafts, outbox | done |
 | M3 | Camera, files, maps, notifications, biometrics, permissions | done |
 | M4 | Appearance, EN/PL, a11y, adaptive widgets, diagnostics, results tracker, goldens, integration tests, wasm build | done (iOS: simulator checks done, a physical iPhone still to do) |
-| Desktop | macOS, Windows and Linux apps: desktop capabilities (no camera, Save for exports, Linux can't schedule notifications), deep links, Touch ID / Windows Hello, desktop columns in the Results tracker, CI builds | macOS: integration flows and deep links pass; Windows, Linux: CI only, not yet run |
+| Desktop | macOS, Windows and Linux apps: desktop capabilities (no camera, Save for exports, Linux can't schedule notifications), deep links, Touch ID / Windows Hello, desktop columns in the Results tracker, CI builds | macOS: flows, probe and deep links pass; Linux (container): build, flows, probe and deep links pass; Windows: not yet run |

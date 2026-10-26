@@ -182,12 +182,21 @@ The macOS app runs in the App Sandbox; `macos/Runner/*.entitlements` allow
 outgoing network (map tiles, mock API), user-selected files (pickers, Save)
 and location.
 
-So far only the macOS app has been run (26 October 2026): the 7 shared
-integration flows pass, it talks to the mock API from the sandbox, and
-`fieldinspections://` links open the right page both in the running app and
-from a cold start. Touch ID hasn't been tried yet (it needs a finger on the
-sensor). The Windows and Linux columns describe what the code and the plugins
-do; the `desktop.yml` workflow is the first place they build and run.
+Checked so far (26 October 2026):
+
+- **macOS** (MacBook Pro, macOS 27): the 7 shared integration flows and the
+  platform probe pass; the sandboxed app reaches the mock API and loads map
+  tiles; Touch ID is available to the lock (enrolled finger found);
+  `fieldinspections://` links open the right page in the running app and from
+  a cold start. Not yet tried by hand: Touch ID itself, the notification and
+  location prompts, file dialogs and Save.
+- **Linux** (Ubuntu 24.04 arm64 in a container on the Mac,
+  `tool/linux_container/test.sh`): the release build, the 7 flows and the
+  probe pass, map tiles load, and links open the right page from a cold start,
+  from a second process and through `xdg-open` with the `.desktop` file
+  registered.
+- **Windows**: not yet built or run anywhere; the `desktop.yml` Windows job
+  (by hand) is the first place.
 
 ### Desktop deep links
 
@@ -241,3 +250,6 @@ cd app && fvm flutter test integration_test/app_test.dart -d macos
   with Homebrew.
 - **FVM on Windows fails to create the link**: turn on Developer Mode.
 - **The Linux app shows no file dialog**: install `xdg-desktop-portal-gtk`.
+- **"Connectivity unavailable" in the Linux app's log**: there's no system bus
+  or NetworkManager (containers, minimal installs). The app assumes it's
+  online and carries on.

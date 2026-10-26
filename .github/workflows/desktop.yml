@@ -31,7 +31,7 @@ jobs:
       - name: Linux build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev xvfb
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev xvfb dbus-x11
       - name: Get packages
         working-directory: app
         run: flutter pub get
@@ -45,11 +45,11 @@ jobs:
           retention-days: 7
       # One file per run: a second app launch in the same `flutter test` call
       # can lose its debug connection on desktop. host_test.dart skips itself.
-      - name: Integration flows (virtual display)
+      - name: Integration flows and platform probe (virtual display, session bus)
         working-directory: app
         run: |
-          for f in app_test ui_flows_test; do
-            xvfb-run -a flutter test integration_test/$f.dart -d linux
+          for f in app_test ui_flows_test platform_probe_test; do
+            dbus-run-session -- xvfb-run -a flutter test integration_test/$f.dart -d linux
           done
 
   windows:
@@ -84,7 +84,7 @@ jobs:
       - name: Integration flows
         working-directory: app
         run: |
-          for f in app_test ui_flows_test; do
+          for f in app_test ui_flows_test platform_probe_test; do
             flutter test integration_test/$f.dart -d windows
           done
 
@@ -112,6 +112,6 @@ jobs:
       - name: Integration flows
         working-directory: app
         run: |
-          for f in app_test ui_flows_test; do
+          for f in app_test ui_flows_test platform_probe_test; do
             flutter test integration_test/$f.dart -d macos
           done

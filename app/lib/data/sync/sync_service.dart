@@ -12,19 +12,40 @@ import '../local/local_store.dart';
 import '../providers.dart';
 
 /// True when the device has some network. Web uses the browser's
-/// online/offline events; mobile uses the OS connectivity API.
+/// online/offline events; phones and desktops use the OS connectivity API
+/// (NetworkManager over the system bus on Linux).
 final connectivityProvider = StreamProvider<bool>((ref) async* {
   final c = Connectivity();
   bool online(List<ConnectivityResult> r) => r.any((x) => x != ConnectivityResult.none);
+  // Plugin unavailable or failing (tests; Linux without a system bus or
+  // NetworkManager): assume online and let requests fail with network errors
+  // if not. Changes are followed only when the first check worked.
   try {
-    yield online(await c.checkConnectivity());
-    yield* c.onConnectivityChanged.map(online);
-  } on Object {
-    // Plugin unavailable (tests, unsupported platform): assume online and let
-    // requests fail with network errors if not.
+    yield online(await _guarded(c.checkConnectivity));
+  } on Object catch (e) {
+    debugPrint('Connectivity unavailable: $e');
     yield true;
+    return;
   }
+  yield* c.onConnectivityChanged.map(online).handleError((Object e) => debugPrint('Connectivity: $e'));
 });
+
+/// Runs [call] in its own error zone. On Linux, connectivity_plus starts D-Bus
+/// work it doesn't await, so a missing system bus surfaces as an uncaught
+/// error rather than from the call; the zone turns it into this future's error.
+Future<T> _guarded<T>(Future<T> Function() call) {
+  final result = Completer<T>();
+  runZonedGuarded(
+    () async {
+      final value = await call();
+      if (!result.isCompleted) result.complete(value);
+    },
+    (e, s) {
+      if (!result.isCompleted) result.completeError(e, s);
+    },
+  );
+  return result.future;
+}
 
 @immutable
 class SyncState {

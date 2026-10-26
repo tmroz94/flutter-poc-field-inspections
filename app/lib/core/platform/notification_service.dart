@@ -99,6 +99,8 @@ class NotificationService {
         },
       );
       _ready = true;
+      // Linux's plugin can't tell whether a notification launched the app.
+      if (!isWeb && defaultTargetPlatform == TargetPlatform.linux) return null;
       final launch = await _plugin.getNotificationAppLaunchDetails();
       if (launch?.didNotificationLaunchApp ?? false) return DeepLinks.toLocation(launch!.notificationResponse?.payload ?? '');
     } on Object catch (e) {

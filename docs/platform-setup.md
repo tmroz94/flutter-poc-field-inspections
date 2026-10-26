@@ -130,12 +130,24 @@ What differs from the phones is in `Capabilities` and summed up in
 
 Verified on macOS 27 (Apple silicon): the 7 shared integration flows pass
 (`app_test` and `ui_flows_test`, one file per `flutter test` run: a second
-launch in the same run lost its debug connection), and the sandboxed app
-reaches the mock API. `fieldinspections://` links open the right page in the
-running app and from a cold start (release build). Not checked by hand there
-yet: Touch ID, the notification and location prompts, map tiles, file dialogs
-and Save. Windows and Linux: CI only (`desktop.yml`), not yet run; their
-runner changes for links compile there first.
+launch in the same run lost its debug connection), and so does the platform
+probe (`platform_probe_test`: device info, notification and location state,
+Touch ID available with a finger enrolled, 21 map tiles from OSM inside the
+sandbox). `fieldinspections://` links open the right page in the running app
+and from a cold start (release build). Not tried by hand yet: Touch ID itself,
+the notification and location prompts, file dialogs and Save (they need clicks
+in system UI).
+
+Verified on Linux (Ubuntu 24.04 arm64 in a container on the Mac,
+`tool/linux_container/test.sh`): release build, the 7 flows, the probe
+(notifications on, no location plugin, no biometrics, map tiles drawn), and
+links from a cold start, from a second process and through `xdg-open` with the
+`.desktop` file registered. Running there turned up three things, now fixed:
+drift kept the database in the Documents folder (moved to the app's support
+folder on desktop), connectivity_plus throws an uncaught error when there's no
+system bus (the first check now runs in its own error zone; the app assumes
+it's online), and the Linux notification plugin can't report a launch from a
+notification (no longer asked). Windows: not yet run.
 
 Adding `app_links` didn't change the phones: on the iPhone simulator a link
 still opens its page while the app runs, after sign-in and from a cold start
