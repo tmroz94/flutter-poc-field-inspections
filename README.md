@@ -57,6 +57,8 @@ fvm flutter run -d chrome
 Other targets: `-d emulator-5554` (Android), `-d <simulator id>` (iOS, on a
 Mac), `-d macos`, `-d linux`, `-d windows` (each on its own OS). Production-like
 web builds, release builds and what differs on desktop: [docs/setup.md](docs/setup.md#run).
+In VS Code, Run and Debug has a configuration for each target, alone or with
+the mock API ([docs/setup.md](docs/setup.md#vs-code)).
 
 Demo account: `anna.nowak@example.com` / `inspect123` (mock backend only), or
 tap **Use demo account**.

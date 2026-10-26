@@ -1,0 +1,134 @@
+{
+  // Run and Debug view (needs the Flutter extension). Each desktop entry
+  // builds only on its own OS, the iPhone simulator only on a Mac. Details:
+  // docs/setup.md, "VS Code".
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Web: Chrome",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "deviceId": "chrome",
+      "presentation": { "group": "1 web", "order": 1 }
+    },
+    {
+      "name": "Web: Chrome, WebAssembly",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "deviceId": "chrome",
+      "toolArgs": ["--wasm"],
+      "presentation": { "group": "1 web", "order": 2 }
+    },
+    {
+      "name": "Desktop: Windows",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "deviceId": "windows",
+      "presentation": { "group": "2 desktop", "order": 1 }
+    },
+    {
+      "name": "Desktop: macOS",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "deviceId": "macos",
+      "presentation": { "group": "2 desktop", "order": 2 }
+    },
+    {
+      "name": "Desktop: Linux",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "deviceId": "linux",
+      "presentation": { "group": "2 desktop", "order": 3 }
+    },
+    {
+      // The first running emulator (ids are emulator-NNNN); start one from the
+      // device picker in the status bar.
+      "name": "Mobile: Android emulator",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "deviceId": "emulator",
+      "presentation": { "group": "3 mobile", "order": 1 }
+    },
+    {
+      // The first booted simulator whose name starts with "iPhone" (boot one
+      // from the status bar or Simulator.app).
+      "name": "Mobile: iPhone simulator",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "deviceId": "iPhone",
+      "presentation": { "group": "3 mobile", "order": 2 }
+    },
+    {
+      // No deviceId: the device picked in the status bar (a phone on USB,
+      // an iPad, any other target).
+      "name": "Mobile: device picked in the status bar",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "presentation": { "group": "3 mobile", "order": 3 }
+    },
+    {
+      // Optional: without it the app uses its built-in offline fake.
+      "name": "Mock API (port 8080)",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/mock_server/bin/server.dart",
+      "cwd": "${workspaceFolder}/mock_server",
+      "args": ["--port", "8080"],
+      "presentation": { "group": "4 backend", "order": 1 }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Web: Chrome + mock API",
+      "configurations": ["Mock API (port 8080)", "Web: Chrome"],
+      "stopAll": true,
+      "presentation": { "group": "5 with mock API", "order": 1 }
+    },
+    {
+      "name": "Mobile: Android emulator + mock API",
+      "configurations": ["Mock API (port 8080)", "Mobile: Android emulator"],
+      "stopAll": true,
+      "presentation": { "group": "5 with mock API", "order": 2 }
+    },
+    {
+      "name": "Desktop: Windows + mock API",
+      "configurations": ["Mock API (port 8080)", "Desktop: Windows"],
+      "stopAll": true,
+      "presentation": { "group": "5 with mock API", "order": 3 }
+    },
+    {
+      "name": "Desktop: macOS + mock API",
+      "configurations": ["Mock API (port 8080)", "Desktop: macOS"],
+      "stopAll": true,
+      "presentation": { "group": "5 with mock API", "order": 4 }
+    },
+    {
+      "name": "Desktop: Linux + mock API",
+      "configurations": ["Mock API (port 8080)", "Desktop: Linux"],
+      "stopAll": true,
+      "presentation": { "group": "5 with mock API", "order": 5 }
+    },
+    {
+      "name": "Mobile: iPhone simulator + mock API",
+      "configurations": ["Mock API (port 8080)", "Mobile: iPhone simulator"],
+      "stopAll": true,
+      "presentation": { "group": "5 with mock API", "order": 6 }
+    }
+  ]
+}

@@ -147,8 +147,31 @@ All from `app/`. `fvm flutter devices` lists what's available.
 | Linux app | `fvm flutter run -d linux` | `fvm flutter build linux` → `build/linux/x64/release/bundle/field_inspections` |
 | Windows app | `fvm flutter run -d windows` | `fvm flutter build windows` → `build\windows\x64\runner\Release\field_inspections.exe` |
 
-Boot an iOS simulator first (`xcrun simctl boot <id>` or open Simulator.app);
-`fvm flutter run -d ios` picks a connected iPhone or booted simulator.
+Boot an iOS simulator first (`xcrun simctl boot <id>` or open Simulator.app).
+`-d` also takes the start of a device name, so `fvm flutter run -d iPhone`
+finds a booted iPhone simulator (Flutter asks which one if several match).
+
+### VS Code
+
+Install the Flutter extension (VS Code suggests it from
+`.vscode/extensions.json`). `.vscode/settings.json` points it at the FVM SDK,
+`.fvm/versions/<version>`: a link FVM makes when it sets up the project (if
+it's missing, run `fvm use <the version in .fvmrc>` in the repository root).
+FVM also updates that setting when the version changes. The Run and Debug view
+then has:
+
+| Configuration | Runs on |
+|---|---|
+| Web: Chrome, Web: Chrome, WebAssembly | Chrome, debug build (the second with `--wasm`) |
+| Desktop: Windows / macOS / Linux | that OS only (Windows needs the Visual Studio workload above) |
+| Mobile: Android emulator | the first running emulator; start one from the device picker in the status bar |
+| Mobile: iPhone simulator | the first booted simulator named "iPhone…" (Mac only) |
+| Mobile: device picked in the status bar | whatever is picked there: a phone on USB, an iPad, any other target |
+| Mock API (port 8080) | the mock server, as in "Mock API" above |
+| … + mock API | the mock server and the app together; stopping one stops both |
+
+Debug builds are slower than release ones; use the commands in "Web like
+production" or the release builds in the table above to judge speed.
 
 ### Web like production
 
