@@ -235,6 +235,9 @@ Future<T> _cachedReference<T>(
   }
 }
 
+/// Template every new inspection uses in the PoC (see fixtures).
+const fireSafetyTemplateId = 'tpl-fire-annual-v3';
+
 final checklistProvider = FutureProvider.autoDispose.family<List<ChecklistItem>, String>(
   (ref, templateId) => _cachedReference(
     ref,

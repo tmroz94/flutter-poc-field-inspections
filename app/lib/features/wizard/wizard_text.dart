@@ -4,9 +4,6 @@ import '../../data/models/inspection.dart';
 import '../../l10n/l10n.dart';
 import 'wizard_validation.dart';
 
-/// Template every new inspection uses in the PoC (see fixtures).
-const fireSafetyTemplateId = 'tpl-fire-annual-v3';
-
 /// Localized step names.
 String stepTitle(BuildContext context, WizardStep s) => switch (s) {
   WizardStep.site => context.l10n.stepSite,

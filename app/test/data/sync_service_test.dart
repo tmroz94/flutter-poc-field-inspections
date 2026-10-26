@@ -11,6 +11,7 @@ import 'package:field_inspections/data/sync/sync_service.dart';
 import 'package:field_inspections/features/auth/auth_controller.dart';
 import 'package:field_inspections/features/auth/auth_models.dart';
 import 'package:field_inspections/features/auth/auth_repository.dart';
+import 'package:field_inspections/features/inspections/inspections_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mock_data/mock_data.dart';
@@ -38,6 +39,16 @@ class _Repo extends FakeInspectionsRepository {
   int saves = 0;
   Completer<void>? hold;
   Object? failWith;
+
+  /// Reference data fails like a device without network.
+  bool offline = false;
+
+  @override
+  Future<List<ChecklistItem>> checklist(String templateId) =>
+      offline ? Future.error(const ApiException('network')) : super.checklist(templateId);
+
+  @override
+  Future<List<String>> inspectionTypes() => offline ? Future.error(const ApiException('network')) : super.inspectionTypes();
 
   @override
   Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async {
@@ -167,6 +178,34 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 10));
     expect(store.entries, isEmpty);
     expect(c.read(syncServiceProvider).lastSyncAt, isNotNull);
+  });
+
+  test('a sync keeps the checklist and types on the device, for a wizard opened offline later', () async {
+    final c = await signedIn();
+    await c.read(syncServiceProvider.notifier).run();
+    final kv = c.read(keyValueStoreProvider);
+    expect(kv.getString('cache.checklist.$fireSafetyTemplateId'), isNotNull);
+    expect(kv.getString('cache.inspectionTypes'), isNotNull);
+
+    // A later start without network, the wizard never opened online.
+    repo.offline = true;
+    final later = ProviderContainer(
+      overrides: [keyValueStoreProvider.overrideWithValue(kv), inspectionsRepositoryProvider.overrideWithValue(repo)],
+    );
+    addTearDown(later.dispose);
+    expect(await later.read(checklistProvider(fireSafetyTemplateId).future), hasLength(18));
+    expect(await later.read(inspectionTypesProvider.future), contains('Fire safety, annual'));
+  });
+
+  test('without network the sync still finishes; the wizard reports the missing data itself', () async {
+    repo.offline = true;
+    final c = await signedIn();
+    await store.enqueue(kind: 'create', site: 'Riverside', body: _body('s-riverside-office'));
+    await c.read(syncServiceProvider.notifier).run();
+    expect(store.entries, isEmpty, reason: 'the outbox is sent regardless');
+    expect(c.read(syncServiceProvider).syncing, isFalse);
+    expect(c.read(keyValueStoreProvider).getString('cache.checklist.$fireSafetyTemplateId'), isNull);
+    await expectLater(c.read(checklistProvider(fireSafetyTemplateId).future), throwsA(isA<ApiException>()));
   });
 
   test('the outbox keeps the draft so a rejected report can be reopened', () async {

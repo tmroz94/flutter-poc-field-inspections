@@ -60,7 +60,8 @@ class SyncState {
 
 /// Sends queued submits in order. Stops at the first network error (still
 /// offline) or a rejected session (401: the entry waits for the next sign-in);
-/// any other failure marks that entry failed and moves on.
+/// any other failure marks that entry failed and moves on. Each run also
+/// fetches the wizard's reference data, so it's on the device for offline use.
 class SyncService extends Notifier<SyncState> {
   /// The run in progress; callers during a run share it, so one entry is never sent twice.
   Future<void>? _running;
@@ -83,6 +84,7 @@ class SyncService extends Notifier<SyncState> {
     if (ref.read(authControllerProvider).status != AuthStatus.signedIn) return;
     final store = ref.read(localStoreProvider);
     state = SyncState(syncing: true, lastSyncAt: state.lastSyncAt);
+    final reference = _fetchReferenceData();
     var sent = 0;
     var finished = false;
     var offline = false;
@@ -116,11 +118,24 @@ class SyncService extends Notifier<SyncState> {
     } on Object catch (e) {
       debugPrint('Sync failed: $e');
     } finally {
+      await reference;
       if (ref.mounted) {
         if (sent > 0) ref.read(inspectionsRevisionProvider.notifier).changed();
         final complete = finished && !offline && !signedOut;
         state = SyncState(lastSyncAt: complete ? DateTime.now() : state.lastSyncAt, offline: offline);
       }
+    }
+  }
+
+  /// The checklist template and inspection types keep their last copy on the
+  /// device (see `_cachedReference`), so a report can be written offline even
+  /// when the wizard was never opened online. A failure is left to the wizard,
+  /// which says so when it needs the data.
+  Future<void> _fetchReferenceData() async {
+    try {
+      await (ref.read(checklistProvider(fireSafetyTemplateId).future), ref.read(inspectionTypesProvider.future)).wait;
+    } on Object catch (e) {
+      debugPrint('Reference data not fetched: $e');
     }
   }
 }
