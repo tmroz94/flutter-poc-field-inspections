@@ -2,10 +2,25 @@ import 'package:field_inspections/app.dart';
 import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
 import 'package:field_inspections/data/api/backend_config.dart';
+import 'package:field_inspections/data/local/app_database.dart';
+import 'package:field_inspections/data/local/local_store.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// A clean device for each test: preferences, and the drafts, outbox and files
+/// in SQLite (an earlier test or a crashed run can leave them behind).
+Future<void> clearDeviceData() async {
+  await SharedPreferencesAsync().clear();
+  final db = AppDatabase();
+  try {
+    await DriftLocalStore(db).clearAll();
+  } finally {
+    await db.close();
+  }
+}
 
 /// Starts the app the way `main` does (real shared_preferences and SQLite),
 /// minus notifications and the backend probe. Returns the provider container

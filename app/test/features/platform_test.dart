@@ -43,19 +43,28 @@ void main() {
       expect(app.fakes.launcher.opened.single.toString(), 'tel:+48600000000');
     });
 
+    /// The PDF is built with real async work (fonts, compression): wait for it
+    /// in real time, polling, rather than for a fixed delay.
+    Future<void> waitForShare(WidgetTester tester, TestApp app) async {
+      final end = DateTime.now().add(const Duration(seconds: 20));
+      while (app.fakes.share.files.isEmpty && DateTime.now().isBefore(end)) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+
     testWidgets('export PDF shares (mobile) the generated report', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042', store: signedInStore());
       await tester.tap(find.text('Export PDF'));
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
-      await tester.pumpAndSettle();
+      await waitForShare(tester, app);
       expect(app.fakes.share.files, ['inspection-INS-1042.pdf']);
     });
 
     testWidgets('export PDF on desktop saves the report through a Save dialog', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042', store: signedInStore(), capabilities: macos);
       await tester.tap(find.text('Export PDF'));
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
-      await tester.pumpAndSettle();
+      await waitForShare(tester, app);
       expect(app.fakes.share.files, ['inspection-INS-1042.pdf']);
       expect(find.text('Report saved: inspection-INS-1042.pdf'), findsOneWidget);
     });

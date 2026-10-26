@@ -14,7 +14,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support.dart';
 
@@ -44,7 +43,7 @@ InspectionDraft _site({int lastStep = 1}) => const InspectionDraft(
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() => SharedPreferencesAsync().clear());
+  setUp(clearDeviceData);
   tearDown(() => host('airplane off'));
 
   testWidgets('offline: the list explains it, a submit is queued, and it syncs once the network is back', skip: !_withHost, (tester) async {
@@ -55,9 +54,6 @@ void main() {
     );
     await signIn(tester);
     final store = c.read(localStoreProvider);
-    for (final e in await store.outbox()) {
-      await store.removeFromOutbox(e.id);
-    }
 
     host('airplane on');
     await waitFor(tester, () => c.read(connectivityProvider).value == false, reason: 'the app to see it is offline');

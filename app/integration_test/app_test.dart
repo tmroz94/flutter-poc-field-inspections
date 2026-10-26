@@ -1,19 +1,19 @@
 // End-to-end flows on a real device or emulator, with the real stores
 // (shared_preferences, SQLite via drift) and the in-app fake backend:
 //   fvm flutter test integration_test -d emulator-5554
+import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/features/inspections/inspection_detail_screen.dart';
 import 'package:field_inspections/features/inspections/inspection_list_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() => SharedPreferencesAsync().clear());
+  setUp(clearDeviceData);
 
   testWidgets('deep link while signed out → sign in → lands on the detail; back → list', (tester) async {
     final c = await launch(tester, initialLocation: '/inspections/INS-1042?tab=checklist');
@@ -25,10 +25,16 @@ void main() {
 
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
+    expect(c.read(routerProvider).state.uri.toString(), '/inspections/INS-1042?tab=history');
     // System back (Android) / browser back: on a phone the list replaces the
-    // detail; on wide screens the list stays and the detail pane closes.
+    // detail; on wide screens the list stays and the detail pane closes. The
+    // list shows in both, so check that the detail is gone.
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
+    // The path only: go_router keeps the deep link's query on a pop, so a
+    // stale ?tab= can stay; the list ignores it.
+    expect(c.read(routerProvider).state.uri.path, '/inspections');
+    expect(find.byType(InspectionDetailView), findsNothing);
     expect(find.byType(InspectionsScreen), findsOneWidget);
     await quit(tester, c);
   });

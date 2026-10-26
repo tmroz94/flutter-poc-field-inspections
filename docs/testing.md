@@ -26,7 +26,7 @@ Add `-Coverage` (or `--coverage` to `check.sh`) to write `app/coverage/lcov.info
 | Folder | Kind | Examples |
 |---|---|---|
 | `app/test/core/` | Router, guards, deep links, validators, layout | every route opens its screen; guards redirect signed-out users and keep `from`; scheme links; browser history entries |
-| `app/test/data/` | Unit | list queries, API client error mapping, outbox sync (`sync_service_test.dart`: one run at a time, rejected and 401 entries, Retry) |
+| `app/test/data/` | Unit and widget | list queries, API client error mapping, outbox sync (`sync_service_test.dart`: one run at a time, rejected and 401 entries, Retry), and the real HTTP repositories against the mock server's handler run in-process (`http_backend_test.dart`: query encoding, JSON, the 401 → sign-out wiring, one full app flow) |
 | `app/test/features/` | Widget and unit | auth forms, session restore and the sign-out wipe (`auth_session_test.dart`), lists and filters, detail tabs, every wizard step and its validators, drafts and the offline outbox (`wizard_logic_test.dart`), editing an inspection, notifications, map, shell and reminders, platform integrations through fakes, appearance, results tracker, adaptive widgets, diagnostics |
 | `app/test/a11y/` | Accessibility | key screens against Flutter's guidelines (48 dp Android and 44 pt iOS tap targets, labelled targets, text contrast); the same screens at 200 % text must not overflow |
 | `app/test/golden/` | Golden images | 7 phone screens in light, dark and high contrast; 4 desktop screens in light and dark |
@@ -62,7 +62,8 @@ diff images before regenerating anything.
 ## Device tests
 
 `app/integration_test/` runs on an emulator or phone with the real stores
-(shared_preferences, SQLite through drift):
+(shared_preferences, SQLite through drift). Each test starts from an empty
+device: preferences, drafts, outbox and saved files are cleared first.
 
 | File | Flows |
 |---|---|

@@ -8,6 +8,7 @@ import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
 import 'package:field_inspections/core/widgets/inspection_widgets.dart';
+import 'package:field_inspections/data/api/backend_config.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/providers.dart';
 import 'package:field_inspections/data/repositories/inspections_repository.dart';
@@ -21,6 +22,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart';
 
 import 'fakes.dart';
+import 'mock_server_adapter.dart';
 
 /// Phone, tablet landscape and desktop sizes from the design boards.
 const phoneSize = Size(390, 844);
@@ -76,6 +78,10 @@ Future<TestApp> pumpApp(
 
   /// Freezes both the UI clock and the mock backend's fixtures (goldens).
   DateTime? now,
+
+  /// Runs the real HTTP repositories against this in-process mock server
+  /// instead of the in-app fakes.
+  MockServerAdapter? http,
 }) async {
   final f = fakes ?? Fakes(capabilities: capabilities);
   tester.view
@@ -90,10 +96,15 @@ Future<TestApp> pumpApp(
   final container = ProviderContainer(
     overrides: [
       keyValueStoreProvider.overrideWithValue(MemoryStore(store)),
-      authRepositoryProvider.overrideWith((ref) => FakeAuthRepository(ref.watch(mockDatabaseProvider), latency: authLatency)),
-      inspectionsRepositoryProvider.overrideWith(
-        (ref) => (inspections ?? (db) => FakeInspectionsRepository(db, latency: Duration.zero))(ref.watch(mockDatabaseProvider)),
-      ),
+      if (http != null) ...[
+        backendConfigProvider.overrideWithValue(const BackendConfig(mode: BackendMode.http, baseUrl: mockServerUrl)),
+        httpClientAdapterProvider.overrideWithValue(http),
+      ] else ...[
+        authRepositoryProvider.overrideWith((ref) => FakeAuthRepository(ref.watch(mockDatabaseProvider), latency: authLatency)),
+        inspectionsRepositoryProvider.overrideWith(
+          (ref) => (inspections ?? (db) => FakeInspectionsRepository(db, latency: Duration.zero))(ref.watch(mockDatabaseProvider)),
+        ),
+      ],
       capabilitiesProvider.overrideWithValue(capabilities),
       initialLocationProvider.overrideWithValue(initialLocation),
       localStoreProvider.overrideWithValue(localStore ?? MemoryLocalStore()),

@@ -115,8 +115,19 @@ void main() {
     await tester.enterText(find.widgetWithText(TextFormField, 'Site'), 'Rive');
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
+    expect(options, findsAtLeastNWidgets(2));
+    List<bool> highlighted() => [for (final e in options.evaluate()) (e.widget as ListTile).selected];
+    String address(int i) => (tester.widget<ListTile>(options.at(i)).subtitle! as Text).data!;
+    final second = address(1);
+    expect(second, isNot(address(0)));
+
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(highlighted().take(2), [false, true], reason: 'ArrowDown moves to the second');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(highlighted().take(2), [true, false], reason: 'ArrowUp moves back');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('Add “Rive” as a new site'), findsNothing, reason: 'the list closed after picking');
@@ -125,6 +136,7 @@ void main() {
       findsOneWidget,
       reason: 'an existing site was picked',
     );
+    expect(find.text(second), findsOneWidget, reason: 'the highlighted one, not the first');
     await tester.pump(const Duration(milliseconds: 500)); // let the draft autosave run
   });
 

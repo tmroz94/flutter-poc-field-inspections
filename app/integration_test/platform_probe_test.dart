@@ -16,7 +16,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support.dart';
 
@@ -27,7 +26,7 @@ void _probe(String what, Object? result) => debugPrint('PROBE $what: $result');
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() => SharedPreferencesAsync().clear());
+  setUp(clearDeviceData);
 
   testWidgets('device and app info', (tester) async {
     final container = ProviderContainer();

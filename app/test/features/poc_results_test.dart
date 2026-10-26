@@ -140,10 +140,13 @@ void main() {
       expect(find.text('0 of 44 tested'), findsNWidgets(4));
       expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
 
-      final all = find.byType(InkWell).evaluate().length;
+      // Adaptive shell passes everywhere tested; the guards are partial on Android.
+      expect(find.text('Adaptive shell'), findsOneWidget);
+      expect(find.text('Auth and lock guards'), findsOneWidget);
       await tester.tap(find.text('Failing'));
       await tester.pumpAndSettle();
-      expect(find.byType(InkWell).evaluate().length, lessThan(all));
+      expect(find.text('Adaptive shell'), findsNothing);
+      expect(find.text('Auth and lock guards'), findsOneWidget);
       semantics.dispose();
     });
 

@@ -88,6 +88,10 @@ dev_dependencies:
   drift_dev: ^2.35.2
   build_runner: ^2.17.1
   patrol: ^4.10.0
+  # Its request handler, run in-process, backs the HTTP repository tests.
+  mock_server:
+    path: ../mock_server
+  shelf: ^1.4.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

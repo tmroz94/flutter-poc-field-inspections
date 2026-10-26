@@ -53,11 +53,12 @@ void main() {
     }
   });
 
-  testWidgets('every route-table example resolves without a 404', (tester) async {
+  testWidgets('every route-table example opens at its own path (no 404, no redirect)', (tester) async {
     final app = await pumpApp(tester, store: signedInStore());
     for (final r in RouteTable.all.where((r) => !r.public && r.pattern != Routes.unlock)) {
       await app.go(r.example);
       expect(find.byType(NotFoundScreen), findsNothing, reason: r.example);
+      expect(app.router.state.uri.path, Uri.parse(r.example).path, reason: r.example);
     }
   });
 

@@ -9,7 +9,6 @@ import 'package:field_inspections/core/platform/capabilities.dart';
 import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/theme/theme_settings.dart';
-import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/models/inspection.dart';
 import 'package:field_inspections/features/inspections/inspection_detail_screen.dart';
 import 'package:field_inspections/features/inspections/inspection_list_screen.dart';
@@ -21,8 +20,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support.dart';
 
@@ -79,9 +78,7 @@ Future<void> frames(String name, Future<void> Function() body) async {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() async {
-    await SharedPreferencesAsync().clear();
-  });
+  setUp(clearDeviceData);
 
   testWidgets('wizard end to end: autocomplete, keyboard, pickers, segmented answers, animated photo grid, success animation', (
     tester,
@@ -90,22 +87,23 @@ void main() {
     // UI that integration_test can't drive (Patrol can).
     final c = await launch(tester, overrides: [mediaServiceProvider.overrideWithValue(_Camera())]);
     await signIn(tester);
-    await c.read(localStoreProvider).deleteDraft('new');
 
     await tester.tap(find.text('New inspection'));
     await tester.pumpAndSettle();
 
-    // Step 1: autocomplete with the keyboard (arrow down + Enter).
+    // Step 1: autocomplete with the keyboard (arrow down + Enter). The keys
+    // work on every platform since the inline suggestions (decision 83).
     await tester.enterText(find.widgetWithText(TextFormField, 'Site'), 'River');
     await waitFor(tester, () => find.text('Add “River” as a new site').evaluate().isNotEmpty, reason: 'suggestions');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    if (find.text('Add “River” as a new site').evaluate().isNotEmpty) {
-      debugPrint('KEYBOARD: arrow keys did not pick a suggestion; tapping it');
-      await tester.tap(find.textContaining('office, floor 4').last);
-      await tester.pumpAndSettle();
-    }
+    expect(find.text('Add “River” as a new site'), findsNothing, reason: 'Enter picked a suggestion and closed the list');
+    expect(
+      find.byWidgetPredicate((w) => w is Icon && w.icon == Symbols.check_circle),
+      findsOneWidget,
+      reason: 'the second suggestion, an existing site, was picked',
+    );
     await _next(tester);
     expect(_step(c), 2);
 
@@ -319,8 +317,12 @@ void main() {
     await tester.tap(find.textContaining(RegExp(r'^Show')));
     await tester.pumpAndSettle();
     expect(find.byType(InspectionsScreen), findsOneWidget);
-    expect(find.text('Submitted'), findsWidgets, reason: 'chip row still lists the status');
-    expect(find.text('Solar farm, inverter row B'), findsNothing, reason: 'submitted ones are filtered out');
+    final query = c.read(routerProvider).state.uri.queryParameters;
+    expect((query['status'], query['due'], query['sort']), ('inProgress,overdue,scheduled', 'week', 'siteAsc'));
+    // Fixtures within this week: the draft INS-1040 (in 2 days) and the
+    // scheduled INS-1045 (in 4). Only the status filter can hide the draft.
+    await waitFor(tester, () => find.textContaining('INS-1045').evaluate().isNotEmpty, reason: 'the filtered list');
+    expect(find.textContaining('INS-1040'), findsNothing, reason: 'drafts are filtered out');
     await quit(tester, c);
   });
 }

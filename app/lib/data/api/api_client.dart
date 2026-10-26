@@ -3,9 +3,10 @@ import 'package:dio/dio.dart';
 import 'api_exception.dart';
 
 /// Thin JSON client over dio. Adds the bearer token, maps every failure to an
-/// [ApiException], and reports 401s so the session can end.
+/// [ApiException], and reports 401s so the session can end. [adapter] replaces
+/// the network transport (tests send requests to the mock server in-process).
 class ApiClient {
-  ApiClient({required String baseUrl, required this.token, this.onUnauthorized, Dio? dio})
+  ApiClient({required String baseUrl, required this.token, this.onUnauthorized, Dio? dio, HttpClientAdapter? adapter})
     : _dio =
           dio ??
           Dio(
@@ -16,7 +17,9 @@ class ApiClient {
               contentType: Headers.jsonContentType,
               responseType: ResponseType.json,
             ),
-          );
+          ) {
+    if (adapter != null) _dio.httpClientAdapter = adapter;
+  }
 
   final Dio _dio;
   final String? Function() token;
