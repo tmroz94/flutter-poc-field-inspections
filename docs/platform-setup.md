@@ -13,11 +13,72 @@ on a real device.
 | Permissions: biometric, location, notifications, boot completed. **No `CAMERA`**: image_picker uses the system camera app, and declaring CAMERA would make that intent need the permission | `AndroidManifest.xml` |
 | Receivers for scheduled reminders | `AndroidManifest.xml` |
 | `<queries>` for https, geo and tel links (package visibility) | `AndroidManifest.xml` |
-| Plain HTTP to the mock API in debug builds only | `src/debug/AndroidManifest.xml` |
+| Plain HTTP to the mock API in debug builds only (iOS differs, see below) | `src/debug/AndroidManifest.xml` |
 | Kotlin incremental compilation off (project on D:, pub cache on C:) | `android/gradle.properties` |
+| Release signing: `key.properties`, else `ANDROID_KEYSTORE_*` environment variables, else the debug key with a warning (see below) | `android/app/build.gradle.kts` |
 
 Reminders use inexact alarms (`inexactAllowWhileIdle`): no exact-alarm
 permission, but Android may deliver a few minutes late.
+
+### Release signing
+
+Release builds (`flutter build apk`, `flutter build appbundle`, `flutter run
+--release`) are signed with the first of these that is set up:
+
+1. `app/android/key.properties` (Flutter's format, git-ignored).
+2. The environment variables `ANDROID_KEYSTORE_PATH`,
+   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`,
+   used only when `key.properties` doesn't exist (CI).
+3. Neither: the debug key, and the build prints `WARNING: the release build is
+   debug-signed`. Fine for trying a release build on your own device; such an
+   APK can't update a properly signed install, and Google Play rejects it.
+
+A half-filled setup (a `key.properties` without a password, only some of the
+variables, a keystore path that doesn't exist) fails release builds with a
+message naming what's missing; debug builds are never affected.
+
+Create an upload keystore once, back it up, and keep it and its passwords out
+of the repository. `keytool` comes with any JDK, including Android Studio's
+(`C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe` on Windows):
+
+```bash
+keytool -genkey -v -keystore ~/upload-keystore.jks -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+Then `app/android/key.properties`:
+
+```properties
+storePassword=<keystore password>
+keyPassword=<key password>
+keyAlias=upload
+storeFile=/Users/<you>/upload-keystore.jks
+```
+
+On Windows write the path with doubled backslashes or forward slashes
+(`storeFile=C:\\Users\\<you>\\upload-keystore.jks`). A relative `storeFile`
+is resolved against `app/android/app`. `key.properties`, `*.jks` and
+`*.keystore` are git-ignored, in `app/android` and in the rest of the repo.
+
+On CI, store the keystore as a base64 secret and the passwords as secrets,
+then export them for the build step, for example in GitHub Actions:
+
+```yaml
+- name: Release keystore
+  env:
+    KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+  run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload-keystore.jks"
+- name: Build the app bundle
+  working-directory: app
+  env:
+    ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/upload-keystore.jks
+    ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+    ANDROID_KEY_ALIAS: upload
+    ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+  run: flutter build appbundle --release
+```
+
+No workflow builds a signed release yet; the device-test workflow uses debug
+builds.
 
 ## iOS (on the Mac)
 
@@ -25,6 +86,14 @@ Already in the repo: `Info.plist` usage strings (camera, photo library,
 location when in use, Face ID), the `fieldinspections` URL scheme, local
 networking for the mock API, `LSApplicationQueriesSchemes` (https, tel, maps),
 and the notification delegate in `AppDelegate.swift`.
+
+Plain HTTP: `NSAllowsLocalNetworking` is set for every build, release
+included, unlike Android's debug-only cleartext. It is kept on purpose: it
+exempts only unqualified host names (`localhost`), `.local` names and literal
+IP addresses (which iOS 17+ otherwise blocks over HTTP), so the simulator and
+a phone pointed at `http://<pc-ip>:8080` reach the mock API, while named
+internet hosts still need HTTPS. A production build that talks to a real API
+over HTTPS doesn't need it and should drop it.
 
 On the Mac:
 

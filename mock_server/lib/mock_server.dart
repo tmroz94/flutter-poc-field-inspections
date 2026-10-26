@@ -5,6 +5,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show stderr;
 
 import 'package:mock_data/mock_data.dart';
 import 'package:shelf/shelf.dart';
@@ -34,6 +35,19 @@ Handler buildHandler({MockDatabase Function()? database, Duration defaultDelay =
   }
 
   void requireAuth(Request r) => db.authenticate(bearer(r));
+
+  /// An integer query parameter, [fallback] when absent; anything else is a 400.
+  int intParam(Map<String, String> q, String name, int fallback) {
+    final raw = q[name];
+    if (raw == null || raw.isEmpty) return fallback;
+    return int.tryParse(raw) ?? (throw MockError(400, 'badPage'));
+  }
+
+  DateTime? dateParam(Map<String, String> q, String name) {
+    final raw = q[name];
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw) ?? (throw MockError(400, 'badDate'));
+  }
 
   api
     ..get('/health', (Request r) => json({'ok': true}))
@@ -65,10 +79,10 @@ Handler buildHandler({MockDatabase Function()? database, Duration defaultDelay =
           q: q['q'],
           sort: q['sort'] ?? 'dueAsc',
           due: q['due'] ?? 'any',
-          from: DateTime.tryParse(q['from'] ?? ''),
-          to: DateTime.tryParse(q['to'] ?? ''),
-          page: int.tryParse(q['page'] ?? '') ?? 1,
-          pageSize: int.tryParse(q['pageSize'] ?? '') ?? 20,
+          from: dateParam(q, 'from'),
+          to: dateParam(q, 'to'),
+          page: intParam(q, 'page', 1),
+          pageSize: intParam(q, 'pageSize', 20),
         ),
       );
     })
@@ -112,7 +126,12 @@ Handler buildHandler({MockDatabase Function()? database, Duration defaultDelay =
     })
     ..post('/notifications/read', (Request r) async {
       requireAuth(r);
-      db.markNotificationsRead(id: (await readBody(r))['id'] as String?);
+      final id = switch ((await readBody(r))['id']) {
+        null => null,
+        final String s => s,
+        _ => throw MockError(422, 'validation', fields: {'id': 'invalid'}),
+      };
+      db.markNotificationsRead(id: id);
       return json({'ok': true});
     })
     ..delete('/notifications/<id>', (Request r, String id) {
@@ -125,8 +144,16 @@ Handler buildHandler({MockDatabase Function()? database, Duration defaultDelay =
     ..mount('/api/', api.call)
     ..get('/', (Request r) => Response.ok('Field Inspections mock API. See /api/health.'));
 
-  return const Pipeline().addMiddleware(_cors()).addMiddleware(_faults(defaultDelay)).addMiddleware(_errors()).addHandler(root.call);
+  // CORS outermost, so every response carries its headers, errors included
+  // (a browser reports a response without them as a network failure).
+  return const Pipeline().addMiddleware(_cors()).addMiddleware(_errors()).addMiddleware(_faults(defaultDelay)).addHandler(root.call);
 }
+
+/// Longest latency `?delay` / `X-Mock-Delay` may ask for.
+const maxDelay = Duration(seconds: 30);
+
+Response _jsonError(int status, Map<String, Object?> body) =>
+    Response(status, body: jsonEncode(body), headers: {'content-type': 'application/json; charset=utf-8'});
 
 const _corsHeaders = {
   'access-control-allow-origin': '*',
@@ -142,28 +169,34 @@ Middleware _cors() =>
       return response.change(headers: _corsHeaders);
     };
 
-/// `?delay=<ms>` or `X-Mock-Delay` overrides latency; `?fail=<status>` or
-/// `X-Mock-Fail` forces an error response (e.g. 500, 503).
+/// `?delay=<ms>` or `X-Mock-Delay` overrides latency (0 to [maxDelay]);
+/// `?fail=<status>` or `X-Mock-Fail` forces an error response (400–599, e.g.
+/// 500, 503).
 Middleware _faults(Duration defaultDelay) =>
     (inner) => (request) async {
       final q = request.url.queryParameters;
       final delayMs = int.tryParse(q['delay'] ?? request.headers['x-mock-delay'] ?? '');
-      final delay = delayMs != null ? Duration(milliseconds: delayMs) : defaultDelay;
+      final delay = delayMs != null ? Duration(milliseconds: delayMs.clamp(0, maxDelay.inMilliseconds)) : defaultDelay;
       if (delay > Duration.zero) await Future<void>.delayed(delay);
       final fail = int.tryParse(q['fail'] ?? request.headers['x-mock-fail'] ?? '');
-      if (fail != null && fail >= 400) {
-        return Response(fail, body: jsonEncode({'error': 'injected'}), headers: {'content-type': 'application/json'});
-      }
+      if (fail != null && fail >= 400 && fail <= 599) return _jsonError(fail, {'error': 'injected'});
       return inner(request);
     };
 
+/// Maps every failure to a JSON error: [MockError] to its status, bad JSON to
+/// 400, anything else (a bug, or a body the backend didn't expect) to 500.
 Middleware _errors() =>
     (inner) => (request) async {
       try {
         return await inner(request);
+      } on HijackException {
+        rethrow;
       } on MockError catch (e) {
-        return Response(e.status, body: jsonEncode(e.toJson()), headers: {'content-type': 'application/json'});
+        return _jsonError(e.status, e.toJson());
       } on FormatException {
-        return Response(400, body: jsonEncode({'error': 'badJson'}), headers: {'content-type': 'application/json'});
+        return _jsonError(400, {'error': 'badJson'});
+      } catch (e, stack) {
+        stderr.writeln('[mock] ${request.method} ${request.requestedUri}: $e\n$stack');
+        return _jsonError(500, {'error': 'server'});
       }
     };

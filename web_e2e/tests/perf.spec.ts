@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 import { enableSemantics, openSignedIn, text } from './flutter';
 
@@ -95,7 +96,10 @@ async function measure(browser: Browser, baseURL: string): Promise<Run> {
   return { firstFrameMs, scroll, engine };
 }
 
-test('JS vs WebAssembly: first frame and scroll smoothness', async ({ browser }) => {
+// A measurement: the numbers are for reading (perf-results/perf.json). The
+// checks at the end are loose on purpose; they catch a broken measurement (no
+// frames counted, a page that never painted), not a slow machine.
+test('JS vs WebAssembly: first frame and scroll smoothness (measurement)', async ({ browser }) => {
   const results: Record<string, Run[]> = {};
   for (const b of builds) {
     results[b.name] = [];
@@ -111,7 +115,17 @@ test('JS vs WebAssembly: first frame and scroll smoothness', async ({ browser })
   }));
   console.table(summary.map(({ engine, ...rest }) => rest));
   for (const s of summary) console.log(`${s.build} engine timings: ${s.engine.join(' | ')}`);
-  mkdirSync('test-results', { recursive: true });
-  writeFileSync('test-results/perf.json', JSON.stringify({ when: new Date().toISOString(), runs, results, summary }, null, 2));
-  for (const s of summary) expect(s.scrollFps).toBeGreaterThan(0);
+  // Next to playwright.config.ts, outside test-results/ (Playwright empties that on every run).
+  const resultsDir = join(dirname(test.info().config.configFile ?? 'playwright.config.ts'), 'perf-results');
+  mkdirSync(resultsDir, { recursive: true });
+  writeFileSync(join(resultsDir, 'perf.json'), JSON.stringify({ when: new Date().toISOString(), runs, results, summary }, null, 2));
+
+  for (const [name, rs] of Object.entries(results)) {
+    for (const r of rs) expect(r.scroll.frames, `${name}: frames counted while scrolling`).toBeGreaterThan(30);
+  }
+  for (const s of summary) {
+    expect(s.firstFrameMs, `${s.build}: first frame`).toBeLessThan(30_000);
+    expect(s.scrollFps, `${s.build}: scroll frame rate`).toBeGreaterThan(10);
+    expect(s.scrollOver25Pct, `${s.build}: share of frames over 25 ms`).toBeLessThan(50);
+  }
 });

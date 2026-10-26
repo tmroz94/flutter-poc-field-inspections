@@ -4,15 +4,19 @@
 //   fvm dart tool/android_device_tests.dart [--device emulator-5554] [--only host]
 //   fvm dart tool/android_device_tests.dart --patrol [--only native|kill]
 //
-// Default: starts the mock API on port 8080 when nothing answers there, runs
-// `flutter test` for app/integration_test, and executes the `HOST> …` lines the
-// tests print (see app/integration_test/host_test.dart). Only the commands below
-// are accepted; anything else fails the run.
+// Default: starts the mock API on port 8080 when nothing answers there (or
+// resets the one that does to its fixtures), runs `flutter test` for
+// app/integration_test, and executes the `HOST> …` lines the tests print (see
+// app/integration_test/host_test.dart). Only the commands below are accepted;
+// anything else, or an adb command that fails, fails the run.
 //
 // --patrol: runs app/patrol_test with Patrol (needs `dart pub global activate
 // patrol_cli` and a JDK, e.g. Android Studio's). The device gets a test photo
 // and a screen-lock PIN for the duration; afterwards the helper checks that
 // tapping a notification cold-starts the killed app on its route.
+//
+// The device is restored (airplane mode off, test GPS provider removed, PIN
+// and test photo removed) when the run ends, also on Ctrl+C or SIGTERM.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -59,11 +63,69 @@ String get _adb {
   return 'adb';
 }
 
-Future<String> _adbRun(String device, List<String> args, {bool quiet = false}) async {
+/// Runs `adb -s <device> <args>` and returns its output. A non-zero exit code
+/// throws, unless [allowFailure] (probes such as `pidof`, best-effort steps).
+Future<String> _adbRun(String device, List<String> args, {bool quiet = false, bool allowFailure = false}) async {
   final r = await Process.run(_adb, ['-s', device, ...args]);
   final out = '${r.stdout}${r.stderr}'.trim();
-  if (!quiet) stdout.writeln('[host] adb ${args.join(' ')} → exit ${r.exitCode} $out');
+  if (!quiet || (r.exitCode != 0 && !allowFailure)) stdout.writeln('[host] adb ${args.join(' ')} → exit ${r.exitCode} $out');
+  if (r.exitCode != 0 && !allowFailure) throw StateError('adb ${args.join(' ')} failed (exit ${r.exitCode})');
   return out;
+}
+
+// ---- Clean-up on exit and on signals ----
+
+/// Steps that undo what the run changed, newest last; [_runCleanups] runs them
+/// newest first. Keyed so a step registers once.
+final _cleanups = <String, Future<void> Function()>{};
+Future<bool>? _cleaning;
+
+/// Runs every registered clean-up step, even when one fails; false when any
+/// step failed. Callers that arrive while it runs wait for the same run.
+Future<bool> _runCleanups() {
+  final running = _cleaning;
+  if (running != null) return running;
+  final run = _cleanUp();
+  _cleaning = run;
+  unawaited(run.whenComplete(() => _cleaning = null));
+  return run;
+}
+
+Future<bool> _cleanUp() async {
+  var ok = true;
+  for (final MapEntry(key: name, value: step) in _cleanups.entries.toList().reversed) {
+    _cleanups.remove(name);
+    try {
+      await step();
+    } on Object catch (e) {
+      ok = false;
+      stdout.writeln('[host] FAIL: clean-up "$name": $e');
+    }
+  }
+  return ok;
+}
+
+/// Ctrl+C (and SIGTERM, e.g. a cancelled CI job) restores the device before
+/// exiting. A second Ctrl+C during the clean-up exits at once.
+void _restoreOnSignals() {
+  for (final signal in [ProcessSignal.sigint, if (!Platform.isWindows) ProcessSignal.sigterm]) {
+    signal.watch().listen((_) async {
+      if (_cleaning != null) exit(130);
+      stdout.writeln('\n[host] $signal: restoring the device before exiting');
+      await _runCleanups();
+      exit(signal == ProcessSignal.sigint ? 130 : 143);
+    });
+  }
+}
+
+/// Ends [process] and its children (on Windows, killing fvm.exe would leave its
+/// dart child running).
+void _killTree(Process process) {
+  if (Platform.isWindows) {
+    Process.runSync('taskkill', ['/F', '/T', '/PID', '${process.pid}']);
+  } else {
+    process.kill();
+  }
 }
 
 var _mockLocation = false;
@@ -71,8 +133,24 @@ var _mockLocation = false;
 /// Removes the test location provider and the shell's mock-location right.
 Future<void> _restoreLocation(String device) async {
   if (!_mockLocation) return;
-  await _adbRun(device, ['shell', 'cmd', 'location', 'providers', 'remove-test-provider', 'gps']);
-  await _adbRun(device, ['shell', 'appops', 'set', 'com.android.shell', 'android:mock_location', 'default']);
+  _mockLocation = false;
+  await _all([
+    () => _adbRun(device, ['shell', 'cmd', 'location', 'providers', 'remove-test-provider', 'gps']),
+    () => _adbRun(device, ['shell', 'appops', 'set', 'com.android.shell', 'android:mock_location', 'default']),
+  ]);
+}
+
+/// Runs every step even when one fails, then throws the collected errors.
+Future<void> _all(List<Future<Object?> Function()> steps) async {
+  final errors = <Object>[];
+  for (final step in steps) {
+    try {
+      await step();
+    } on Object catch (e) {
+      errors.add(e);
+    }
+  }
+  if (errors.isNotEmpty) throw StateError(errors.join('; '));
 }
 
 /// The whitelisted host commands the tests may ask for.
@@ -80,6 +158,7 @@ Future<void> _hostCommand(String device, String line) async {
   final parts = line.trim().split(RegExp(r'\s+'));
   switch (parts) {
     case ['airplane', final s] when s == 'on' || s == 'off':
+      if (s == 'on') _cleanups['airplane mode'] ??= () => _hostCommand(device, 'airplane off');
       await _adbRun(device, ['shell', 'cmd', 'connectivity', 'airplane-mode', s == 'on' ? 'enable' : 'disable']);
     case ['location', final s] when s == 'grant' || s == 'revoke':
       for (final p in ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION']) {
@@ -90,7 +169,10 @@ Future<void> _hostCommand(String device, String line) async {
       // emulator's own `geo fix` didn't reach the location stack on API 37.
       if (!_mockLocation) {
         _mockLocation = true;
+        _cleanups['test GPS provider'] ??= () => _restoreLocation(device);
         await _adbRun(device, ['shell', 'appops', 'set', 'com.android.shell', 'android:mock_location', 'allow']);
+        // Left over if an earlier run was killed; adding it again would fail.
+        await _adbRun(device, ['shell', 'cmd', 'location', 'providers', 'remove-test-provider', 'gps'], quiet: true, allowFailure: true);
         await _adbRun(device, ['shell', 'cmd', 'location', 'providers', 'add-test-provider', 'gps']);
         await _adbRun(device, ['shell', 'cmd', 'location', 'providers', 'set-test-provider-enabled', 'gps', 'true']);
       }
@@ -111,16 +193,23 @@ Future<void> _hostCommand(String device, String line) async {
   }
 }
 
-Future<bool> _apiUp() async {
+const _api = 'http://localhost:8080/api';
+
+/// Sends a request to the mock API; true when it answers 200.
+Future<bool> _apiOk(String method, String path) async {
+  final client = HttpClient()..connectionTimeout = const Duration(seconds: 1);
   try {
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 1);
-    final res = await (await client.getUrl(Uri.parse('http://localhost:8080/api/health'))).close();
-    client.close();
+    final res = await (await client.openUrl(method, Uri.parse('$_api$path'))).close();
+    await res.drain<void>();
     return res.statusCode == 200;
   } on Object {
     return false;
+  } finally {
+    client.close(force: true);
   }
 }
+
+Future<bool> _apiUp() => _apiOk('GET', '/health');
 
 // ---- Patrol ----
 
@@ -187,17 +276,18 @@ Future<void> _rescanMedia(String device) => _adbRun(device, [
 ], quiet: true);
 
 /// A photo for the gallery test and a PIN for the device-credential prompt.
+/// Registers their removal first, so even a half-done preparation is undone.
 Future<void> _preparePatrol(String device) async {
+  _cleanups['test photo'] ??= () async {
+    await _adbRun(device, ['shell', 'rm', '-f', _photo]);
+    await _rescanMedia(device);
+  };
   final file = File('${Directory.systemTemp.path}/fi_test_photo.png')..writeAsBytesSync(_png());
   await _adbRun(device, ['push', file.path, _photo]);
   await _rescanMedia(device);
+  // Fails when the device already has a screen lock; the helper never clears one it didn't set.
   await _adbRun(device, ['shell', 'locksettings', 'set-pin', _pin]);
-}
-
-Future<void> _cleanUpPatrol(String device) async {
-  await _adbRun(device, ['shell', 'locksettings', 'clear', '--old', _pin]);
-  await _adbRun(device, ['shell', 'rm', '-f', _photo]);
-  await _rescanMedia(device);
+  _cleanups['screen-lock PIN'] ??= () => _adbRun(device, ['shell', 'locksettings', 'clear', '--old', _pin]);
 }
 
 /// Patrol's Gradle run needs a JDK: JAVA_HOME, else Android Studio's bundled one.
@@ -257,9 +347,11 @@ Future<bool> _poll(int seconds, Future<bool> Function() check) async {
 }
 
 /// The UI tree as uiautomator sees it (Flutter exposes its semantics to it).
+/// Transient failures (no idle state yet) return an empty or partial dump;
+/// callers poll.
 Future<String> _uiDump(String device) async {
-  await _adbRun(device, ['shell', 'uiautomator', 'dump', '/sdcard/fi_ui.xml'], quiet: true);
-  return _adbRun(device, ['shell', 'cat', '/sdcard/fi_ui.xml'], quiet: true);
+  await _adbRun(device, ['shell', 'uiautomator', 'dump', '/sdcard/fi_ui.xml'], quiet: true, allowFailure: true);
+  return _adbRun(device, ['shell', 'cat', '/sdcard/fi_ui.xml'], quiet: true, allowFailure: true);
 }
 
 /// The real app (not Patrol's test-bundle build, whose entry point waits for
@@ -305,8 +397,10 @@ Future<bool> _tapLabel(String device, String label, {int seconds = 20, bool scro
 /// Android does under memory pressure, and the tap must cold-start the app on
 /// the notification's route.
 Future<bool> _notificationAfterKill(String device, String appApk) async {
-  Future<bool> running() async => (await _adbRun(device, ['shell', 'pidof', _package], quiet: true)).isNotEmpty;
-  await _adbRun(device, ['uninstall', _package], quiet: true);
+  // pidof exits 1 when the process isn't running.
+  Future<bool> running() async => (await _adbRun(device, ['shell', 'pidof', _package], quiet: true, allowFailure: true)).isNotEmpty;
+  await _adbRun(device, ['uninstall', _package], quiet: true, allowFailure: true);
+  _cleanups['app install'] ??= () => _adbRun(device, ['uninstall', _package], quiet: true, allowFailure: true);
   await _adbRun(device, ['install', appApk]);
   await _adbRun(device, ['shell', 'pm', 'grant', _package, 'android.permission.POST_NOTIFICATIONS']);
   await _adbRun(device, [
@@ -327,8 +421,8 @@ Future<bool> _notificationAfterKill(String device, String appApk) async {
     // (force-stop would cancel them); run-as kill is the fallback.
     await _adbRun(device, ['shell', 'am', 'kill', _package]);
     if (await running()) {
-      final pid = await _adbRun(device, ['shell', 'pidof', _package], quiet: true);
-      await _adbRun(device, ['shell', 'run-as', _package, 'kill', '-9', pid]);
+      final pid = await _adbRun(device, ['shell', 'pidof', _package], quiet: true, allowFailure: true);
+      await _adbRun(device, ['shell', 'run-as', _package, 'kill', '-9', pid], allowFailure: true);
     }
     ok = await _poll(5, () async => !await running());
     stdout.writeln(ok ? '[host] app process killed; waiting for the notification' : '[host] FAIL: the app process is still running');
@@ -356,29 +450,34 @@ Future<bool> _notificationAfterKill(String device, String appApk) async {
   }
   if (!ok) {
     final shot = '${Directory.systemTemp.path}${Platform.pathSeparator}fi_notification_fail.png';
-    await _adbRun(device, ['shell', 'screencap', '-p', '/sdcard/fi_fail.png'], quiet: true);
-    await _adbRun(device, ['pull', '/sdcard/fi_fail.png', shot], quiet: true);
+    await _adbRun(device, ['shell', 'screencap', '-p', '/sdcard/fi_fail.png'], quiet: true, allowFailure: true);
+    await _adbRun(device, ['pull', '/sdcard/fi_fail.png', shot], quiet: true, allowFailure: true);
     stdout.writeln('[host] screenshot: $shot');
   }
-  await _adbRun(device, ['uninstall', _package], quiet: true);
+  await _adbRun(device, ['uninstall', _package], quiet: true, allowFailure: true);
+  _cleanups.remove('app install');
   return ok;
 }
 
 /// [only]: `native` or `kill` runs just that part.
 Future<int> _patrolMain(String device, String? only) async {
-  await _preparePatrol(device);
+  var native = 1;
+  var tapped = false;
   try {
-    final native = only == 'kill' ? 0 : await _runPatrol(device, 'patrol_test/native_test.dart');
-    var tapped = true;
+    await _preparePatrol(device);
+    native = only == 'kill' ? 0 : await _runPatrol(device, 'patrol_test/native_test.dart');
+    tapped = true;
     if (only != 'native') {
       final appApk = await _buildAppApk();
       tapped = appApk != null && await _notificationAfterKill(device, appApk);
     }
-    stdout.writeln('[host] native tests: ${native == 0 ? 'passed' : 'failed'} · notification after kill: ${tapped ? 'passed' : 'failed'}');
-    return native == 0 && tapped ? 0 : 1;
-  } finally {
-    await _cleanUpPatrol(device);
+  } on Object catch (e) {
+    stdout.writeln('[host] FAIL: $e');
+    tapped = false;
   }
+  final cleaned = await _runCleanups();
+  stdout.writeln('[host] native tests: ${native == 0 ? 'passed' : 'failed'} · notification after kill: ${tapped ? 'passed' : 'failed'}');
+  return native == 0 && tapped && cleaned ? 0 : 1;
 }
 
 Future<void> main(List<String> args) async {
@@ -389,19 +488,37 @@ Future<void> main(List<String> args) async {
 
   final device = opt('device') ?? 'emulator-5554';
   final only = opt('only');
+  _restoreOnSignals();
   if (args.contains('--patrol')) exit(await _patrolMain(device, only));
   final target = only == null ? 'integration_test' : 'integration_test/${only}_test.dart';
 
-  Process? server;
-  if (!await _apiUp()) {
+  if (await _apiUp()) {
+    // Someone else's server (another run, a manual one): start from the fixtures.
+    if (!await _apiOk('POST', '/admin/reset')) {
+      stdout.writeln('[host] FAIL: something answers $_api/health but the reset failed; stop it or free port 8080');
+      exit(1);
+    }
+    stdout.writeln('[host] reusing the mock API on :8080 (reset to its fixtures)');
+  } else {
     stdout.writeln('[host] starting the mock API on :8080');
-    server = await _sdkStart(['dart', 'run', 'mock_server/bin/server.dart', '--port', '8080']);
-    for (var i = 0; i < 60 && !await _apiUp(); i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+    final deps = await _sdkRun(['dart', 'pub', 'get'], workingDirectory: 'mock_server');
+    if (deps.exitCode != 0) stdout.writeln('[host] dart pub get in mock_server failed:\n${deps.stdout}${deps.stderr}');
+    final server = await _sdkStart(['dart', 'run', 'mock_server/bin/server.dart', '--port', '8080', '--quiet']);
+    _cleanups['mock API'] = () async => _killTree(server);
+    // Read its output so a full pipe can never block it; errors show with a prefix.
+    for (final (stream, sink) in [(server.stdout, stdout), (server.stderr, stderr)]) {
+      stream.transform(utf8.decoder).transform(const LineSplitter()).listen((l) => sink.writeln('[mock] $l'));
+    }
+    final up = await _poll(30, _apiUp);
+    if (!up) {
+      stdout.writeln('[host] FAIL: the mock API did not start on :8080');
+      await _runCleanups();
+      exit(1);
     }
   }
 
   final test = await _sdkStart(['flutter', 'test', target, '-d', device, '--dart-define=HOST_HELPER=true'], workingDirectory: 'app');
+  _cleanups['flutter test'] = () async => _killTree(test);
   var failed = false;
   // Host commands run one at a time, in the order the tests print them.
   var queue = Future<void>.value();
@@ -417,19 +534,13 @@ Future<void> main(List<String> args) async {
   });
   test.stderr.transform(utf8.decoder).listen(stderr.write);
   final code = await test.exitCode;
+  _cleanups.remove('flutter test');
+  // Let the last lines through; a child that inherited the pipe may keep it open.
+  await out.asFuture<void>().timeout(const Duration(seconds: 5), onTimeout: () {});
   await out.cancel();
   await queue;
 
-  // Never leave the device offline or on a fake position.
-  await _hostCommand(device, 'airplane off');
-  await _restoreLocation(device);
-  if (server != null) {
-    // On Windows killing fvm.exe leaves its dart child serving :8080; end the tree.
-    if (Platform.isWindows) {
-      Process.runSync('taskkill', ['/F', '/T', '/PID', '${server.pid}']);
-    } else {
-      server.kill();
-    }
-  }
-  exit(code != 0 || failed ? 1 : 0);
+  // Never leave the device offline or on a fake position, nor the server running.
+  final cleaned = await _runCleanups();
+  exit(code != 0 || failed || !cleaned ? 1 : 0);
 }

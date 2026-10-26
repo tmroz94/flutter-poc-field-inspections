@@ -31,11 +31,22 @@ cd app && fvm flutter pub get
 
 ## Run
 
-Mock API (optional; without it the app uses its built-in offline fake):
+Mock API (optional; without it the app uses its built-in offline fake). On a
+fresh clone, get its packages once:
+
+```bash
+cd mock_server && fvm dart pub get && cd ..
+```
 
 ```bash
 fvm dart run mock_server/bin/server.dart --port 8080
 ```
+
+It listens on 127.0.0.1, which the browser, the iOS simulator, the desktop
+apps and the Android emulator (through 10.0.2.2, the host's loopback) can all
+reach. For a phone on the same Wi-Fi add `--host 0.0.0.0` and run the app with
+`--dart-define=API_URL=http://<pc-ip>:8080/api`; anyone on that network can
+then use the mock API, so only do it on a network you trust.
 
 App, from `app/` (`fvm flutter devices` lists the targets):
 
@@ -61,7 +72,7 @@ router, accessibility and golden tests). On macOS/Linux: `tool/check.sh`.
 Device tests (Android, including airplane mode and GPS steps driven from the host): `fvm dart tool/android_device_tests.dart`. Native UI (permission dialogs, camera, photo picker, share sheet, biometric prompt, notification tap after a kill) with Patrol: `fvm dart tool/android_device_tests.dart --patrol`. Web: the same flows in Chrome via `flutter drive`, and browser prompts plus JS vs WebAssembly timings with Playwright in `web_e2e/` (see `docs/testing.md`).
 Details in `docs/testing.md`.
 
-CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run on every push (`.github/workflows/ci.yml`), and so does the Linux app build with the integration flows (`desktop.yml`); the Android emulator, iOS simulator, Windows and macOS jobs run when started by hand from the Actions tab.
+CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run on every push (`.github/workflows/ci.yml`), and so does the Linux app build with the integration flows (`desktop.yml`); the Android emulator, iOS simulator, Windows and macOS app jobs and the Windows golden-test job (`goldens.yml`) run when started by hand from the Actions tab.
 
 ## PoC tools (Settings › PoC tools)
 

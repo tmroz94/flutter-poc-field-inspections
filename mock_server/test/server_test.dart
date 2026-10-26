@@ -64,6 +64,42 @@ void main() {
   test('malformed JSON is a 400', () async {
     final r = await handler(Request('POST', Uri.parse('http://localhost/api/auth/sign-in'), body: '{nope'));
     expect(r.statusCode, 400);
+    expect(r.headers['access-control-allow-origin'], '*');
+  });
+
+  test('a body of the wrong shape is a 422 with field errors and CORS headers', () async {
+    final token = await signIn();
+    final r = await call('POST', '/api/inspections', token: token, body: {'site': 5, 'answers': [], 'photos': 'x'});
+    expect(r.statusCode, 422);
+    expect(r.headers['access-control-allow-origin'], '*');
+    expect((await decode(r))['fields'], containsPair('photos', 'invalid'));
+
+    final read = await call('POST', '/api/notifications/read', token: token, body: {'id': 5});
+    expect(read.statusCode, 422);
+  });
+
+  test('an unexpected error is a JSON 500 that still carries CORS headers', () async {
+    final broken = buildHandler(database: _BrokenDatabase.new, defaultDelay: Duration.zero);
+    final token = _BrokenDatabase().signIn(demoEmail, demoPassword)['token']! as String;
+    final r = await broken(Request('GET', Uri.parse('http://localhost/api/notifications'), headers: {'authorization': 'Bearer $token'}));
+    expect(r.statusCode, 500);
+    expect(r.headers['access-control-allow-origin'], '*');
+    expect(r.headers['content-type'], startsWith('application/json'));
+    expect(jsonDecode(await r.readAsString()), {'error': 'server'});
+  });
+
+  test('paging parameters that are not numbers, or could overflow, are a 400', () async {
+    final token = await signIn();
+    for (final query in ['page=abc', 'page=9223372036854775807', 'pageSize=0', 'from=yesterday', 'status=done']) {
+      final r = await call('GET', '/api/inspections?$query', token: token);
+      expect(r.statusCode, 400, reason: query);
+      expect(r.headers['access-control-allow-origin'], '*', reason: query);
+    }
+  });
+
+  test('injected failures outside 400–599 are ignored', () async {
+    expect((await call('GET', '/api/health?fail=1000')).statusCode, 200);
+    expect((await call('GET', '/api/health?fail=302')).statusCode, 200);
   });
 
   test('create, archive, and reset restore fixtures', () async {
@@ -87,4 +123,10 @@ void main() {
     final list = await decode(await call('GET', '/api/inspections?q=INS-1043', token: fresh));
     expect(list['total'], 1);
   });
+}
+
+/// A backend with a bug, to check what the HTTP layer does with it.
+class _BrokenDatabase extends MockDatabase {
+  @override
+  List<Map<String, Object?>> notifications() => throw StateError('boom');
 }

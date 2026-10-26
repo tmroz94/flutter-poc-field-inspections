@@ -123,8 +123,13 @@ without it. With it:
 fvm dart run mock_server/bin/server.dart --port 8080
 ```
 
+It listens on 127.0.0.1 only; for a phone on the same Wi-Fi start it with
+`--host 0.0.0.0` (anyone on that network can then use it, so only on a network
+you trust) and pass the PC's address with `API_URL`. On a fresh clone run
+`fvm dart pub get` in `mock_server/` once first.
+
 The app looks for it at `http://localhost:8080/api` (on the Android emulator
-`http://10.0.2.2:8080/api`). Force a mode or another address with
+`http://10.0.2.2:8080/api`, the host's loopback). Force a mode or another address with
 `--dart-define=BACKEND=http|fake|auto` and `--dart-define=API_URL=http://host:8080/api`.
 
 Demo account: `anna.nowak@example.com` / `inspect123`, or tap **Use demo account**.
@@ -149,7 +154,8 @@ Boot an iOS simulator first (`xcrun simctl boot <id>` or open Simulator.app);
 
 `flutter run` doesn't do the SPA rewrite (refreshing a deep link) or serve
 `.wasm` with the right type. Build, then serve with the helper (from the
-repository root; `python` on Windows):
+repository root; `python` on Windows). It sends paths without a file extension
+to `index.html`, answers a missing file with 404, and listens on 127.0.0.1:
 
 ```bash
 cd app && fvm flutter build web && cd .. && python3 tool/serve_web.py

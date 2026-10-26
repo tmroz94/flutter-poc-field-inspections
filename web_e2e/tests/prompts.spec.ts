@@ -49,15 +49,36 @@ test.describe('notifications', () => {
 
   // With no tab open, the plugin's service worker opens
   // /?notification_payload=<route>. Chrome only lets a worker open windows in
-  // response to a real click, so the test opens that same URL itself.
+  // response to a real click, so the test runs the worker's own click handler
+  // with `clients` stubbed in the worker (no window open; openWindow records
+  // its URL instead of opening it), then opens the URL the worker built.
   test('with the tab closed, the URL the worker opens leads to the route', async ({ page, context }) => {
     await openSignedIn(page, '/settings/poc/deep-links');
     await sendTestNotification(page);
     const sw = context.serviceWorkers().find((w) => w.url().includes('notifications_service_worker'));
+    expect(sw, 'the notifications service worker is running').toBeTruthy();
     const url: string = await sw!.evaluate(async () => {
-      const [n] = await (self as any).registration.getNotifications();
-      return `/?notification_id=${encodeURIComponent(n.tag)}&notification_payload=${encodeURIComponent(n.data?.payload || '')}&notification_action=&notification_reply=`;
+      const scope = self as any;
+      const [n] = await scope.registration.getNotifications();
+      // `clients` is the same object on every access, so own properties shadow
+      // its methods; deleting them restores the real ones.
+      const clients = scope.clients;
+      let opened = '';
+      clients.matchAll = async () => [];
+      clients.openWindow = async (u: string) => {
+        opened = u;
+        return null;
+      };
+      try {
+        await scope._handleNotif({ notification: n, action: '', reply: null, waitUntil: () => undefined });
+      } finally {
+        delete clients.matchAll;
+        delete clients.openWindow;
+      }
+      return opened;
     });
+    expect(url).toMatch(/^\/\?notification_id=.*&notification_payload=/);
+    expect(new URL(url, 'http://localhost').searchParams.get('notification_payload')).toBe(route);
     await page.close();
     const tab = await context.newPage();
     await tab.goto(url);

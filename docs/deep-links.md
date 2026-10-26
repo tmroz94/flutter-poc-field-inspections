@@ -14,7 +14,10 @@ The same location works from:
 
 ## Guards (in order)
 
-1. Session still restoring → `/splash?from=<target>` (a cold-start link is not lost).
+1. Session still restoring → no redirect: the splash screen shows in place of
+   the router at the current URL, and the router is built (and parses the
+   link) once the session is known, so a cold-start link is not lost and no
+   extra history entry is added.
 2. Signed out on a guarded path → `/sign-in?from=<target>`; after sign-in → target.
 3. Signed in and locked (iOS/Android, biometric lock on) → `/unlock?from=<target>`.
 4. Signed in on `/sign-in`, `/sign-up`, `/forgot-password` or `/unlock` → `from` or `/home`.
@@ -56,6 +59,6 @@ macOS, Windows and Linux open `fieldinspections://` links through `app_links`
 
 ## Hosting checklist (not needed for local testing)
 
-- SPA rewrite: every path that is not a file → `/index.html` (Firebase `rewrites`, Netlify `_redirects`, nginx `try_files $uri /index.html`).
+- SPA rewrite: every path that is not a file → `/index.html` (Firebase `rewrites`, Netlify `_redirects`, nginx `try_files $uri /index.html`). Better still, rewrite only paths without a file extension, so a missing asset is a 404 rather than HTML (what `tool/serve_web.py` does).
 - iOS universal links: host `/.well-known/apple-app-site-association` and add the Associated Domains entitlement.
 - Android app links: host `/.well-known/assetlinks.json` with the signing certificate fingerprint and add an `autoVerify` intent filter.

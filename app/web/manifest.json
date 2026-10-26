@@ -1,12 +1,12 @@
 {
-    "name": "field_inspections",
-    "short_name": "field_inspections",
+    "name": "Field Inspections",
+    "short_name": "Inspections",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
+    "background_color": "#FEF7FF",
+    "theme_color": "#6750A4",
     "description": "Flutter PoC - Field Inspections (iOS, Android, Web)",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

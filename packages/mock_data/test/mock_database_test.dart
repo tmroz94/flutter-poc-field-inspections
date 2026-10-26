@@ -93,6 +93,16 @@ void main() {
     test('rejects a bad sort', () {
       expect(() => db.listInspections(sort: 'x'), throwsA(isA<MockError>()));
     });
+
+    test('rejects unknown statuses and due windows, and pages that could overflow', () {
+      Matcher badRequest(String code) => throwsA(isA<MockError>().having((e) => (e.status, e.code), 'error', (400, code)));
+      expect(() => db.listInspections(status: {'done'}), badRequest('badStatus'));
+      expect(() => db.listInspections(due: 'month'), badRequest('badDue'));
+      expect(() => db.listInspections(page: 0), badRequest('badPage'));
+      expect(() => db.listInspections(page: 9223372036854775807), badRequest('badPage'));
+      expect(() => db.listInspections(pageSize: 101), badRequest('badPage'));
+      expect(db.listInspections(page: MockDatabase.maxPage)['items'], isEmpty);
+    });
   });
 
   group('inspection detail and writes', () {
@@ -159,6 +169,149 @@ void main() {
     test('archiving hides an inspection from the list', () {
       db.setArchived('INS-1043', true);
       expect(db.listInspections(q: 'INS-1043')['total'], 0);
+    });
+
+    Matcher rejects(Map<String, String> fields) => throwsA(
+      isA<MockError>()
+          .having((e) => e.status, 'status', 422)
+          .having((e) => e.fields, 'fields', containsPair(fields.keys.single, fields.values.single)),
+    );
+
+    test('an unknown site id is a 422 on site, and nothing is stored', () {
+      expect(() => db.createInspection({...validDraft(), 'siteId': 's-nowhere'}), rejects({'site': 'unknown'}));
+      expect(db.listInspections()['total'], 36);
+      expect(db.createInspection(validDraft())['id'], 'INS-1046', reason: 'the rejected create used no id');
+      expect(db.listInspections(q: 'riverside', sort: 'siteAsc')['total'], greaterThan(0));
+    });
+
+    test('values of the wrong type are 422 field errors, never a crash', () {
+      expect(() => db.createInspection({...validDraft(), 'siteId': 5}), rejects({'site': 'invalid'}));
+      expect(() => db.createInspection({...validDraft(), 'scheduledAt': 20261022}), rejects({'scheduledAt': 'invalid'}));
+      expect(() => db.createInspection({...validDraft(), 'notes': 42}), rejects({'notes': 'invalid'}));
+      expect(
+        () => db.createInspection({
+          ...validDraft(),
+          'answers': ['pass'],
+        }),
+        rejects({'answers': 'invalid'}),
+      );
+      expect(
+        () => db.createInspection({
+          ...validDraft(),
+          'answers': {'c01': 'maybe'},
+        }),
+        rejects({'answers': 'invalid'}),
+      );
+      expect(
+        () => db.createInspection({
+          ...validDraft(),
+          'answers': {'c99': 'pass'},
+        }),
+        rejects({'answers': 'invalid'}),
+      );
+      expect(
+        () => db.createInspection({
+          ...validDraft(),
+          'photos': [1],
+        }),
+        rejects({'photos': 'invalid'}),
+      );
+      expect(
+        () => db.createInspection({
+          ...validDraft(),
+          'photos': [
+            {'id': 'a'},
+            {'id': 'a'},
+          ],
+        }),
+        rejects({'photos': 'invalid'}),
+      );
+      expect(
+        () => db.createInspection({
+          ...validDraft(),
+          'files': {'id': 'f'},
+        }),
+        rejects({'files': 'invalid'}),
+      );
+      expect(
+        () => db.createInspection({
+          ...validDraft(),
+          'failures': {
+            'c02': {'severity': 9},
+          },
+        }),
+        rejects({'failures': 'invalid'}),
+      );
+      expect(
+        () => db.createInspection({
+          ...validDraft(),
+          'checkedInAt': {'lat': 'x'},
+        }),
+        rejects({'checkedInAt': 'invalid'}),
+      );
+      expect(() => db.createInspection({...validDraft(), 'confirmed': 'yes'}), rejects({'confirmed': 'invalid'}));
+      expect(db.listInspections()['total'], 36);
+    });
+
+    test('a PUT only changes client fields and validates before storing anything', () {
+      final updated = db.updateInspection('INS-1040', {
+        'id': 'INS-1',
+        'status': 'submitted',
+        'archived': true,
+        'inspector': {'name': 'Mallory'},
+        'templateId': 'tpl-x',
+        'notes': 'Bring a ladder',
+      });
+      expect(
+        (updated['id'], updated['status'], updated['archived'], (updated['inspector']! as Map)['name']),
+        ('INS-1040', 'draft', false, 'Anna Nowak'),
+      );
+      expect((updated['templateId'], updated['notes']), ('tpl-fire-annual-v3', 'Bring a ladder'));
+
+      expect(() => db.updateInspection('INS-1042', {'answers': null}), rejects({'answers': 'invalid'}));
+      expect(() => db.updateInspection('INS-1042', {'notes': 'changed', 'durationMin': 5}), rejects({'durationMin': 'range'}));
+      expect(() => db.updateInspection('INS-1042', {'siteId': 's-nowhere'}), rejects({'site': 'unknown'}));
+      final unchanged = db.getInspection('INS-1042');
+      expect((unchanged['notes'], unchanged['site']), ('Access through gate 3. Bring the fire panel key.', 'Warehouse A – loading dock'));
+      expect(unchanged['checklistSummary'], {'answered': 12, 'total': 18, 'failed': 2});
+    });
+
+    test('a named site becomes a new site that later inspections can reuse', () {
+      final created = db.createInspection({
+        ...validDraft()..remove('siteId'),
+        'site': '  Boiler house  ',
+        'address': 'ul. Kotłowa 1',
+        'lat': 52.1,
+        'lng': 21.1,
+      });
+      expect((created['siteId'], created['site'], created['address']), ('s-new-INS-1046', 'Boiler house', 'ul. Kotłowa 1'));
+      final again = db.createInspection({...validDraft(), 'siteId': 's-new-INS-1046'});
+      expect((again['site'], again['lat']), ('Boiler house', 52.1));
+      expect(db.listInspections(q: 'boiler', sort: 'siteAsc')['total'], 2);
+    });
+
+    test('stored records do not share maps with the request body', () {
+      final answers = {'c01': 'pass'};
+      final created = db.createInspection({...validDraft(), 'answers': answers});
+      answers['c02'] = 'fail';
+      expect(db.getInspection(created['id']! as String)['checklistSummary'], {'answered': 1, 'total': 18, 'failed': 0});
+    });
+
+    test('failures, files and the location check are stored', () {
+      final created = db.createInspection({
+        ...validDraft(),
+        'answers': {'c02': 'fail'},
+        'failures': {
+          'c02': {'severity': 4, 'followUp': true, 'note': 'Blocked by pallets'},
+        },
+        'files': [
+          {'id': 'f1', 'name': 'permit.pdf', 'sizeBytes': 2048, 'isPhoto': false, 'forItem': null},
+        ],
+        'checkedInAt': {'lat': 52.24, 'lng': 21.03, 'accuracy': null},
+      });
+      expect(((created['failures']! as Map)['c02'] as Map)['severity'], 4);
+      expect(((created['files']! as List).single as Map)['name'], 'permit.pdf');
+      expect((created['checkedInAt']! as Map)['lat'], 52.24);
     });
   });
 

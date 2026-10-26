@@ -30,3 +30,13 @@ Thumbs.db
 web_e2e/node_modules/
 web_e2e/test-results/
 web_e2e/playwright-report/
+web_e2e/perf-results/
+
+# Python bytecode (tool/*.py)
+__pycache__/
+
+# Android release signing: never commit a keystore or its passwords
+# (app/android/.gitignore covers app/android; this covers the rest of the repo).
+key.properties
+*.jks
+*.keystore

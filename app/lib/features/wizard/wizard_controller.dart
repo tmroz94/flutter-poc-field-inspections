@@ -19,8 +19,9 @@ final _random = Random();
 
 /// Unique on every platform: the web clock has millisecond resolution, so
 /// several files dropped at once would otherwise share an id (and a blob).
+/// (Not `1 << 32` for the bound: compiled to JavaScript that is 0.)
 String newAttachmentId({required bool photo}) =>
-    '${photo ? 'ph' : 'f'}-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${_random.nextInt(1 << 32).toRadixString(36)}';
+    '${photo ? 'ph' : 'f'}-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${_random.nextInt(0xFFFFFFFF).toRadixString(36)}';
 
 @immutable
 class WizardState {

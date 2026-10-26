@@ -17,9 +17,15 @@ export async function openSignedIn(page: Page, path: string): Promise<void> {
   await enableSemantics(page);
   const demo = page.getByRole('button', { name: 'Use demo account' });
   const target = new RegExp(escape(path.split('?')[0]));
-  if (await demo.isVisible({ timeout: 5_000 }).catch(() => false)) {
-    await demo.click();
+  // isVisible() doesn't wait (its timeout is ignored); give the guard's
+  // redirect to sign-in a moment to show the button.
+  let signInShown = true;
+  try {
+    await demo.waitFor({ state: 'visible', timeout: 5_000 });
+  } catch {
+    signInShown = false;
   }
+  if (signInShown) await demo.click();
   await expect(page).toHaveURL(target);
   await enableSemantics(page).catch(() => undefined);
 }

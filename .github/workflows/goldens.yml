@@ -1,0 +1,50 @@
+# Golden image tests on Windows, the OS the reference images in
+# app/test/golden/goldens are made on (other hosts skip them: font
+# rasterisation differs per OS). Windows minutes count 2× on private
+# repositories, so this runs only when started by hand (Actions › Golden tests
+# (Windows) › Run workflow). On a mismatch, the diff images are uploaded.
+name: Golden tests (Windows)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: goldens-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  goldens:
+    name: Goldens on Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+      - name: Flutter version from .fvmrc
+        id: fvm
+        run: '"version=$((Get-Content .fvmrc -Raw | ConvertFrom-Json).flutter)" >> $env:GITHUB_OUTPUT'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ steps.fvm.outputs.version }}
+          channel: stable
+          cache: true
+      - name: Get packages
+        working-directory: app
+        run: flutter pub get
+      - name: Golden tests
+        working-directory: app
+        run: flutter test test/golden
+      # flutter_test writes the expected, actual and diff images of each
+      # mismatch to test/golden/failures/.
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: golden-failures
+          path: app/test/golden/failures/**
+          if-no-files-found: ignore
+          retention-days: 7

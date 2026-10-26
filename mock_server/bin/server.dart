@@ -5,14 +5,16 @@ import 'package:mock_server/mock_server.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 
-/// Usage: dart run bin/server.dart [--port 8080] [--host 0.0.0.0] [--delay 300]
+/// Usage: dart run bin/server.dart [--port 8080] [--host 127.0.0.1] [--delay 300]
 ///
-/// Bind to 0.0.0.0 so the Android emulator (10.0.2.2) and phones on the same
-/// network can reach it.
+/// The default host, 127.0.0.1, is enough for this machine's browser, the iOS
+/// simulator and the Android emulator (its 10.0.2.2 is the host's loopback).
+/// Pass `--host 0.0.0.0` only to reach it from a phone on the same network:
+/// anyone on that network can then use it (no real auth, CORS open to all).
 Future<void> main(List<String> args) async {
   final parser = ArgParser()
     ..addOption('port', defaultsTo: Platform.environment['PORT'] ?? '8080')
-    ..addOption('host', defaultsTo: '0.0.0.0')
+    ..addOption('host', defaultsTo: '127.0.0.1', help: 'Interface to bind; 0.0.0.0 for phones on the same network')
     ..addOption('delay', defaultsTo: '300', help: 'Default latency in ms')
     ..addFlag('quiet', negatable: false, help: 'No request log');
   final opts = parser.parse(args);

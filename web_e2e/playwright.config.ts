@@ -13,6 +13,9 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 15_000 },
   workers: 1,
+  // On CI: a stray test.only fails the run, and one retry absorbs a flaky start-up.
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 1 : 0,
   reporter: [['list']],
   use: {
     channel: 'chrome',
@@ -37,7 +40,7 @@ export default defineConfig({
     },
   ],
   webServer: [
-    { command: `${py} ../tool/serve_web.py 5174 build/web-js`, port: 5174, reuseExistingServer: true },
-    { command: `${py} ../tool/serve_web.py 5176 build/web-wasm --isolate`, port: 5176, reuseExistingServer: true },
+    { command: `${py} ../tool/serve_web.py 5174 build/web-js`, port: 5174, reuseExistingServer: !process.env.CI },
+    { command: `${py} ../tool/serve_web.py 5176 build/web-wasm --isolate`, port: 5176, reuseExistingServer: !process.env.CI },
   ],
 });

@@ -36,6 +36,11 @@ class MockDatabase {
 
   static const statuses = {'scheduled', 'inProgress', 'draft', 'overdue', 'submitted'};
   static const sorts = {'dueAsc', 'dueDesc', 'siteAsc'};
+  static const dueWindows = {'any', 'today', 'week', 'custom'};
+
+  /// Highest page number accepted; far beyond the data, small enough that
+  /// `(page - 1) * pageSize` can't overflow.
+  static const maxPage = 100000;
   static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   // ---- Auth ----
@@ -108,7 +113,9 @@ class MockDatabase {
     int pageSize = 20,
   }) {
     if (!sorts.contains(sort)) throw MockError(400, 'badSort');
-    if (page < 1 || pageSize < 1 || pageSize > 100) throw MockError(400, 'badPage');
+    if (!dueWindows.contains(due)) throw MockError(400, 'badDue');
+    if (status != null && !statuses.containsAll(status)) throw MockError(400, 'badStatus');
+    if (page < 1 || page > maxPage || pageSize < 1 || pageSize > 100) throw MockError(400, 'badPage');
     final now = _clock();
     final today = DateTime(now.year, now.month, now.day);
     final query = q?.trim().toLowerCase() ?? '';
@@ -159,8 +166,8 @@ class MockDatabase {
 
   Map<String, Object?> getInspection(String id) {
     final i = _find(id);
-    final answers = i['answers']! as Map;
-    final total = (fireSafetyTemplate['items']! as List).length;
+    final answers = (i['answers'] as Map?) ?? const {};
+    final total = _itemIds.length;
     return {
       ...i,
       'checklistSummary': {'answered': answers.length, 'total': total, 'failed': answers.values.where((v) => v == 'fail').length},
@@ -170,99 +177,249 @@ class MockDatabase {
 
   Map<String, Object?> _find(String id) => _inspections.where((i) => i['id'] == id).firstOrNull ?? (throw MockError(404, 'notFound'));
 
+  // ---- Inspection writes ----
+
+  /// The keys `POST` / `PUT /inspections` read. Anything else in a body (id,
+  /// status, archived, inspector, history, …) is ignored: those belong to the
+  /// server, so a client can't rewrite them.
+  static const writableKeys = {
+    'siteId',
+    'site',
+    'address',
+    'lat',
+    'lng',
+    'checkedInAt',
+    'type',
+    'scheduledAt',
+    'durationMin',
+    'priority',
+    'notes',
+    'answers',
+    'failures',
+    'photos',
+    'files',
+    'confirmed',
+  };
+
+  static const _priorities = {'low', 'normal', 'high'};
+  static const _answerValues = {'pass', 'fail', 'na'};
+  static final _itemIds = {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id']! as String};
+
   /// Server-side validation mirrors the app's wizard validators, so a client
-  /// that skips them still gets field errors back (HTTP 422).
-  Map<String, String> validateInspection(Map<String, Object?> body, {required bool submitting, bool isNew = false}) {
+  /// that skips them still gets field errors back (HTTP 422). [record] is the
+  /// inspection as it would be stored, plus `confirmed` from the request.
+  Map<String, String> validateInspection(Map<String, Object?> record, {required bool submitting, bool isNew = false}) {
     final f = <String, String>{};
-    final siteId = body['siteId'];
-    final siteName = (body['site'] as String?)?.trim() ?? '';
-    if (siteId == null && siteName.length < 3) f['site'] = 'required';
-    if (!inspectionTypes.contains(body['type'])) f['type'] = 'required';
-    final at = DateTime.tryParse(body['scheduledAt'] as String? ?? '');
+    final site = record['site'];
+    if (site is! String || site.trim().length < 3) f['site'] = 'required';
+    if (!inspectionTypes.contains(record['type'])) f['type'] = 'required';
+    final at = switch (record['scheduledAt']) {
+      final String s => DateTime.tryParse(s),
+      _ => null,
+    };
+    final now = _clock();
     if (at == null) {
       f['scheduledAt'] = 'required';
-    } else if (isNew && at.isBefore(DateTime(_clock().year, _clock().month, _clock().day))) {
+    } else if (isNew && at.isBefore(DateTime(now.year, now.month, now.day))) {
       f['scheduledAt'] = 'past';
     }
-    final duration = body['durationMin'];
+    final duration = record['durationMin'];
     if (duration is! int || duration < 15 || duration > 480) f['durationMin'] = 'range';
-    if ((body['notes'] as String? ?? '').length > 500) f['notes'] = 'tooLong';
-    if (!const {'low', 'normal', 'high'}.contains(body['priority'] ?? 'normal')) f['priority'] = 'invalid';
+    if (record['notes'] case final String notes when notes.length > 500) f['notes'] = 'tooLong';
+    if (!_priorities.contains(record['priority'] ?? 'normal')) f['priority'] = 'invalid';
     if (submitting) {
-      final answers = (body['answers'] as Map?) ?? const {};
-      final items = (fireSafetyTemplate['items']! as List).cast<Map>();
-      if (items.any((it) => !answers.containsKey(it['id']))) f['answers'] = 'incomplete';
-      if (body['confirmed'] != true) f['confirmed'] = 'required';
+      final answers = record['answers'];
+      if (answers is! Map || _itemIds.any((id) => !answers.containsKey(id))) f['answers'] = 'incomplete';
+      if (record['confirmed'] != true) f['confirmed'] = 'required';
     }
     return f;
   }
 
   Map<String, Object?> createInspection(Map<String, Object?> body, {bool submit = false}) {
-    final errors = validateInspection(body, submitting: submit, isNew: true);
-    if (errors.isNotEmpty) throw MockError(422, 'validation', fields: errors);
-    final site = sites.where((s) => s['id'] == body['siteId']).firstOrNull;
-    final now = _clock().toIso8601String();
-    final created = <String, Object?>{
-      'id': 'INS-${_nextId++}',
-      'siteId': body['siteId'] ?? 's-new-$_nextId',
-      'site': site?['name'] ?? body['site'],
-      'address': site?['address'] ?? body['address'] ?? '',
-      'postcode': site?['postcode'] ?? '',
-      'city': site?['city'] ?? '',
-      'icon': site?['icon'] ?? 'location_on',
-      'lat': site?['lat'] ?? body['lat'],
-      'lng': site?['lng'] ?? body['lng'],
+    final id = 'INS-$_nextId';
+    final record = _prepare(body, id: id, submit: submit);
+    _nextId++;
+    _inspections.add({
+      'id': id,
+      ...record,
       'status': submit ? 'submitted' : 'draft',
-      'type': body['type'],
       'templateId': fireSafetyTemplate['id'],
-      'scheduledAt': body['scheduledAt'],
-      'durationMin': body['durationMin'],
-      'priority': body['priority'] ?? 'normal',
       'inspector': inspectorAnna,
       'siteManager': siteManagerPiotr,
-      'answers': body['answers'] ?? const <String, String>{},
-      'photos': _storePhotos(body['photos'], const []),
-      'files': body['files'] ?? const [],
-      'notes': body['notes'] ?? '',
       'archived': false,
-      'updatedAt': now,
-    };
-    _inspections.add(created);
-    return getInspection(created['id']! as String);
+      'updatedAt': _clock().toIso8601String(),
+    });
+    return getInspection(id);
   }
 
+  /// Merges [body] into the stored inspection. Only [writableKeys] change; the
+  /// whole body is checked before anything is stored.
   Map<String, Object?> updateInspection(String id, Map<String, Object?> body, {bool submit = false}) {
     final existing = _find(id);
-    final merged = {...existing, ...body};
-    final errors = validateInspection(merged, submitting: submit);
-    if (errors.isNotEmpty) throw MockError(422, 'validation', fields: errors);
-    final photos = _storePhotos(body['photos'] ?? existing['photos'], (existing['photos'] as List?) ?? const []);
+    final record = _prepare(body, id: id, existing: existing, submit: submit);
     existing
-      ..addAll(body)
-      ..['photos'] = photos
+      ..addAll(record)
       ..['status'] = submit ? 'submitted' : existing['status']
       ..['updatedAt'] = _clock().toIso8601String();
     return getInspection(id);
   }
 
+  /// The client-writable fields of the inspection [id] after applying [body]
+  /// to [existing] (null for a create). Throws 422 with field errors, before
+  /// anything is stored, for values of the wrong type, an unknown site or a
+  /// failed validation rule.
+  Map<String, Object?> _prepare(Map<String, Object?> body, {required String id, Map<String, Object?>? existing, required bool submit}) {
+    final b = {
+      for (final e in body.entries)
+        if (writableKeys.contains(e.key)) e.key: e.value,
+    };
+    final errors = _shapeErrors(b);
+    final record = <String, Object?>{
+      if (existing == null) ...{
+        'priority': 'normal',
+        'notes': '',
+        'answers': <String, Object?>{},
+        'failures': <String, Object?>{},
+        'photos': <Object?>[],
+        'files': <Object?>[],
+      },
+      for (final k in const ['type', 'scheduledAt', 'durationMin', 'priority', 'notes', 'answers', 'failures', 'files', 'checkedInAt'])
+        if (b.containsKey(k) && !errors.containsKey(k)) k: _copy(b[k]),
+    };
+
+    // Site: a known id copies that site's details; a name alone is a new site.
+    if (b['siteId'] case final String siteId) {
+      final site = _siteById(siteId);
+      if (site == null) {
+        errors['site'] ??= 'unknown';
+      } else {
+        record.addAll(site);
+      }
+    } else if (b['site'] is String || existing == null) {
+      record.addAll({
+        'siteId': 's-new-$id',
+        'site': switch (b['site']) {
+          final String s => s.trim(),
+          _ => '',
+        },
+        'address': b['address'] is String ? b['address'] : '',
+        'postcode': '',
+        'city': '',
+        'icon': 'location_on',
+        'lat': errors.containsKey('lat') ? null : b['lat'],
+        'lng': errors.containsKey('lng') ? null : b['lng'],
+      });
+    }
+
+    if (b['photos'] case final List<Object?> photos when !errors.containsKey('photos')) {
+      record['photos'] = _storePhotos(photos, (existing?['photos'] as List?) ?? const []);
+    }
+
+    final rules = validateInspection({...?existing, ...record, 'confirmed': b['confirmed']}, submitting: submit, isNew: existing == null);
+    final all = {...rules, ...errors};
+    if (all.isNotEmpty) throw MockError(422, 'validation', fields: all);
+    return record;
+  }
+
+  /// Field errors for values of the wrong JSON type or shape. A wrong `siteId`
+  /// is reported on `site`, the field the app shows.
+  static Map<String, String> _shapeErrors(Map<String, Object?> b) {
+    final f = <String, String>{};
+    bool isNum(Object? v) => v is num && v.isFinite;
+    for (final k in const ['siteId', 'site', 'address', 'type', 'scheduledAt', 'priority', 'notes']) {
+      if (b[k] != null && b[k] is! String) f[k == 'siteId' ? 'site' : k] = 'invalid';
+    }
+    for (final k in const ['lat', 'lng']) {
+      if (b[k] != null && !isNum(b[k])) f[k] = 'invalid';
+    }
+    if (b['confirmed'] is! bool?) f['confirmed'] = 'invalid';
+    if (b['checkedInAt'] case final Object c) {
+      final ok = c is Map && isNum(c['lat']) && isNum(c['lng']) && (c['accuracy'] == null || isNum(c['accuracy']));
+      if (!ok) f['checkedInAt'] = 'invalid';
+    }
+    if (b.containsKey('answers')) {
+      final a = b['answers'];
+      if (a is! Map || a.entries.any((e) => !_itemIds.contains(e.key) || !_answerValues.contains(e.value))) f['answers'] = 'invalid';
+    }
+    if (b.containsKey('failures')) {
+      final m = b['failures'];
+      if (m is! Map || m.entries.any((e) => !_itemIds.contains(e.key) || !_isFailure(e.value))) f['failures'] = 'invalid';
+    }
+    for (final k in const ['photos', 'files']) {
+      if (b.containsKey(k) && !_isAttachmentList(b[k])) f[k] = 'invalid';
+    }
+    return f;
+  }
+
+  /// `{severity: 1–5, followUp: bool, note: String}`, each optional.
+  static bool _isFailure(Object? v) =>
+      v is Map &&
+      switch (v['severity']) {
+        null => true,
+        final int s => s >= 1 && s <= 5,
+        _ => false,
+      } &&
+      v['followUp'] is bool? &&
+      v['note'] is String?;
+
+  /// A list of `{id, name?, caption?, sizeBytes?, forItem?, isPhoto?, takenAt?,
+  /// lat?, lng?}` with unique, non-empty string ids.
+  static bool _isAttachmentList(Object? v) {
+    if (v is! List) return false;
+    final ids = <String>{};
+    for (final a in v) {
+      if (a is! Map) return false;
+      final id = a['id'];
+      if (id is! String || id.isEmpty || !ids.add(id)) return false;
+      if (a['name'] is! String? || a['caption'] is! String? || a['forItem'] is! String? || a['isPhoto'] is! bool?) return false;
+      final size = a['sizeBytes'];
+      if (size != null && (size is! int || size < 0)) return false;
+      final takenAt = a['takenAt'];
+      if (takenAt != null && (takenAt is! String || DateTime.tryParse(takenAt) == null)) return false;
+      for (final k in const ['lat', 'lng']) {
+        final n = a[k];
+        if (n != null && (n is! num || !n.isFinite)) return false;
+      }
+    }
+    return true;
+  }
+
+  /// Site details for [siteId]: a fixture site, or a free-text site that an
+  /// earlier inspection created. Null when there is no such site.
+  Map<String, Object?>? _siteById(String siteId) {
+    final fixture = sites.where((s) => s['id'] == siteId).firstOrNull;
+    final source = fixture ?? _inspections.where((i) => i['siteId'] == siteId).firstOrNull;
+    if (source == null) return null;
+    return {
+      'siteId': siteId,
+      'site': fixture != null ? fixture['name'] : source['site'],
+      for (final k in const ['address', 'postcode', 'city', 'icon', 'lat', 'lng']) k: source[k],
+    };
+  }
+
   /// Turns uploaded photo metadata (`{id, name, sizeBytes, forItem}` from the
   /// app's drafts) into stored photo records, like a real API would: known ids
-  /// keep their record, new ones get a caption and a server timestamp.
-  List<Map<String, Object?>> _storePhotos(Object? uploaded, List<Object?> current) {
-    final known = {for (final p in current.cast<Map<String, Object?>>()) p['id']: p};
+  /// keep their stored record, new ones get a caption and a server timestamp.
+  /// The list replaces the stored one, so a photo left out is removed.
+  List<Map<String, Object?>> _storePhotos(List<Object?> uploaded, List<Object?> current) {
+    final known = {
+      for (final p in current)
+        if (p is Map) p['id']: p.cast<String, Object?>(),
+    };
     final now = _clock().toIso8601String();
     return [
-      for (final p in ((uploaded as List?) ?? const []).cast<Map<String, Object?>>())
-        known[p['id']] ??
-            (p.containsKey('takenAt')
-                ? p
-                : {
-                    'id': p['id'],
-                    'caption': p['caption'] ?? p['name'] ?? '',
-                    'takenAt': now,
-                    'sizeBytes': p['sizeBytes'] ?? 0,
-                    if (p['forItem'] != null) 'forItem': p['forItem'],
-                  }),
+      for (final p in uploaded)
+        if (p is Map)
+          known[p['id']] ??
+              {
+                'id': p['id'],
+                'caption': p['caption'] ?? p['name'] ?? '',
+                'takenAt': p['takenAt'] ?? now,
+                'sizeBytes': p['sizeBytes'] ?? 0,
+                if (p['lat'] != null) 'lat': p['lat'],
+                if (p['lng'] != null) 'lng': p['lng'],
+                if (p['forItem'] != null) 'forItem': p['forItem'],
+              },
     ];
   }
 
@@ -299,3 +456,11 @@ class MockDatabase {
 
   void deleteNotification(String id) => _notifications.removeWhere((n) => n['id'] == id);
 }
+
+/// A deep copy of a JSON-like value, so stored records never share maps or
+/// lists with the caller (the app's offline fake passes its own objects).
+Object? _copy(Object? v) => switch (v) {
+  final Map m => {for (final e in m.entries) '${e.key}': _copy(e.value)},
+  final List l => [for (final x in l) _copy(x)],
+  _ => v,
+};

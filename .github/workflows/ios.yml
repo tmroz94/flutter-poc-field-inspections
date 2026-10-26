@@ -7,6 +7,9 @@ name: iOS simulator tests
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   simulator:
     name: iPhone simulator
@@ -17,7 +20,7 @@ jobs:
       - name: Flutter version from .fvmrc
         id: fvm
         run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: ${{ steps.fvm.outputs.version }}
           channel: stable
@@ -37,6 +40,16 @@ jobs:
       - name: Integration flows on the simulator
         working-directory: app
         run: flutter test integration_test -d ${{ steps.sim.outputs.udid }}
+      # permission_handler compiles in only the permissions whose usage strings
+      # are in Info.plist (its Swift package reads them); log what it resolved.
+      # Flutter links each plugin's package as <name>-<version> in .packages.
+      - name: permission_handler macros
+        if: always()
+        continue-on-error: true
+        working-directory: app
+        run: |
+          pkg=$(ls -d ios/Flutter/ephemeral/Packages/.packages/permission_handler_apple-* | head -n 1)
+          PERMISSION_HANDLER_VERBOSE=1 swift package --manifest-cache none --package-path "$pkg" dump-package > /dev/null
       - name: Screenshot on failure
         if: failure()
         run: xcrun simctl io ${{ steps.sim.outputs.udid }} screenshot ios-failure.png

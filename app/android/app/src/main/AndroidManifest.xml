@@ -11,7 +11,7 @@
     <!-- No CAMERA permission on purpose: image_picker uses the system camera app,
          and declaring CAMERA would make that intent require the permission. -->
     <application
-        android:label="field_inspections"
+        android:label="Field Inspections"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
