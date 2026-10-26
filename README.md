@@ -94,4 +94,4 @@ CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run 
 | M1 | Shell, auth screens, lists, detail, list-detail, photo viewer | done |
 | M2 | Wizard, validators, drafts, outbox | done |
 | M3 | Camera, files, maps, notifications, biometrics, permissions | done |
-| M4 | Appearance, EN/PL, a11y, adaptive widgets, diagnostics, results tracker, goldens, integration tests, wasm build | done (iOS still to run on the Mac) |
+| M4 | Appearance, EN/PL, a11y, adaptive widgets, diagnostics, results tracker, goldens, integration tests, wasm build | done (iOS: simulator checks done, a physical iPhone still to do) |

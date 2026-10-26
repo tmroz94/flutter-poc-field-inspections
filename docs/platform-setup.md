@@ -77,11 +77,25 @@ To see what it resolved, from `app/`:
 PERMISSION_HANDLER_VERBOSE=1 swift package --package-path ~/.pub-cache/hosted/pub.dev/permission_handler_apple-9.6.4/ios/permission_handler_apple dump-package > /dev/null
 ```
 
-Things to verify on iOS (record them in the Results tracker):
+Checked on the iPhone 18 Pro simulator (iOS 27.0) on 26 October 2026; results
+in "Verified so far" below. How to drive the simulator for these:
 
-- Camera denied → the P12 banner and "Open settings" (Settings › Field Inspections › Camera).
-- Face ID / Touch ID on the unlock screen; the simulator can simulate enrolled biometrics (Features › Face ID).
-- Reminder notifications while the app is open (shown by the delegate), in the background and after it was closed.
+- Face ID: `xcrun simctl spawn <udid> notifyutil -s com.apple.BiometricKit.enrollmentChanged 1`
+  then `-p com.apple.BiometricKit.enrollmentChanged` to enroll; while the Face ID
+  panel is up, `-p com.apple.BiometricKit_Sim.pearl.match` (or `.nomatch`).
+- Denied permissions: `xcrun simctl privacy <udid> revoke camera dev.flutterpoc.fieldInspections`
+  (also `location`, `grant`, `reset`); granting while the app is in the background doesn't restart it.
+- Notifications: the deep-link tester schedules one 15 s ahead; `simctl terminate`
+  covers "after it was closed". Banners and Notification Center rows didn't
+  react to synthetic taps; swiping a row right and pressing Open did.
+- Photos: `xcrun simctl addmedia <udid> photo.jpg`. Files: copy into the
+  `group.com.apple.FileProvider.LocalStorage` app group's `File Provider Storage`
+  folder under the simulator's data, and it shows in On My iPhone.
+
+Still to check on a physical iPhone:
+
+- "Open settings" should land on Settings › Field Inspections; on the simulator it opened the top of Settings.
+- The camera itself, real GPS and real Face ID (the simulator showed no separate "allow Face ID" alert).
 - Universal links need an Apple developer team and the Associated Domains entitlement (docs/deep-links.md); the custom scheme works without them.
 
 ## Web
@@ -103,14 +117,16 @@ Things to verify on iOS (record them in the Results tracker):
 | Check | Android emulator | Chrome | iOS |
 |---|---|---|---|
 | Map tiles, pins, `?site=` deep link | ✓ | ✓ | tiles, pins and my location ✓ (simulator) |
-| PDF export | builds; share sheet not opened in tests | ✓ downloaded | – |
-| Test notification → tap opens its route (app in background) | ✓ | ✓ shown by the service worker, click opens the route; tab closed too (Playwright) | – |
-| Notification tap after the app was killed | ✓ cold start on the route (host helper; a dropped-tap bug fixed) | n/a | – |
-| Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | – |
-| Camera / gallery / files | ✓ camera app and photo picker (Patrol); file picker with fakes | tests with fakes | camera prompt ✓, then "Camera not available" (the simulator has none) |
-| Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | ✓ granted and denied (Playwright) | location and camera prompts with the Info.plist texts, Allow ✓; Diagnostics then shows Granted (simulator) |
-| Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | – |
-| Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | – |
+| PDF export | builds; share sheet not opened in tests | ✓ downloaded | ✓ 2 pages, same content (Polish letters transliterated, as everywhere) |
+| Notification while the app is open | ✓ | ✓ | ✓ banner over the app (the `AppDelegate` delegate answers `willPresent`) |
+| Test notification → tap opens its route (app in background) | ✓ | ✓ shown by the service worker, click opens the route; tab closed too (Playwright) | ✓ banner on the home screen; opened from Notification Center onto the route |
+| Notification tap after the app was killed | ✓ cold start on the route (host helper; a dropped-tap bug fixed) | n/a | ✓ cold start on the route (`simctl terminate`, then opened from Notification Center) |
+| Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | ✓ simulated Face ID: turning it on asks once, cold start locks, no match shows iOS's "Face Not Recognised" and stays locked, match opens Home |
+| Camera / gallery / files | ✓ camera app and photo picker (Patrol); file picker with fakes | tests with fakes | camera prompt ✓, then "Camera not available" (the simulator has none); gallery through iOS's private picker (no Photos permission needed) ✓; PDF from Files › On My iPhone ✓ |
+| Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | ✓ granted and denied (Playwright) | location, camera and notification prompts with the Info.plist texts, Allow ✓; Diagnostics then shows Granted (simulator) |
+| Denied camera / location → banner or snackbar with Settings | ✓ (Patrol) | n/a | ✓ banner (Take photo disabled) and snackbar; "Open settings" opens the Settings app but at its top page, not the app's (simulator; recheck on a phone). Diagnostics updates on return without a restart |
+| Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | ✓ iOS share sheet; Save to Files gives `inspection-INS-1042.pdf` |
+| Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | diagnostics ✓ (tracker and adaptive widgets not opened yet) |
 | Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows, iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1) |
 | Camera (browser file input), geolocation in the browser | n/a | ✓ (Playwright) | – |
 | Offline submit → sync when back online (airplane mode) | ✓ | – | – |
