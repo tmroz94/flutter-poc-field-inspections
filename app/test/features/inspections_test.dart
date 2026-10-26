@@ -8,6 +8,7 @@ import 'package:field_inspections/data/repositories/inspections_repository.dart'
 import 'package:field_inspections/features/inspections/inspection_screens.dart';
 import 'package:field_inspections/features/inspections/inspections_controller.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -337,5 +338,13 @@ void main() {
       expect(shared, contains('/inspections/INS-1042/photos/p3'));
       expect(shared, isNot(contains('/photos/p2')));
     });
+  });
+
+  // Found on CI: an Undo whose request finished after the app had closed threw.
+  test('an archive or undo that finishes after the app closed changes nothing', () {
+    final c = ProviderContainer();
+    final revision = c.read(inspectionsRevisionProvider.notifier);
+    c.dispose();
+    expect(revision.changed, returnsNormally);
   });
 }

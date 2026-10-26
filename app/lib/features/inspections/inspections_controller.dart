@@ -183,7 +183,10 @@ class InspectionsRevision extends Notifier<int> {
   int build() => 0;
 
   /// [lists]: also reload every inspections list (archive updates its own list in place).
+  /// Does nothing once the app is closing: an archive or undo that finishes
+  /// after that has no screens left to refresh.
   void changed({bool lists = true}) {
+    if (!ref.mounted) return;
     if (lists) ref.invalidate(inspectionListProvider);
     ref
       ..invalidate(inspectionDetailProvider)
