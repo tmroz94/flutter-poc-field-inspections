@@ -1,30 +1,33 @@
 # Flutter PoC – Field Inspections
 
-One Flutter codebase for **iOS, Android and Web**, built to find out how well
+One Flutter codebase for **iOS, Android, Web, macOS, Windows and Linux**, built to find out how well
 a single codebase covers common app scenarios: navigation, deep links, forms,
 lists, animations, offline data and platform integrations. The design is the
 Claude Design canvas "Flutter PoC – Field Inspections" (Material 3).
 
 | Folder | What |
 |---|---|
-| `app/` | Flutter app (android, ios, web) |
+| `app/` | Flutter app (android, ios, web, macos, linux, windows) |
 | `packages/mock_data/` | Pure-Dart fixtures + in-memory backend, shared by the server and the app's offline fake |
 | `mock_server/` | Local REST mock API (shelf): CORS, latency and failure injection |
 | `design/` | Design tokens copied from the canvas |
-| `docs/` | `decisions.md` (how mock gaps were resolved), `deep-links.md`, `platform-setup.md` (Android/iOS/web specifics, Mac steps, what's verified), `testing.md` (tests, goldens, integration tests, JS vs wasm) |
+| `docs/` | `setup.md` (machine setup on macOS, Linux and Windows; running every target), `decisions.md` (how mock gaps were resolved), `deep-links.md`, `platform-setup.md` (Android/iOS/web/desktop specifics, what's verified), `testing.md` (tests, goldens, integration tests, JS vs wasm) |
 | `web_e2e/` | Playwright tests of the web builds: browser prompts (notifications, location, camera) and JS vs WebAssembly frame timings |
 | `tool/` | `check.ps1` / `check.sh` quality gate, `serve_web.py` (SPA host, optional COOP/COEP), `code_stats.dart` (shared-code ratio for Diagnostics), `android_device_tests.dart` (device tests with adb-driven steps), `gen_color_schemes.py` |
 
 ## Setup
 
 Flutter is pinned with [FVM](https://fvm.app) in `.fvmrc` (currently 3.47.8).
+Step-by-step setup for macOS, Linux and Windows, what each machine can build,
+and how to run every target: **[docs/setup.md](docs/setup.md)**. In short:
 
 ```bash
 fvm install
 ```
 
-On Windows FVM needs Developer Mode (Settings › System › For developers) to
-create its SDK link. iOS builds need a Mac with Xcode; use the same `.fvmrc`.
+```bash
+cd app && fvm flutter pub get
+```
 
 ## Run
 
@@ -34,35 +37,18 @@ Mock API (optional; without it the app uses its built-in offline fake):
 fvm dart run mock_server/bin/server.dart --port 8080
 ```
 
-App:
+App, from `app/` (`fvm flutter devices` lists the targets):
 
 ```bash
-cd app && fvm flutter run -d chrome
+fvm flutter run -d chrome
 ```
 
-```bash
-cd app && fvm flutter run -d emulator-5554
-```
-
-On the Mac: `cd app && fvm flutter run -d ios`.
+Other targets: `-d emulator-5554` (Android), `-d <simulator id>` (iOS, on a
+Mac), `-d macos`, `-d linux`, `-d windows` (each on its own OS). Production-like
+web builds, release builds and what differs on desktop: [docs/setup.md](docs/setup.md#run).
 
 Demo account: `anna.nowak@example.com` / `inspect123` (mock backend only), or
 tap **Use demo account**.
-
-Web like production (SPA rewrite, so deep-link refresh works; serves `.wasm` as
-`application/wasm` for SQLite on the web):
-
-```bash
-cd app && fvm flutter build web && cd .. && python tool/serve_web.py
-```
-
-WebAssembly build (Skwasm renderer; browsers without WasmGC fall back to the
-JS build automatically). `--isolate` adds the COOP/COEP headers it works best
-with:
-
-```bash
-cd app && fvm flutter build web --wasm -o build/web-wasm && cd .. && python tool/serve_web.py 5176 build/web-wasm --isolate
-```
 
 ## Check
 
@@ -75,7 +61,7 @@ router, accessibility and golden tests). On macOS/Linux: `tool/check.sh`.
 Device tests (Android, including airplane mode and GPS steps driven from the host): `fvm dart tool/android_device_tests.dart`. Native UI (permission dialogs, camera, photo picker, share sheet, biometric prompt, notification tap after a kill) with Patrol: `fvm dart tool/android_device_tests.dart --patrol`. Web: the same flows in Chrome via `flutter drive`, and browser prompts plus JS vs WebAssembly timings with Playwright in `web_e2e/` (see `docs/testing.md`).
 Details in `docs/testing.md`.
 
-CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run on every push (`.github/workflows/ci.yml`); the Android emulator and iOS simulator jobs run when started by hand from the Actions tab.
+CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run on every push (`.github/workflows/ci.yml`), and so does the Linux app build with the integration flows (`desktop.yml`); the Android emulator, iOS simulator, Windows and macOS jobs run when started by hand from the Actions tab.
 
 ## PoC tools (Settings › PoC tools)
 
@@ -95,3 +81,4 @@ CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run 
 | M2 | Wizard, validators, drafts, outbox | done |
 | M3 | Camera, files, maps, notifications, biometrics, permissions | done |
 | M4 | Appearance, EN/PL, a11y, adaptive widgets, diagnostics, results tracker, goldens, integration tests, wasm build | done (iOS: simulator checks done, a physical iPhone still to do) |
+| Desktop | macOS, Windows and Linux apps: desktop capabilities (no camera, Save for exports, Linux can't schedule notifications), CI builds | macOS: integration flows pass; Windows, Linux: CI only, not yet run |

@@ -113,7 +113,7 @@ class LocationService {
   }
 }
 
-enum ShareOutcome { shared, copied, dismissed }
+enum ShareOutcome { shared, saved, copied, dismissed }
 
 /// Share sheet on iOS/Android; the Web Share API where the browser has it,
 /// otherwise the link is copied (some desktop browsers lack navigator.share).
@@ -130,11 +130,22 @@ class ShareService {
     }
   }
 
-  /// Mobile: share sheet with the file. Web: the file downloads.
-  Future<ShareOutcome> shareFile({required Uint8List bytes, required String fileName, required String mime, required bool isWeb}) async {
-    if (isWeb) {
+  /// Mobile: share sheet with the file. Web: the file downloads. Desktop: a
+  /// Save dialog (share_plus can't share files on Linux, and saving is what a
+  /// desktop user expects from "Export").
+  Future<ShareOutcome> shareFile({
+    required Uint8List bytes,
+    required String fileName,
+    required String mime,
+    required Capabilities caps,
+  }) async {
+    if (caps.isWeb) {
       web_bridge.downloadBytes(bytes, fileName, mime);
       return ShareOutcome.shared;
+    }
+    if (caps.isDesktop) {
+      final saved = await FilePicker.saveFile(fileName: fileName, bytes: bytes, mimeType: mime);
+      return saved == null ? ShareOutcome.dismissed : ShareOutcome.saved;
     }
     final r = await SharePlus.instance.share(
       ShareParams(

@@ -9,15 +9,19 @@ import 'package:timezone/timezone.dart' as tz;
 import '../router/deep_links.dart';
 import 'platform_services.dart';
 
-/// Local notifications on iOS, Android and the web. Every notification's
-/// payload is an in-app route; tapping it opens that page (P17, deep links).
+/// Local notifications on iOS, Android, macOS, Windows, Linux and the web.
+/// Every notification's payload is an in-app route; tapping it opens that page
+/// (P17, deep links).
 ///
 /// The web shows notifications only while a tab is open and cannot schedule
-/// them (browser limitation), so [schedule] returns false there.
+/// them (browser limitation); Linux's plugin can't schedule either. [schedule]
+/// returns false on both.
 class NotificationService {
-  NotificationService({this.isWeb = kIsWeb});
+  NotificationService({this.isWeb = kIsWeb, bool? canSchedule})
+    : canSchedule = canSchedule ?? (!isWeb && defaultTargetPlatform != TargetPlatform.linux);
 
   final bool isWeb;
+  final bool canSchedule;
   final _plugin = FlutterLocalNotificationsPlugin();
   late final _taps = StreamController<String>.broadcast(onListen: _flushPending);
   bool _ready = false;
@@ -61,6 +65,14 @@ class NotificationService {
       priority: Priority.high,
     ),
     iOS: DarwinNotificationDetails(),
+    macOS: DarwinNotificationDetails(),
+  );
+
+  // Ask for permission from the UI (P17 "Turn on"), not at start-up.
+  static const _darwin = DarwinInitializationSettings(
+    requestAlertPermission: false,
+    requestBadgePermission: false,
+    requestSoundPermission: false,
   );
 
   /// Initialises the plugin. Returns the route of the notification that
@@ -71,8 +83,14 @@ class NotificationService {
       await _plugin.initialize(
         settings: const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-          // Ask for permission from the UI (P17 "Turn on"), not at start-up.
-          iOS: DarwinInitializationSettings(requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false),
+          iOS: _darwin,
+          macOS: _darwin,
+          linux: LinuxInitializationSettings(defaultActionName: 'Open'),
+          windows: WindowsInitializationSettings(
+            appName: 'Field Inspections',
+            appUserModelId: 'dev.flutterpoc.FieldInspections',
+            guid: '019f31a2-22eb-49e8-b857-c3967afcdfae',
+          ),
           web: WebInitializationSettings(),
         ),
         onDidReceiveNotificationResponse: (r) {
@@ -103,7 +121,10 @@ class NotificationService {
       final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       if (android != null) return (await android.areNotificationsEnabled() ?? false) ? PermissionState.granted : PermissionState.denied;
       final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-      final perms = await ios?.checkPermissions();
+      final macos = _plugin.resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>();
+      // Windows and Linux have no permission prompt for app notifications.
+      if (ios == null && macos == null) return PermissionState.granted;
+      final perms = await (ios?.checkPermissions() ?? macos!.checkPermissions());
       return (perms?.isEnabled ?? false) ? PermissionState.granted : PermissionState.denied;
     } on Object {
       return PermissionState.unsupported;
@@ -122,12 +143,11 @@ class NotificationService {
       }
       final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       if (android != null) return await android.requestNotificationsPermission() ?? false;
-      return await _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          ) ??
-          false;
+      final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) return await ios.requestPermissions(alert: true, badge: true, sound: true) ?? false;
+      final macos = _plugin.resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>();
+      if (macos != null) return await macos.requestPermissions(alert: true, badge: true, sound: true) ?? false;
+      return true; // Windows, Linux: nothing to ask.
     } on Object {
       return false;
     }
@@ -138,9 +158,9 @@ class NotificationService {
     await _plugin.show(id: id, title: title, body: body, notificationDetails: _details, payload: route);
   }
 
-  /// Schedules a notification at [at]; false where scheduling isn't possible (web).
+  /// Schedules a notification at [at]; false where scheduling isn't possible (web, Linux).
   Future<bool> schedule({required int id, required DateTime at, required String title, required String body, required String route}) async {
-    if (!_ready || isWeb) return false;
+    if (!_ready || !canSchedule) return false;
     await _plugin.zonedSchedule(
       id: id,
       // An absolute instant: no time-zone database lookup needed for one-off reminders.

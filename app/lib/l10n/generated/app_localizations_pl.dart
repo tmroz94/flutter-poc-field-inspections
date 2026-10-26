@@ -380,6 +380,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get remindersWebSubtitle => 'Niedostępne w przeglądarce';
 
   @override
+  String get remindersLinuxSubtitle => 'Niedostępne w systemie Linux';
+
+  @override
   String get biometricUnlock => 'Odblokowanie biometryczne';
 
   @override

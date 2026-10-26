@@ -112,6 +112,27 @@ Still to check on a physical iPhone:
 - OpenStreetMap tiles: fine for a PoC; production needs a tile provider or
   your own server (OSM tile usage policy).
 
+## Desktop apps (macOS, Windows, Linux)
+
+Added after M4 from the same codebase (`flutter create --platforms=macos,linux,windows`).
+What differs from the phones is in `Capabilities` and summed up in
+[setup.md](setup.md#what-differs-on-the-desktop-apps). In the repo:
+
+| Need | Where |
+|---|---|
+| App Sandbox entitlements: outgoing network, user-selected files (read/write), location | `macos/Runner/DebugProfile.entitlements`, `Release.entitlements` |
+| Location usage strings, local networking for the mock API | `macos/Runner/Info.plist` |
+| App and window name "Field Inspections" | `macos/Runner/Configs/AppInfo.xcconfig`, `linux/runner/my_application.cc`, `windows/runner/main.cpp`, `Runner.rc` |
+| macOS window opens at 1280 × 720 like the other two, with restoration off (it otherwise brought back the template's 800 × 600) | `macos/Runner/MainFlutterWindow.swift` |
+| Notification settings for macOS, Linux and Windows (Windows needs an app ID and a GUID) | `lib/core/platform/notification_service.dart` |
+
+Verified on macOS 27 (Apple silicon): the 7 shared integration flows pass
+(`app_test` and `ui_flows_test`, one file per `flutter test` run: a second
+launch in the same run lost its debug connection), and the sandboxed app
+reaches the mock API. Not checked by hand there yet: the notification and
+location prompts, map tiles, file dialogs and Save. Windows and Linux: CI only
+(`desktop.yml`), not yet run.
+
 ## Verified so far
 
 | Check | Android emulator | Chrome | iOS |

@@ -355,6 +355,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remindersWebSubtitle => 'Not available in the browser';
 
   @override
+  String get remindersLinuxSubtitle => 'Not available on Linux';
+
+  @override
   String get biometricUnlock => 'Biometric unlock';
 
   @override

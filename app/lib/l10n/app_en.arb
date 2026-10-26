@@ -217,6 +217,7 @@
   "inspectionReminders": "Inspection reminders",
   "remindersSubtitle": "30 minutes before start",
   "remindersWebSubtitle": "Not available in the browser",
+  "remindersLinuxSubtitle": "Not available on Linux",
   "biometricUnlock": "Biometric unlock",
   "biometricSubtitle": "Lock after 5 minutes in the background",
   "offlineData": "Offline data",

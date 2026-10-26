@@ -29,6 +29,14 @@ Future<String> _device() async {
       case TargetPlatform.iOS:
         final i = await info.iosInfo;
         return '${i.systemName} ${i.systemVersion} · ${i.modelName}';
+      case TargetPlatform.macOS:
+        final m = await info.macOsInfo;
+        return 'macOS ${m.majorVersion}.${m.minorVersion}.${m.patchVersion} · ${m.modelName}';
+      case TargetPlatform.windows:
+        final w = await info.windowsInfo;
+        return '${w.productName} ${w.displayVersion}';
+      case TargetPlatform.linux:
+        return (await info.linuxInfo).prettyName;
       default:
         return defaultTargetPlatform.name;
     }

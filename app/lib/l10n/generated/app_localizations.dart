@@ -686,6 +686,12 @@ abstract class AppLocalizations {
   /// **'Not available in the browser'**
   String get remindersWebSubtitle;
 
+  /// No description provided for @remindersLinuxSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available on Linux'**
+  String get remindersLinuxSubtitle;
+
   /// No description provided for @biometricUnlock.
   ///
   /// In en, this message translates to:

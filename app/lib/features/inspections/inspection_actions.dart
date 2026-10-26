@@ -19,7 +19,12 @@ class InspectionActions {
   Capabilities get _caps => ref.read(capabilitiesProvider);
 
   void _say(String message) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    // The newest message replaces the last one ("Preparing…" → "Report saved").
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   /// Link to open this inspection: the page URL on the web, the app's custom
@@ -53,7 +58,8 @@ class InspectionActions {
     final bytes = await buildInspectionReport(d, checklist);
     final outcome = await ref
         .read(shareServiceProvider)
-        .shareFile(bytes: bytes, fileName: 'inspection-${d.id}.pdf', mime: 'application/pdf', isWeb: _caps.isWeb);
+        .shareFile(bytes: bytes, fileName: 'inspection-${d.id}.pdf', mime: 'application/pdf', caps: _caps);
     if (_caps.isWeb && outcome == ShareOutcome.shared) _say('Report downloaded: inspection-${d.id}.pdf');
+    if (outcome == ShareOutcome.saved) _say('Report saved: inspection-${d.id}.pdf');
   }
 }

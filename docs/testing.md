@@ -235,6 +235,7 @@ To compare by hand instead, open **Settings › Diagnostics** in each build, tap
 | `ci.yml` | every push and pull request | quality gate (`tool/check.sh --coverage`; goldens skip on Linux), both web builds as artifacts, the integration flows in headless Chrome (`flutter drive`), the Playwright prompt tests |
 | `android.yml` | by hand only | emulator with the local image (API 37, Google Play): `tool/android_device_tests.dart` (including airplane mode and GPS), then `--patrol` (native UI, notification after kill) |
 | `ios.yml` | by hand only | iPhone simulator on a macOS runner: builds for iOS and runs the integration flows |
+| `desktop.yml` | Linux: every push and pull request; Windows and macOS: by hand | builds each desktop app (Linux bundle and Windows release as artifacts) and runs `app_test` and `ui_flows_test` on it, one file per run (Linux under `xvfb-run`) |
 
 Every job installs the Flutter version from `.fvmrc`; `tool/check.sh` and the
 host helper use FVM when it's installed and the plain `flutter`/`dart` on PATH

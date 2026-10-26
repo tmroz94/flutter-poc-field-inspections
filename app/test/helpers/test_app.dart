@@ -29,6 +29,8 @@ const desktopSize = Size(1440, 1000);
 
 const android = Capabilities(isWeb: false, platform: TargetPlatform.android);
 const web = Capabilities(isWeb: true, platform: TargetPlatform.android);
+const macos = Capabilities(isWeb: false, platform: TargetPlatform.macOS);
+const linux = Capabilities(isWeb: false, platform: TargetPlatform.linux);
 
 /// A stored session for the demo user; the mock backend accepts its token.
 Map<String, String> signedInStore({bool biometricLock = false}) => {

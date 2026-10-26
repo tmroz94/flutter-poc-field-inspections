@@ -9,11 +9,11 @@ import '../../data/models/list_query.dart';
 import '../../data/providers.dart';
 import '../inspections/inspections_controller.dart';
 
-enum RemindersResult { on, off, permissionDenied, unsupportedOnWeb }
+enum RemindersResult { on, off, permissionDenied, unsupported }
 
 /// "Inspection reminders" (P19, P17): a notification 30 minutes before each
-/// open inspection, which opens that inspection when tapped. The web can't
-/// schedule notifications, so there the setting explains why it's off.
+/// open inspection, which opens that inspection when tapped. The web and Linux
+/// can't schedule notifications, so there the setting explains why it's off.
 class RemindersController extends Notifier<bool> {
   static const _key = 'reminders';
   static const leadTime = Duration(minutes: 30);
@@ -29,7 +29,7 @@ class RemindersController extends Notifier<bool> {
       state = false;
       return RemindersResult.off;
     }
-    if (ref.read(capabilitiesProvider).isWeb) return RemindersResult.unsupportedOnWeb;
+    if (!ref.read(capabilitiesProvider).scheduledNotifications) return RemindersResult.unsupported;
     if (await notifications.permission() != PermissionState.granted && !await notifications.requestPermission()) {
       return RemindersResult.permissionDenied;
     }

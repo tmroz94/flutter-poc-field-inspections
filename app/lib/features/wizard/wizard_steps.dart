@@ -688,7 +688,8 @@ class _ChecklistStepState extends ConsumerState<_ChecklistStep> {
               });
             },
             onFailure: (f) => wizard.update((x) => x.copyWith(failures: {...x.failures, item.id: f})),
-            onAddPhoto: () => addPickedPhoto(ref, context, widget.wizardKey, camera: true, forItem: item.id),
+            onAddPhoto: () =>
+                addPickedPhoto(ref, context, widget.wizardKey, camera: ref.read(capabilitiesProvider).camera, forItem: item.id),
           ),
           const SizedBox(height: 12),
         ],
@@ -1001,11 +1002,12 @@ class _PhotosStepState extends ConsumerState<_PhotosStep> {
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        FilledButton.tonalIcon(
-          onPressed: _cameraDenied ? null : () => _capture(camera: true),
-          icon: const Icon(Symbols.photo_camera),
-          label: Text(caps.isWeb ? 'Use camera' : 'Take photo'),
-        ),
+        if (caps.camera)
+          FilledButton.tonalIcon(
+            onPressed: _cameraDenied ? null : () => _capture(camera: true),
+            icon: const Icon(Symbols.photo_camera),
+            label: Text(caps.isWeb ? 'Use camera' : 'Take photo'),
+          ),
         OutlinedButton.icon(
           onPressed: () => _capture(camera: false),
           icon: const Icon(Symbols.photo_library),
@@ -1038,7 +1040,11 @@ class _PhotosStepState extends ConsumerState<_PhotosStep> {
             Icon(Symbols.upload, size: 40, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 8),
             Text(
-              _dragging ? 'Drop files to upload' : 'Drag files here, or paste an image',
+              _dragging
+                  ? 'Drop files to upload'
+                  : caps.isWeb
+                  ? 'Drag files here, or paste an image'
+                  : 'Drag files here',
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),

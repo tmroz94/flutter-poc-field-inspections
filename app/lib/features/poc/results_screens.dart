@@ -65,7 +65,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           bytes: utf8.encode(text),
           fileName: 'poc-results.${csv ? 'csv' : 'json'}',
           mime: csv ? 'text/csv' : 'application/json',
-          isWeb: ref.read(capabilitiesProvider).isWeb,
+          caps: ref.read(capabilitiesProvider),
         );
   }
 

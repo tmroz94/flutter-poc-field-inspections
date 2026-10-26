@@ -195,8 +195,10 @@ class _PermissionCard extends ConsumerWidget {
       final message = switch (result) {
         RemindersResult.on => 'Reminders are on: 30 minutes before each inspection.',
         RemindersResult.permissionDenied => 'Notifications are blocked. Allow them in the system settings.',
-        RemindersResult.unsupportedOnWeb =>
-          'Browsers can’t schedule notifications. Test ones work from the deep-link tester while this tab is open.',
+        RemindersResult.unsupported =>
+          caps.isWeb
+              ? 'Browsers can’t schedule notifications. Test ones work from the deep-link tester while this tab is open.'
+              : 'Linux can’t schedule notifications. Test ones work from the deep-link tester while the app is open.',
         RemindersResult.off => '',
       };
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -218,9 +220,11 @@ class _PermissionCard extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              caps.isWeb
+              caps.scheduledNotifications
+                  ? 'Turn them on to get an alert 30 minutes before each inspection.'
+                  : caps.isWeb
                   ? 'Browsers show notifications only while the app is open and can’t schedule them.'
-                  : 'Turn them on to get an alert 30 minutes before each inspection.',
+                  : 'Linux shows notifications only while the app is open and can’t schedule them.',
             ),
             const SizedBox(height: 8),
             Align(
@@ -240,12 +244,12 @@ class _PermissionCard extends ConsumerWidget {
 }
 
 /// Sends a notification that opens [route] after [delay] (deep-link tester).
-/// Mobile schedules it so it also works with the app in the background or
-/// closed, with time to close the app first (15 s); the web shows it from a
-/// timer while the tab is open (5 s).
+/// Mobile, macOS and Windows schedule it so it also works with the app in the
+/// background or closed, with time to close the app first (15 s); the web and
+/// Linux show it from a timer while the app is open (5 s).
 Future<String> sendTestNotification(WidgetRef ref, String route, {Duration? delay}) async {
   final n = ref.read(notificationServiceProvider);
-  delay ??= Duration(seconds: n.isWeb ? 5 : 15);
+  delay ??= Duration(seconds: n.canSchedule ? 15 : 5);
   if (await n.permission() != PermissionState.granted && !await n.requestPermission()) {
     return 'Notifications are not allowed on this device.';
   }
@@ -254,7 +258,8 @@ Future<String> sendTestNotification(WidgetRef ref, String route, {Duration? dela
   if (!scheduled) {
     Future.delayed(delay, () => n.show(id: id, title: 'Test link', body: route, route: route));
   }
-  return 'Notification in ${delay.inSeconds} s. ${scheduled ? 'Put the app in the background or close it to test that too.' : 'Keep this tab open.'}';
+  final keepOpen = n.isWeb ? 'Keep this tab open.' : 'Keep the app open.';
+  return 'Notification in ${delay.inSeconds} s. ${scheduled ? 'Put the app in the background or close it to test that too.' : keepOpen}';
 }
 
 /// Lists every route and opens it, and sends test notifications (deep links).

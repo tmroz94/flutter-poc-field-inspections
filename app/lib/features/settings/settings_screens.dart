@@ -28,7 +28,7 @@ class SettingsScreen extends ConsumerWidget {
     if (!context.mounted) return;
     final message = switch (result) {
       RemindersResult.permissionDenied => 'Notifications are blocked for this app. Allow them in the system settings.',
-      RemindersResult.unsupportedOnWeb => 'Browsers can’t schedule notifications, so reminders are mobile-only.',
+      RemindersResult.unsupported => 'This platform can’t schedule notifications, so reminders are off here.',
       _ => null,
     };
     if (message != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -79,9 +79,15 @@ class SettingsScreen extends ConsumerWidget {
         SwitchListTile(
           secondary: const Icon(Symbols.notifications),
           title: Text(context.l10n.inspectionReminders),
-          subtitle: Text(caps.isWeb ? context.l10n.remindersWebSubtitle : context.l10n.remindersSubtitle),
+          subtitle: Text(
+            caps.scheduledNotifications
+                ? context.l10n.remindersSubtitle
+                : caps.isWeb
+                ? context.l10n.remindersWebSubtitle
+                : context.l10n.remindersLinuxSubtitle,
+          ),
           value: reminders,
-          onChanged: caps.isWeb ? null : (v) => _setReminders(context, ref, v),
+          onChanged: caps.scheduledNotifications ? (v) => _setReminders(context, ref, v) : null,
         ),
         if (caps.biometricLock)
           SwitchListTile(

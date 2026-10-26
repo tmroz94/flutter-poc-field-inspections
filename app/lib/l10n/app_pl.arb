@@ -99,6 +99,7 @@
   "inspectionReminders": "Przypomnienia o inspekcjach",
   "remindersSubtitle": "30 minut przed rozpoczęciem",
   "remindersWebSubtitle": "Niedostępne w przeglądarce",
+  "remindersLinuxSubtitle": "Niedostępne w systemie Linux",
   "biometricUnlock": "Odblokowanie biometryczne",
   "biometricSubtitle": "Blokada po 5 minutach w tle",
   "offlineData": "Dane offline",
