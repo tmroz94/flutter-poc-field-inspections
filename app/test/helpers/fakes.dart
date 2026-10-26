@@ -90,10 +90,15 @@ class FakeShare extends ShareService {
   }
 
   @override
-  Future<ShareOutcome> shareFile({required Uint8List bytes, required String fileName, required String mime, required bool isWeb}) async {
+  Future<ShareOutcome> shareFile({
+    required Uint8List bytes,
+    required String fileName,
+    required String mime,
+    required Capabilities caps,
+  }) async {
     files.add(fileName);
     contents[fileName] = bytes;
-    return ShareOutcome.shared;
+    return caps.isDesktop ? ShareOutcome.saved : ShareOutcome.shared;
   }
 }
 
@@ -110,8 +115,11 @@ class FakeLauncher extends LauncherService {
 class FakePermissions extends PermissionService {
   int settingsOpened = 0;
 
+  /// Anything not listed is granted.
+  final states = <AppPermission, PermissionState>{};
+
   @override
-  Future<PermissionState> status(AppPermission p) async => PermissionState.granted;
+  Future<PermissionState> status(AppPermission p) async => states[p] ?? PermissionState.granted;
 
   @override
   Future<bool> openSettings() async {
@@ -122,7 +130,7 @@ class FakePermissions extends PermissionService {
 
 /// Records notifications instead of showing them.
 class FakeNotifications extends NotificationService {
-  FakeNotifications({this.granted = true, super.isWeb = false});
+  FakeNotifications({this.granted = true, super.isWeb = false, super.canSchedule});
 
   bool granted;
 
@@ -158,7 +166,7 @@ class FakeNotifications extends NotificationService {
     String? channelName,
     String? channelDescription,
   }) async {
-    if (isWeb) return false;
+    if (!canSchedule) return false;
     scheduled.add((at, route));
     scheduledTitles.add(title);
     return true;
@@ -174,7 +182,7 @@ class FakeNotifications extends NotificationService {
 /// Bundle of fakes a test can inspect after pumping the app.
 class Fakes {
   Fakes({Capabilities capabilities = const Capabilities(isWeb: false, platform: TargetPlatform.android)})
-    : notifications = FakeNotifications(isWeb: capabilities.isWeb);
+    : notifications = FakeNotifications(isWeb: capabilities.isWeb, canSchedule: capabilities.scheduledNotifications);
 
   final biometrics = FakeBiometrics();
   final location = FakeLocation();

@@ -1,6 +1,9 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+
+import '../../core/platform/capabilities.dart';
 
 part 'app_database.g.dart';
 
@@ -73,6 +76,10 @@ class AppDatabase extends _$AppDatabase {
 
   static QueryExecutor _open() => driftDatabase(
     name: 'field_inspections',
+    // Desktop: the app's support folder, not drift's default of Documents,
+    // which there is the user's own folder (and may not exist on Linux).
+    // Phones keep the default (inside the app's sandbox).
+    native: Capabilities.current().isDesktop ? const DriftNativeOptions(databaseDirectory: getApplicationSupportDirectory) : null,
     web: DriftWebOptions(
       sqlite3Wasm: Uri.parse('sqlite3.wasm'),
       driftWorker: Uri.parse('drift_worker.js'),

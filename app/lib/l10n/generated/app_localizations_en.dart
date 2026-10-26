@@ -355,6 +355,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remindersWebSubtitle => 'Not available in the browser';
 
   @override
+  String get remindersLinuxSubtitle => 'Not available on Linux';
+
+  @override
   String get biometricUnlock => 'Biometric unlock';
 
   @override
@@ -649,9 +652,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get remindersBlocked => 'Notifications are blocked for this app. Allow them in the system settings.';
-
-  @override
-  String get remindersMobileOnly => 'Browsers can’t schedule notifications, so reminders are mobile-only.';
 
   @override
   String get remindersScheduleFailed =>
@@ -1542,4 +1542,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openInspections => 'Open inspections';
+
+  @override
+  String pdfSaved(String file) {
+    return 'Report saved: $file';
+  }
+
+  @override
+  String get remindersUnsupported => 'This platform can’t schedule notifications, so reminders are off here.';
+
+  @override
+  String get remindersOffLinux => 'Linux shows notifications only while the app is open and can’t schedule them.';
+
+  @override
+  String get remindersLinuxTest => 'Linux can’t schedule notifications. Test ones work from the deep-link tester while the app is open.';
+
+  @override
+  String get dragFiles => 'Drag files here';
 }

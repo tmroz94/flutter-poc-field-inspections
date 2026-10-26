@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/platform/capabilities.dart';
 import '../../../core/platform/platform_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/form_support.dart';
@@ -94,7 +95,9 @@ class _ChecklistStepState extends ConsumerState<ChecklistStep> {
               });
             },
             onFailure: (f) => wizard.update((x) => x.copyWith(failures: {...x.failures, item.id: f})),
-            onAddPhoto: () => addPickedPhoto(ref, context, widget.wizardKey, camera: true, forItem: item.id),
+            // Desktop apps have no camera picker: the photo comes from a file.
+            onAddPhoto: () =>
+                addPickedPhoto(ref, context, widget.wizardKey, camera: ref.read(capabilitiesProvider).camera, forItem: item.id),
           ),
           const SizedBox(height: 12),
         ],

@@ -51,6 +51,15 @@ void main() {
       expect(app.fakes.share.files, ['inspection-INS-1042.pdf']);
     });
 
+    testWidgets('export PDF on desktop saves the report through a Save dialog', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042', store: signedInStore(), capabilities: macos);
+      await tester.tap(find.text('Export PDF'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+      await tester.pumpAndSettle();
+      expect(app.fakes.share.files, ['inspection-INS-1042.pdf']);
+      expect(find.text('Report saved: inspection-INS-1042.pdf'), findsOneWidget);
+    });
+
     testWidgets('share report: custom-scheme link on mobile keeps the tab', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042?tab=checklist', store: signedInStore());
       await tester.tap(find.byTooltip('Share report'));
@@ -151,6 +160,14 @@ void main() {
       expect(find.textContaining('Browsers can’t schedule notifications'), findsOneWidget);
     });
 
+    testWidgets('Linux explains it cannot schedule either', (tester) async {
+      await pumpApp(tester, initialLocation: '/notifications', store: signedInStore(), capabilities: linux);
+      expect(find.textContaining('Linux shows notifications only while the app is open'), findsOneWidget);
+      await tester.tap(find.text('Turn on'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Linux can’t schedule notifications'), findsOneWidget);
+    });
+
     testWidgets('a notification tap anywhere opens its route (custom scheme payload too)', (tester) async {
       final app = await pumpApp(tester, store: signedInStore());
       app.fakes.notifications.debugTap('fieldinspections://app/inspections/INS-1042?tab=photos');
@@ -181,6 +198,25 @@ void main() {
       await tester.pump(const Duration(seconds: 6));
       expect(app.fakes.notifications.shown, ['/map?site=s-riverside-office']);
     });
+
+    testWidgets('macOS schedules it like mobile', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/settings/poc/deep-links', store: signedInStore(), capabilities: macos);
+      await tester.scrollUntilVisible(find.byTooltip('Notification for Map'), 200);
+      await tester.tap(find.byTooltip('Notification for Map'));
+      await tester.pumpAndSettle();
+      expect(app.fakes.notifications.scheduled.single.$2, '/map?site=s-riverside-office');
+    });
+
+    testWidgets('Linux shows it from a timer like the web', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/settings/poc/deep-links', store: signedInStore(), capabilities: linux);
+      await tester.scrollUntilVisible(find.byTooltip('Notification for Map'), 200);
+      await tester.tap(find.byTooltip('Notification for Map'));
+      await tester.pump();
+      expect(find.textContaining('Keep the app open'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 6));
+      expect(app.fakes.notifications.shown, ['/map?site=s-riverside-office']);
+      expect(app.fakes.notifications.scheduled, isEmpty);
+    });
   });
 
   group('settings (P19)', () {
@@ -195,6 +231,30 @@ void main() {
     testWidgets('web hides biometric unlock and disables reminders', (tester) async {
       await pumpApp(tester, initialLocation: '/settings', store: signedInStore(), capabilities: web);
       expect(find.text('Biometric unlock'), findsNothing);
+      expect(tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Inspection reminders')).onChanged, isNull);
+    });
+
+    testWidgets('macOS: Touch ID lock and reminders', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/settings', store: signedInStore(), capabilities: macos);
+      expect(tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Inspection reminders')).onChanged, isNotNull);
+      await tester.tap(find.text('Biometric unlock'));
+      await tester.pumpAndSettle();
+      expect(app.fakes.biometrics.calls, 1);
+      expect(app.container.read(lockControllerProvider).enabled, isTrue);
+    });
+
+    testWidgets('Windows offers the lock (Windows Hello); Linux has neither lock nor reminders', (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        store: signedInStore(),
+        capabilities: const Capabilities(isWeb: false, platform: TargetPlatform.windows),
+      );
+      expect(find.text('Biometric unlock'), findsOneWidget);
+
+      await pumpApp(tester, initialLocation: '/settings', store: signedInStore(), capabilities: linux);
+      expect(find.text('Biometric unlock'), findsNothing);
+      expect(find.text('Not available on Linux'), findsOneWidget);
       expect(tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Inspection reminders')).onChanged, isNull);
     });
   });
@@ -307,6 +367,29 @@ void main() {
       );
       expect(find.text('Drag files here, or paste an image'), findsOneWidget);
       expect(find.text('Use camera'), findsOneWidget);
+    });
+
+    testWidgets('desktop apps: drop zone and gallery, no camera or paste', (tester) async {
+      final store = MemoryLocalStore()
+        ..drafts['new'] = site(lastStep: 4).copyWith(
+          type: () => 'Fire safety, annual',
+          date: () => DateTime.now().add(const Duration(days: 1)),
+          startMinutes: () => 600,
+          duration: '60',
+          answers: {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id'] as String: Answer.pass},
+        );
+      await pumpApp(
+        tester,
+        initialLocation: '/inspections/new?step=4',
+        store: signedInStore(),
+        localStore: store,
+        capabilities: macos,
+        size: desktopSize,
+      );
+      expect(find.text('Drag files here'), findsOneWidget);
+      expect(find.text('Gallery'), findsOneWidget);
+      expect(find.text('Take photo'), findsNothing);
+      expect(find.text('Use camera'), findsNothing);
     });
 
     testWidgets('answering a checklist item gives haptic feedback on mobile only', (tester) async {

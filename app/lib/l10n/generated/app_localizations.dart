@@ -686,6 +686,12 @@ abstract class AppLocalizations {
   /// **'Not available in the browser'**
   String get remindersWebSubtitle;
 
+  /// No description provided for @remindersLinuxSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available on Linux'**
+  String get remindersLinuxSubtitle;
+
   /// No description provided for @biometricUnlock.
   ///
   /// In en, this message translates to:
@@ -1225,12 +1231,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notifications are blocked for this app. Allow them in the system settings.'**
   String get remindersBlocked;
-
-  /// No description provided for @remindersMobileOnly.
-  ///
-  /// In en, this message translates to:
-  /// **'Browsers can’t schedule notifications, so reminders are mobile-only.'**
-  String get remindersMobileOnly;
 
   /// No description provided for @remindersScheduleFailed.
   ///
@@ -2749,6 +2749,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open inspections'**
   String get openInspections;
+
+  /// No description provided for @pdfSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Report saved: {file}'**
+  String pdfSaved(String file);
+
+  /// No description provided for @remindersUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This platform can’t schedule notifications, so reminders are off here.'**
+  String get remindersUnsupported;
+
+  /// No description provided for @remindersOffLinux.
+  ///
+  /// In en, this message translates to:
+  /// **'Linux shows notifications only while the app is open and can’t schedule them.'**
+  String get remindersOffLinux;
+
+  /// No description provided for @remindersLinuxTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Linux can’t schedule notifications. Test ones work from the deep-link tester while the app is open.'**
+  String get remindersLinuxTest;
+
+  /// No description provided for @dragFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag files here'**
+  String get dragFiles;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

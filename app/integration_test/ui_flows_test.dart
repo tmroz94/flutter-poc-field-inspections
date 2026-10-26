@@ -5,6 +5,7 @@
 //   fvm flutter test integration_test/ui_flows_test.dart -d emulator-5554
 import 'dart:ui' as ui;
 
+import 'package:field_inspections/core/platform/capabilities.dart';
 import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:field_inspections/core/router/router.dart';
 import 'package:field_inspections/core/theme/theme_settings.dart';
@@ -46,6 +47,11 @@ class _Camera extends MediaService {
     return bytes!.buffer.asUint8List();
   }
 }
+
+/// Where the flows run: phones use touch gestures and the camera; the web and
+/// desktop apps use the mouse paths (buttons, menus) and, on desktop, files.
+final _caps = Capabilities.current();
+final _addPhoto = _caps.isWeb ? 'Use camera' : (_caps.camera ? 'Take photo' : 'Gallery');
 
 /// The wizard step in the URL (the "Step N of 5" header is phone-only).
 int _step(ProviderContainer c) => int.parse(c.read(routerProvider).state.uri.queryParameters['step'] ?? '0');
@@ -144,9 +150,9 @@ void main() {
 
     // Step 4: the photo grid animates items in and out.
     await frames('photo grid insert/remove', () async {
-      await tester.tap(find.text(kIsWeb ? 'Use camera' : 'Take photo'));
+      await tester.tap(find.text(_addPhoto));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(kIsWeb ? 'Use camera' : 'Take photo'));
+      await tester.tap(find.text(_addPhoto));
       await tester.pumpAndSettle();
       expect(find.text('Photos · 2'), findsOneWidget);
       await tester.tap(find.byTooltip('Remove photo 1'));
@@ -174,7 +180,9 @@ void main() {
     await quit(tester, c);
   });
 
-  testWidgets('list: next page, refresh, archive and undo (touch gestures on phones, buttons and menus on the web)', (tester) async {
+  testWidgets('list: next page, refresh, archive and undo (touch gestures on phones, buttons and menus on the web and desktop)', (
+    tester,
+  ) async {
     final c = await launch(tester, initialLocation: '/inspections');
     await signIn(tester);
     expect(find.byType(InspectionsScreen), findsOneWidget);
@@ -211,7 +219,7 @@ void main() {
       await tester.fling(list, const Offset(0, 800), 3000);
       await settle(tester, const Duration(milliseconds: 300));
     }
-    if (kIsWeb) {
+    if (!_caps.isMobile) {
       // No pull gesture with a mouse: the app bar's Refresh button.
       await tester.tap(find.byTooltip('Refresh list'));
       await settle(tester, const Duration(seconds: 2));
@@ -228,7 +236,7 @@ void main() {
     }
 
     // "Substation 12" also names an older inspection further down (INS-1026).
-    if (kIsWeb) {
+    if (!_caps.isMobile) {
       await tester.tap(find.byTooltip('Actions for INS-1038'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Archive'));
@@ -236,7 +244,8 @@ void main() {
       await tester.drag(find.textContaining('INS-1038'), const Offset(-600, 0));
     }
     await tester.pumpAndSettle();
-    expect(find.textContaining('INS-1038'), findsNothing);
+    // The row is gone; the snackbar may already say "INS-1038 archived" (it's quicker on desktop).
+    expect(find.textContaining(RegExp(r'INS-1038(?! archived)')), findsNothing);
     await waitFor(tester, () => find.text('INS-1038 archived').evaluate().isNotEmpty, reason: 'archive snackbar');
     await tester.pumpAndSettle(); // let the snackbar finish sliding in
     await tester.tap(find.text('Undo'));

@@ -217,6 +217,7 @@
   "inspectionReminders": "Inspection reminders",
   "remindersSubtitle": "30 minutes before start",
   "remindersWebSubtitle": "Not available in the browser",
+  "remindersLinuxSubtitle": "Not available on Linux",
   "biometricUnlock": "Biometric unlock",
   "biometricSubtitle": "Lock after 5 minutes in the background",
   "offlineData": "Offline data",
@@ -390,7 +391,6 @@
   },
   "signOutConfirm": "Sign out and delete",
   "remindersBlocked": "Notifications are blocked for this app. Allow them in the system settings.",
-  "remindersMobileOnly": "Browsers can’t schedule notifications, so reminders are mobile-only.",
   "remindersScheduleFailed": "Reminders are on, but they couldn't be scheduled yet. They'll be set up when the inspections load.",
   "biometricNotSetUp": "Set up a fingerprint, face or screen lock on this device first.",
   "reminderTitle": "{site} at {time}",
@@ -1154,5 +1154,17 @@
   "goHome": "Go to home",
   "pageNotFound": "Page not found",
   "pageNotFoundBody": "Nothing lives at this address. The link may be old, or the inspection was deleted.",
-  "openInspections": "Open inspections"
+  "openInspections": "Open inspections",
+  "pdfSaved": "Report saved: {file}",
+  "@pdfSaved": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "remindersUnsupported": "This platform can’t schedule notifications, so reminders are off here.",
+  "remindersOffLinux": "Linux shows notifications only while the app is open and can’t schedule them.",
+  "remindersLinuxTest": "Linux can’t schedule notifications. Test ones work from the deep-link tester while the app is open.",
+  "dragFiles": "Drag files here"
 }

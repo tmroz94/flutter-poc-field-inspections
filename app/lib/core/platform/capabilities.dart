@@ -14,8 +14,22 @@ class Capabilities {
 
   bool get isMobile => !isWeb && (platform == TargetPlatform.iOS || platform == TargetPlatform.android);
 
-  /// Biometric lock (P26) exists on iOS and Android only; web has no equivalent.
-  bool get biometricLock => isMobile;
+  /// macOS, Windows and Linux apps (not the web build running on them).
+  bool get isDesktop =>
+      !isWeb && (platform == TargetPlatform.macOS || platform == TargetPlatform.windows || platform == TargetPlatform.linux);
+
+  /// Biometric lock (P26): Face ID / Touch ID / fingerprint on phones, Touch ID
+  /// on macOS and Windows Hello on Windows (local_auth; the device password is
+  /// the fallback). The web has no equivalent and local_auth has no Linux plugin.
+  bool get biometricLock => isMobile || (!isWeb && (platform == TargetPlatform.macOS || platform == TargetPlatform.windows));
+
+  /// Taking a photo: the phone camera, or the browser's camera input. Desktop
+  /// apps have no camera picker, so they offer files and drag and drop instead.
+  bool get camera => !isDesktop;
+
+  /// Reminders need notifications scheduled ahead. Browsers can't, and neither
+  /// can Linux's notification plugin; both show test notifications from a timer.
+  bool get scheduledNotifications => !isWeb && platform != TargetPlatform.linux;
 
   /// Haptics are a no-op on web.
   bool get haptics => isMobile;

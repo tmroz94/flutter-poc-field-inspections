@@ -18,7 +18,12 @@ import '../../l10n/l10n.dart';
 
 /// Runtime permission states for the four permissions the app uses.
 /// Notifications come from the notification service, which also works on web.
+/// Read again whenever the app is resumed: a system permission prompt (shown
+/// from any screen) and a trip to Settings both end that way, and the Settings
+/// tab keeps this screen alive meanwhile.
 final permissionStatesProvider = FutureProvider.autoDispose<Map<AppPermission, PermissionState>>((ref) async {
+  final listener = AppLifecycleListener(onResume: ref.invalidateSelf);
+  ref.onDispose(listener.dispose);
   final perms = ref.watch(permissionServiceProvider);
   return {
     for (final p in AppPermission.values)

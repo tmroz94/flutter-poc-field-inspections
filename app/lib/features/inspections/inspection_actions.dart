@@ -26,7 +26,12 @@ class InspectionActions {
   Capabilities get _caps => ref.read(capabilitiesProvider);
 
   void _say(String message) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    // The newest message replaces the last one ("Preparing…" → "Report saved").
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   Uri link(String path) => appLink(_caps, path);
@@ -71,14 +76,17 @@ class InspectionActions {
   Future<void> exportPdf(InspectionDetail d) async {
     final l = context.l10n;
     final locale = Localizations.localeOf(context).toLanguageTag();
+    final fileName = 'inspection-${d.id}.pdf';
     _say(l.preparingPdf);
     try {
       final checklist = await ref.read(checklistProvider(d.templateId).future);
       final bytes = await buildInspectionReport(d, checklist, l: l, locale: locale);
       final outcome = await ref
           .read(shareServiceProvider)
-          .shareFile(bytes: bytes, fileName: 'inspection-${d.id}.pdf', mime: 'application/pdf', isWeb: _caps.isWeb);
-      if (_caps.isWeb && outcome == ShareOutcome.shared) _say(l.pdfDownloaded('inspection-${d.id}.pdf'));
+          .shareFile(bytes: bytes, fileName: fileName, mime: 'application/pdf', caps: _caps);
+      if (_caps.isWeb && outcome == ShareOutcome.shared) _say(l.pdfDownloaded(fileName));
+      // Desktop: a Save dialog.
+      if (outcome == ShareOutcome.saved) _say(l.pdfSaved(fileName));
     } on Object catch (e) {
       debugPrint('PDF export failed: $e');
       _say(l.pdfFailed);

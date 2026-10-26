@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app.dart';
+import 'core/platform/desktop_links.dart';
 import 'core/platform/frame_stats.dart';
 import 'core/platform/notification_service.dart';
 import 'core/router/router.dart';
@@ -21,16 +22,23 @@ Future<void> main() async {
   // so what's on screen can always be shared, bookmarked and refreshed.
   GoRouter.optionURLReflectsImperativeAPIs = true;
   final notifications = NotificationService();
+  final links = DesktopLinks.current();
   // In parallel: the backend probe can take up to its 1.5 s timeout.
-  final (store, backend, launchRoute) = await (PrefsStore.create(), BackendConfig.resolve(), notifications.init()).wait;
+  final (store, backend, launchRoute, linkRoute) = await (
+    PrefsStore.create(),
+    BackendConfig.resolve(),
+    notifications.init(),
+    links.initialRoute(),
+  ).wait;
   runApp(
     ProviderScope(
       overrides: [
         keyValueStoreProvider.overrideWithValue(store),
         backendConfigProvider.overrideWithValue(backend),
         notificationServiceProvider.overrideWithValue(notifications),
-        // A tap on a notification that started the app opens its route.
-        initialLocationProvider.overrideWithValue(launchRoute ?? Routes.home),
+        desktopLinksProvider.overrideWithValue(links),
+        // A tap on a notification, or a link (desktop), that started the app opens its route.
+        initialLocationProvider.overrideWithValue(launchRoute ?? linkRoute ?? Routes.home),
       ],
       child: const FieldInspectionsApp(),
     ),

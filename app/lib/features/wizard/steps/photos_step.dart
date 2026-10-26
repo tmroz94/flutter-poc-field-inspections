@@ -180,11 +180,12 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        FilledButton.tonalIcon(
-          onPressed: _cameraDenied ? null : () => _capture(camera: true),
-          icon: const Icon(Symbols.photo_camera),
-          label: Text(caps.isWeb ? l.useCamera : l.takePhoto),
-        ),
+        if (caps.camera)
+          FilledButton.tonalIcon(
+            onPressed: _cameraDenied ? null : () => _capture(camera: true),
+            icon: const Icon(Symbols.photo_camera),
+            label: Text(caps.isWeb ? l.useCamera : l.takePhoto),
+          ),
         OutlinedButton.icon(onPressed: () => _capture(camera: false), icon: const Icon(Symbols.photo_library), label: Text(l.gallery)),
       ],
     );
@@ -214,7 +215,15 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
           children: [
             Icon(Symbols.upload, size: 40, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 8),
-            Text(_dragging ? l.dropFiles : l.dragOrPaste, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(
+              _dragging
+                  ? l.dropFiles
+                  : caps.isWeb
+                  ? l.dragOrPaste
+                  : l.dragFiles,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             Text(l.fileTypesHint, style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             buttons,

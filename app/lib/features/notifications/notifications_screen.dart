@@ -245,7 +245,7 @@ class _PermissionCardState extends ConsumerState<_PermissionCard> {
   Future<void> _turnOn() async {
     final l = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
-    final canOpenSettings = ref.read(capabilitiesProvider).openSystemSettings;
+    final caps = ref.read(capabilitiesProvider);
     final permissions = ref.read(permissionServiceProvider);
     final result = await ref.read(remindersProvider.notifier).setEnabled(true);
     if (!mounted) return;
@@ -253,7 +253,7 @@ class _PermissionCardState extends ConsumerState<_PermissionCard> {
     final message = switch (result) {
       RemindersResult.on => l.remindersOnMessage,
       RemindersResult.permissionDenied => l.remindersBlocked,
-      RemindersResult.unsupportedOnWeb => l.remindersWebTest,
+      RemindersResult.unsupported => caps.isWeb ? l.remindersWebTest : l.remindersLinuxTest,
       RemindersResult.scheduleFailed => l.remindersScheduleFailed,
       RemindersResult.off => null,
     };
@@ -261,7 +261,7 @@ class _PermissionCardState extends ConsumerState<_PermissionCard> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(message),
-        action: result == RemindersResult.permissionDenied && canOpenSettings
+        action: result == RemindersResult.permissionDenied && caps.openSystemSettings
             ? SnackBarAction(label: l.openSettings, onPressed: () => unawaited(permissions.openSettings()))
             : null,
       ),
@@ -293,7 +293,11 @@ class _PermissionCardState extends ConsumerState<_PermissionCard> {
               ],
             ),
             const SizedBox(height: 8),
-            Text(caps.isWeb ? l.remindersOffWeb : (blocked ? l.remindersBlocked : l.remindersOffBody)),
+            Text(switch ((caps.scheduledNotifications, caps.isWeb)) {
+              (false, true) => l.remindersOffWeb,
+              (false, false) => l.remindersOffLinux,
+              _ => blocked ? l.remindersBlocked : l.remindersOffBody,
+            }),
             const SizedBox(height: 8),
             Align(
               alignment: AlignmentDirectional.centerEnd,
@@ -309,12 +313,12 @@ class _PermissionCardState extends ConsumerState<_PermissionCard> {
 }
 
 /// Sends a notification that opens [route] after [delay] (deep-link tester).
-/// Mobile schedules it so it also works with the app in the background or
-/// closed, with time to close the app first (15 s); the web shows it from a
-/// timer while the tab is open (5 s).
+/// Mobile, macOS and Windows schedule it so it also works with the app in the
+/// background or closed, with time to close the app first (15 s); the web and
+/// Linux show it from a timer while the app is open (5 s).
 Future<String> sendTestNotification(WidgetRef ref, String route, {Duration? delay}) async {
   final n = ref.read(notificationServiceProvider);
-  delay ??= Duration(seconds: n.isWeb ? 5 : 15);
+  delay ??= Duration(seconds: n.canSchedule ? 15 : 5);
   if (await n.permission() != PermissionState.granted && !await n.requestPermission()) {
     return 'Notifications are not allowed on this device.';
   }
@@ -323,7 +327,8 @@ Future<String> sendTestNotification(WidgetRef ref, String route, {Duration? dela
   if (!scheduled) {
     Future.delayed(delay, () => n.show(id: id, title: 'Test link', body: route, route: route));
   }
-  return 'Notification in ${delay.inSeconds} s. ${scheduled ? 'Put the app in the background or close it to test that too.' : 'Keep this tab open.'}';
+  final keepOpen = n.isWeb ? 'Keep this tab open.' : 'Keep the app open.';
+  return 'Notification in ${delay.inSeconds} s. ${scheduled ? 'Put the app in the background or close it to test that too.' : keepOpen}';
 }
 
 /// Lists every route and opens it, and sends test notifications (deep links).

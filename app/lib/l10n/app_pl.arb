@@ -99,6 +99,7 @@
   "inspectionReminders": "Przypomnienia o inspekcjach",
   "remindersSubtitle": "30 minut przed rozpoczęciem",
   "remindersWebSubtitle": "Niedostępne w przeglądarce",
+  "remindersLinuxSubtitle": "Niedostępne w systemie Linux",
   "biometricUnlock": "Odblokowanie biometryczne",
   "biometricSubtitle": "Blokada po 5 minutach w tle",
   "offlineData": "Dane offline",
@@ -189,7 +190,6 @@
   "signOutDrafts": "{count, plural, =1{1 szkic} few{{count} szkice} many{{count} szkiców} other{{count} szkicu}}",
   "signOutConfirm": "Wyloguj i usuń",
   "remindersBlocked": "Powiadomienia są zablokowane dla tej aplikacji. Zezwól na nie w ustawieniach systemu.",
-  "remindersMobileOnly": "Przeglądarki nie planują powiadomień, więc przypomnienia działają tylko w aplikacji mobilnej.",
   "remindersScheduleFailed": "Przypomnienia są włączone, ale nie udało się ich jeszcze zaplanować. Zostaną ustawione po wczytaniu inspekcji.",
   "biometricNotSetUp": "Najpierw ustaw na tym urządzeniu odcisk palca, twarz lub blokadę ekranu.",
   "reminderTitle": "{site} o {time}",
@@ -442,5 +442,10 @@
   "goHome": "Przejdź do strony głównej",
   "pageNotFound": "Nie znaleziono strony",
   "pageNotFoundBody": "Pod tym adresem nic nie ma. Link może być nieaktualny albo inspekcja została usunięta.",
-  "openInspections": "Otwórz inspekcje"
+  "openInspections": "Otwórz inspekcje",
+  "pdfSaved": "Zapisano raport: {file}",
+  "remindersUnsupported": "Ta platforma nie planuje powiadomień, więc przypomnienia są tu wyłączone.",
+  "remindersOffLinux": "Linux pokazuje powiadomienia tylko przy otwartej aplikacji i nie umie ich planować.",
+  "remindersLinuxTest": "Linux nie planuje powiadomień. Testowe działają z testera linków, gdy aplikacja jest otwarta.",
+  "dragFiles": "Przeciągnij tu pliki"
 }

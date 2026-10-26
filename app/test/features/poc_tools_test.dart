@@ -1,5 +1,6 @@
 import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoActivityIndicator, CupertinoAlertDialog, CupertinoButton, CupertinoDatePicker;
 import 'package:field_inspections/core/platform/capabilities.dart';
+import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -101,6 +102,21 @@ void main() {
       await tester.tap(find.text('Ask for notifications'));
       await tester.pumpAndSettle();
       expect(find.text('Not granted'), findsOneWidget);
+    });
+
+    testWidgets('permission states are read again when the app resumes (after a prompt or Settings)', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/diagnostics', size: _tall);
+      expect(find.text('Granted'), findsNWidgets(4));
+
+      app.fakes.permissions.states[AppPermission.camera] = PermissionState.permanentlyDenied;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pumpAndSettle();
+      expect(find.text('Granted'), findsNWidgets(4)); // not yet: still inactive
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(find.text('Denied'), findsOneWidget);
+      expect(find.text('Granted'), findsNWidgets(3));
     });
   });
 }

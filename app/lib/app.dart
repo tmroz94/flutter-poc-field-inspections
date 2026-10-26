@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'core/platform/desktop_links.dart';
 import 'core/platform/notification_service.dart';
 import 'core/router/router.dart';
 import 'core/theme/app_theme.dart';
@@ -28,6 +29,10 @@ class FieldInspectionsApp extends ConsumerWidget {
       ..listen(remindersProvider, (_, _) {});
     // Notification taps while the app runs open the notification's route.
     ref.listen(notificationTapsProvider, (_, next) {
+      if (next.value case final route?) router.go(route);
+    });
+    // So do fieldinspections:// links opened while a desktop app runs.
+    ref.listen(desktopLinkRoutesProvider, (_, next) {
       if (next.value case final route?) router.go(route);
     });
     final contrast = settings.contrast ?? AppContrast.standard;

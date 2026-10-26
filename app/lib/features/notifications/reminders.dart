@@ -18,11 +18,11 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_models.dart';
 import '../inspections/inspections_controller.dart';
 
-enum RemindersResult { on, off, permissionDenied, unsupportedOnWeb, scheduleFailed }
+enum RemindersResult { on, off, permissionDenied, unsupported, scheduleFailed }
 
 /// "Inspection reminders" (P19, P17): a notification 30 minutes before each
-/// open inspection, which opens that inspection when tapped. The web can't
-/// schedule notifications, so there the setting explains why it's off.
+/// open inspection, which opens that inspection when tapped. The web and Linux
+/// can't schedule notifications, so there the setting explains why it's off.
 ///
 /// The set is rebuilt on sign-in and whenever this app changes inspections
 /// (submit, sync, archive), so new, moved and finished inspections are right.
@@ -55,7 +55,7 @@ class RemindersController extends Notifier<bool> {
       state = false;
       return RemindersResult.off;
     }
-    if (ref.read(capabilitiesProvider).isWeb) return RemindersResult.unsupportedOnWeb;
+    if (!ref.read(capabilitiesProvider).scheduledNotifications) return RemindersResult.unsupported;
     if (await notifications.permission() != PermissionState.granted && !await notifications.requestPermission()) {
       return RemindersResult.permissionDenied;
     }
@@ -82,7 +82,11 @@ class RemindersController extends Notifier<bool> {
   }
 
   Future<int?> _schedule() async {
-    if (!state || ref.read(capabilitiesProvider).isWeb || ref.read(authControllerProvider).status != AuthStatus.signedIn) return 0;
+    if (!state ||
+        !ref.read(capabilitiesProvider).scheduledNotifications ||
+        ref.read(authControllerProvider).status != AuthStatus.signedIn) {
+      return 0;
+    }
     final notifications = ref.read(notificationServiceProvider);
     final List<InspectionSummary> items;
     try {

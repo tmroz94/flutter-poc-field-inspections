@@ -31,7 +31,7 @@ class SettingsScreen extends ConsumerWidget {
     final result = await ref.read(remindersProvider.notifier).setEnabled(on);
     final message = switch (result) {
       RemindersResult.permissionDenied => l.remindersBlocked,
-      RemindersResult.unsupportedOnWeb => l.remindersMobileOnly,
+      RemindersResult.unsupported => l.remindersUnsupported,
       RemindersResult.scheduleFailed => l.remindersScheduleFailed,
       RemindersResult.on || RemindersResult.off => null,
     };
@@ -126,9 +126,15 @@ class SettingsScreen extends ConsumerWidget {
         SwitchListTile(
           secondary: const Icon(Symbols.notifications),
           title: Text(context.l10n.inspectionReminders),
-          subtitle: Text(caps.isWeb ? context.l10n.remindersWebSubtitle : context.l10n.remindersSubtitle),
+          subtitle: Text(
+            caps.scheduledNotifications
+                ? context.l10n.remindersSubtitle
+                : caps.isWeb
+                ? context.l10n.remindersWebSubtitle
+                : context.l10n.remindersLinuxSubtitle,
+          ),
           value: reminders,
-          onChanged: caps.isWeb ? null : (v) => _setReminders(context, ref, v),
+          onChanged: caps.scheduledNotifications ? (v) => _setReminders(context, ref, v) : null,
         ),
         if (caps.biometricLock)
           SwitchListTile(

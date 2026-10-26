@@ -380,6 +380,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get remindersWebSubtitle => 'Niedostępne w przeglądarce';
 
   @override
+  String get remindersLinuxSubtitle => 'Niedostępne w systemie Linux';
+
+  @override
   String get biometricUnlock => 'Odblokowanie biometryczne';
 
   @override
@@ -702,9 +705,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get remindersBlocked => 'Powiadomienia są zablokowane dla tej aplikacji. Zezwól na nie w ustawieniach systemu.';
-
-  @override
-  String get remindersMobileOnly => 'Przeglądarki nie planują powiadomień, więc przypomnienia działają tylko w aplikacji mobilnej.';
 
   @override
   String get remindersScheduleFailed =>
@@ -1609,4 +1609,21 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get openInspections => 'Otwórz inspekcje';
+
+  @override
+  String pdfSaved(String file) {
+    return 'Zapisano raport: $file';
+  }
+
+  @override
+  String get remindersUnsupported => 'Ta platforma nie planuje powiadomień, więc przypomnienia są tu wyłączone.';
+
+  @override
+  String get remindersOffLinux => 'Linux pokazuje powiadomienia tylko przy otwartej aplikacji i nie umie ich planować.';
+
+  @override
+  String get remindersLinuxTest => 'Linux nie planuje powiadomień. Testowe działają z testera linków, gdy aplikacja jest otwarta.';
+
+  @override
+  String get dragFiles => 'Przeciągnij tu pliki';
 }
