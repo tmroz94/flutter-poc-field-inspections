@@ -20,6 +20,7 @@ import '../auth/auth_controller.dart';
 import '../inspections/inspections_controller.dart';
 import '../notifications/notification_bell.dart';
 import '../wizard/wizard_controller.dart';
+import '../wizard/wizard_text.dart';
 
 /// P02 (phone) / D02 (desktop): greeting, offline banner, today's cards and
 /// what's due this week.
@@ -330,7 +331,11 @@ class _LocalWork extends ConsumerWidget {
                 color: e.lastError == null ? null : scheme.error,
               ),
               title: Text(e.site.isEmpty ? (e.inspectionId ?? l.newInspection) : e.site),
-              subtitle: Text(e.lastError == null ? l.outboxQueued(time.format(e.createdAt)) : l.outboxRejected(e.lastError!)),
+              subtitle: Text(
+                e.lastError == null
+                    ? l.outboxQueued(time.format(e.createdAt))
+                    : l.outboxRejected(outboxRejectionText(context, e.lastError!)),
+              ),
               trailing: e.lastError == null
                   ? null
                   : MenuAnchor(

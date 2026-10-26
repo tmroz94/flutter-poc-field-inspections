@@ -291,7 +291,7 @@ class _LocationCheckState extends ConsumerState<_LocationCheck> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Symbols.my_location, color: theme.colorScheme.primary),
-              title: Text(fix == null ? l.locationNotChecked : '${fix.lat!.toStringAsFixed(4)}° N, ${fix.lng!.toStringAsFixed(4)}° E'),
+              title: Text(fix == null ? l.locationNotChecked : coordinatesText(context, fix.lat!, fix.lng!)),
               subtitle: Text(
                 fix == null
                     ? l.locationOptional

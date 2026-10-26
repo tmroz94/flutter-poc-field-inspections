@@ -153,8 +153,21 @@ class FakeNotifications extends NotificationService {
   @override
   Future<bool> requestPermission() async => granted;
 
+  /// The Android channel name each notification was sent with.
+  final channels = <String>[];
+
   @override
-  Future<void> show({required int id, required String title, required String body, required String route}) async => shown.add(route);
+  Future<void> show({
+    required int id,
+    required String title,
+    required String body,
+    required String route,
+    required String channelName,
+    required String channelDescription,
+  }) async {
+    shown.add(route);
+    channels.add(channelName);
+  }
 
   @override
   Future<bool> schedule({
@@ -163,12 +176,13 @@ class FakeNotifications extends NotificationService {
     required String title,
     required String body,
     required String route,
-    String? channelName,
-    String? channelDescription,
+    required String channelName,
+    required String channelDescription,
   }) async {
     if (!canSchedule) return false;
     scheduled.add((at, route));
     scheduledTitles.add(title);
+    channels.add(channelName);
     return true;
   }
 

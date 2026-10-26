@@ -92,11 +92,7 @@ class ReviewStep extends ConsumerWidget {
           onChanged: (c) => ref.read(wizardControllerProvider(wizardKey).notifier).update((x) => x.copyWith(confirmed: c ?? false)),
         ),
         if (error != null) ...[
-          FormErrorBanner(
-            error.fields.isEmpty
-                ? l.submitFailed(error.code)
-                : l.serverRejected(error.fields.entries.map((e) => '${e.key} (${t.server(e.value, field: e.key)})').join(', ')),
-          ),
+          FormErrorBanner(error.fields.isEmpty ? l.submitFailed(error.code) : l.serverRejected(serverFieldErrors(context, error.fields))),
           const SizedBox(height: 8),
         ],
         const SizedBox(height: 8),

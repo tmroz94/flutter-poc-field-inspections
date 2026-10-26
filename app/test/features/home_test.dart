@@ -70,6 +70,19 @@ void main() {
       expect(store.entries, isEmpty);
     });
 
+    testWidgets('field errors use the wizard\'s field names and messages, in the app language', (tester) async {
+      final store = MemoryLocalStore();
+      final id = await store.enqueue(kind: 'create', site: draft.siteName, body: draft.toApiBody(), draft: draft);
+      await store.markFailed(id, 'scheduledAt: past, durationMin: range');
+      await pumpApp(tester, store: {...signedInStore(), 'theme_settings': '{"locale":"pl"}'}, localStore: store, now: now);
+      expect(
+        find.text(
+          'Odrzucony przez serwer: Data (Wybierz dzisiejszą lub późniejszą datę), Szacowany czas (minuty) (Podaj liczbę od 15 do 480)',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('can be reopened in the wizard on its review step', (tester) async {
       final store = await rejected();
       final app = await pumpApp(tester, store: signedInStore(), localStore: store, now: now);

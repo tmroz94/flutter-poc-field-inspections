@@ -125,10 +125,11 @@ class InspectionDraft {
       // already on the server come along (by id) or they'd be deleted.
       failures: d.failures,
       attachments: [
-        for (final (i, p) in d.photos.indexed)
+        for (final p in d.photos)
           DraftAttachment(
             id: p.id,
-            name: p.caption.isEmpty ? 'Photo ${i + 1}' : p.caption,
+            // The caption, possibly empty; the grid labels photos by number.
+            name: p.caption,
             sizeBytes: p.sizeBytes,
             forItem: p.forItem,
             stored: true,

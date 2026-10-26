@@ -213,7 +213,7 @@ class MessageState extends StatelessWidget {
 
 /// "You're offline" strip (P02, P04) with a retry action.
 class OfflineBanner extends StatelessWidget {
-  const OfflineBanner({required this.onRetry, this.message = "Showing what's saved on this device.", this.strong = false, super.key});
+  const OfflineBanner({required this.onRetry, required this.message, this.strong = false, super.key});
 
   final VoidCallback onRetry;
   final String message;
@@ -241,7 +241,7 @@ class OfflineBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "You're offline",
+                    context.l10n.offlineTitle,
                     style: theme.textTheme.bodyMedium?.copyWith(color: fg, fontWeight: FontWeight.w500),
                   ),
                   Text(message, style: theme.textTheme.bodySmall?.copyWith(color: fg)),

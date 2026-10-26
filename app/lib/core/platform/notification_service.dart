@@ -58,11 +58,9 @@ class NotificationService {
   }
 
   /// [channelName] and [channelDescription] show in Android's notification
-  /// settings; callers pass them in the app's language.
-  static NotificationDetails _details({
-    String channelName = 'Inspection reminders',
-    String channelDescription = 'Alerts before inspections start',
-  }) => NotificationDetails(
+  /// settings; callers pass them in the app's language. Every notification
+  /// uses the one channel, so each call renames it.
+  static NotificationDetails _details({required String channelName, required String channelDescription}) => NotificationDetails(
     android: AndroidNotificationDetails(
       'reminders',
       channelName,
@@ -167,9 +165,22 @@ class NotificationService {
     }
   }
 
-  Future<void> show({required int id, required String title, required String body, required String route}) async {
+  Future<void> show({
+    required int id,
+    required String title,
+    required String body,
+    required String route,
+    required String channelName,
+    required String channelDescription,
+  }) async {
     if (!_ready) return;
-    await _plugin.show(id: id, title: title, body: body, notificationDetails: _details(), payload: route);
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: _details(channelName: channelName, channelDescription: channelDescription),
+      payload: route,
+    );
   }
 
   /// Schedules a notification at [at]; false where scheduling isn't possible (web, Linux).
@@ -179,17 +190,15 @@ class NotificationService {
     required String title,
     required String body,
     required String route,
-    String? channelName,
-    String? channelDescription,
+    required String channelName,
+    required String channelDescription,
   }) async {
     if (!_ready || !canSchedule) return false;
     await _plugin.zonedSchedule(
       id: id,
       // An absolute instant: no time-zone database lookup needed for one-off reminders.
       scheduledDate: tz.TZDateTime.from(at.toUtc(), tz.UTC),
-      notificationDetails: channelName == null || channelDescription == null
-          ? _details()
-          : _details(channelName: channelName, channelDescription: channelDescription),
+      notificationDetails: _details(channelName: channelName, channelDescription: channelDescription),
       // Inexact: no exact-alarm permission needed; Android may delay a few minutes.
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       title: title,

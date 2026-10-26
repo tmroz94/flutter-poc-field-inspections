@@ -198,6 +198,18 @@ void main() {
       expect(find.textContaining('Notification in 15 s'), findsOneWidget, reason: 'time to close the app first');
     });
 
+    testWidgets('it names the Android channel in the app language, like the reminders it shares it with', (tester) async {
+      final app = await pumpApp(
+        tester,
+        initialLocation: '/settings/poc/deep-links',
+        store: {...signedInStore(), 'theme_settings': '{"locale":"pl"}'},
+      );
+      await tester.scrollUntilVisible(find.byTooltip('Notification for Map'), 200);
+      await tester.tap(find.byTooltip('Notification for Map'));
+      await tester.pumpAndSettle();
+      expect(app.fakes.notifications.channels, ['Przypomnienia o inspekcjach']);
+    });
+
     testWidgets('web shows it from a timer instead', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/settings/poc/deep-links', store: signedInStore(), capabilities: web);
       await tester.scrollUntilVisible(find.byTooltip('Notification for Map'), 200);

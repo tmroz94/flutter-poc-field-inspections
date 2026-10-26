@@ -110,8 +110,8 @@ class _ViewerState extends ConsumerState<_Viewer> {
     final photo = _photos[_index];
     final meta = [
       DateFormat.Hm(Localizations.localeOf(context).toLanguageTag()).format(photo.takenAt),
-      if (photo.lat != null && photo.lng != null) '${photo.lat!.toStringAsFixed(4)}° N, ${photo.lng!.toStringAsFixed(4)}° E',
-      if (photo.sizeBytes > 0) '${(photo.sizeBytes / 1e6).toStringAsFixed(1)} MB',
+      if (photo.lat != null && photo.lng != null) coordinatesText(context, photo.lat!, photo.lng!),
+      if (photo.sizeBytes > 0) megabytesText(context, photo.sizeBytes),
     ].join(' · ');
 
     return CallbackShortcuts(

@@ -54,7 +54,8 @@ class AttachmentImage extends ConsumerWidget {
         bytes,
         fit: BoxFit.cover,
         gaplessPlayback: true,
-        semanticLabel: attachment.name,
+        // The tile around it says "Photo N"; a caption or file name adds to that.
+        semanticLabel: attachment.name.isEmpty ? null : attachment.name,
         errorBuilder: (_, _, _) => PhotoPlaceholder(index: index),
       ),
     );

@@ -316,16 +316,29 @@ class _PermissionCardState extends ConsumerState<_PermissionCard> {
 /// Mobile, macOS and Windows schedule it so it also works with the app in the
 /// background or closed, with time to close the app first (15 s); the web and
 /// Linux show it from a timer while the app is open (5 s).
-Future<String> sendTestNotification(WidgetRef ref, String route, {Duration? delay}) async {
+/// [l] names the notification channel, which the reminders share.
+Future<String> sendTestNotification(WidgetRef ref, AppLocalizations l, String route, {Duration? delay}) async {
   final n = ref.read(notificationServiceProvider);
   delay ??= Duration(seconds: n.canSchedule ? 15 : 5);
   if (await n.permission() != PermissionState.granted && !await n.requestPermission()) {
     return 'Notifications are not allowed on this device.';
   }
   final id = DateTime.now().millisecondsSinceEpoch & 0x7fffffff;
-  final scheduled = await n.schedule(id: id, at: DateTime.now().add(delay), title: 'Test link', body: route, route: route);
+  final (channel, description) = (l.reminderChannel, l.reminderChannelDescription);
+  final scheduled = await n.schedule(
+    id: id,
+    at: DateTime.now().add(delay),
+    title: 'Test link',
+    body: route,
+    route: route,
+    channelName: channel,
+    channelDescription: description,
+  );
   if (!scheduled) {
-    Future.delayed(delay, () => n.show(id: id, title: 'Test link', body: route, route: route));
+    Future.delayed(
+      delay,
+      () => n.show(id: id, title: 'Test link', body: route, route: route, channelName: channel, channelDescription: description),
+    );
   }
   final keepOpen = n.isWeb ? 'Keep this tab open.' : 'Keep the app open.';
   return 'Notification in ${delay.inSeconds} s. ${scheduled ? 'Put the app in the background or close it to test that too.' : keepOpen}';
@@ -360,7 +373,7 @@ class DeepLinksScreen extends ConsumerWidget {
                 tooltip: 'Notification for ${r.title}',
                 icon: const Icon(Symbols.notification_add),
                 onPressed: () async {
-                  final message = await sendTestNotification(ref, r.example);
+                  final message = await sendTestNotification(ref, context.l10n, r.example);
                   if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
                 },
               ),
