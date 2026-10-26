@@ -57,8 +57,25 @@ post_install do |installer|
 end
 ```
 
-With Swift Package Manager (Flutter's default on newer versions) no Podfile
-is generated; check permission_handler's README for its SPM instructions.
+With Swift Package Manager (Flutter's default on newer versions, and what
+this app builds with on 3.47.8) no Podfile is generated and nothing needs
+setting up: permission_handler's package manifest reads `ios/Runner/Info.plist`
+and turns on each permission whose usage description is there (camera,
+photos, location when in use; notifications are on by default). Two catches:
+
+- It finds the app through the working directory, so builds started from
+  `flutter run`/`flutter build`/`flutter test` work, but builds started from
+  Xcode.app compile every permission out and report them as denied. For
+  those, `launchctl setenv PERMISSION_HANDLER_INFO_PLIST "$PWD/ios/Runner/Info.plist"`
+  (from `app/`) once.
+- The manifest result is cached. After adding or removing a usage description,
+  `rm -rf ~/Library/Developer/Xcode/DerivedData` before the next build.
+
+To see what it resolved, from `app/`:
+
+```bash
+PERMISSION_HANDLER_VERBOSE=1 swift package --package-path ~/.pub-cache/hosted/pub.dev/permission_handler_apple-9.6.4/ios/permission_handler_apple dump-package > /dev/null
+```
 
 Things to verify on iOS (record them in the Results tracker):
 
@@ -85,20 +102,20 @@ Things to verify on iOS (record them in the Results tracker):
 
 | Check | Android emulator | Chrome | iOS |
 |---|---|---|---|
-| Map tiles, pins, `?site=` deep link | ✓ | ✓ | – |
+| Map tiles, pins, `?site=` deep link | ✓ | ✓ | tiles, pins and my location ✓ (simulator) |
 | PDF export | builds; share sheet not opened in tests | ✓ downloaded | – |
 | Test notification → tap opens its route (app in background) | ✓ | ✓ shown by the service worker, click opens the route; tab closed too (Playwright) | – |
 | Notification tap after the app was killed | ✓ cold start on the route (host helper; a dropped-tap bug fixed) | n/a | – |
 | Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | – |
-| Camera / gallery / files | ✓ camera app and photo picker (Patrol); file picker with fakes | tests with fakes | – |
-| Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | ✓ granted and denied (Playwright) | – |
+| Camera / gallery / files | ✓ camera app and photo picker (Patrol); file picker with fakes | tests with fakes | camera prompt ✓, then "Camera not available" (the simulator has none) |
+| Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | ✓ granted and denied (Playwright) | location and camera prompts with the Info.plist texts, Allow ✓; Diagnostics then shows Granted (simulator) |
 | Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | – |
 | Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | – |
-| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | – |
+| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows, iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1) |
 | Camera (browser file input), geolocation in the browser | n/a | ✓ (Playwright) | – |
 | Offline submit → sync when back online (airplane mode) | ✓ | – | – |
 | GPS distance and far-away warning | ✓ via LocationManager test positions; fused provider needs a real phone | – | – |
-| Pickers, swipe, pull to refresh, Hero, animated grid, reduce motion | ✓ | partly (widget tests) | – |
+| Pickers, swipe, pull to refresh, Hero, animated grid, reduce motion | ✓ | partly (widget tests) | ✓ simulator |
 | WebAssembly build (Skwasm, cross-origin isolated, drift on OPFS) | n/a | ✓ | n/a |
 
 ## Web builds

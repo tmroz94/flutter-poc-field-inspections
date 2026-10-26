@@ -95,8 +95,11 @@ class FakeLauncher extends LauncherService {
 class FakePermissions extends PermissionService {
   int settingsOpened = 0;
 
+  /// Anything not listed is granted.
+  final states = <AppPermission, PermissionState>{};
+
   @override
-  Future<PermissionState> status(AppPermission p) async => PermissionState.granted;
+  Future<PermissionState> status(AppPermission p) async => states[p] ?? PermissionState.granted;
 
   @override
   Future<bool> openSettings() async {
