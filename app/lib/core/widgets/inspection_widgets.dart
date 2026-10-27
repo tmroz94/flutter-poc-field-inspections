@@ -31,27 +31,41 @@ IconData siteIcon(String name) => switch (name) {
 
 /// Status pill from the boards: container colour + icon + label.
 class StatusChip extends StatelessWidget {
-  const StatusChip(this.status, {super.key});
+  const StatusChip(this.status, {this.outlined = false, super.key});
 
   final InspectionStatus status;
+
+  /// For a selected row: its highlight (secondaryContainer) is Scheduled's
+  /// fill and close to In progress's, so the chip drops the fill and draws an
+  /// outline, icon and label in onSecondaryContainer, the one colour that reads
+  /// on the highlight in every scheme (the status colours don't in the medium
+  /// and high contrast ones). The icon and label still tell the statuses apart.
+  /// Same size either way.
+  final bool outlined;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final (bg, fg, icon) = switch (status) {
+    final (bg, statusFg, icon) = switch (status) {
       InspectionStatus.scheduled => (scheme.secondaryContainer, scheme.onSecondaryContainer, Symbols.schedule),
       InspectionStatus.inProgress => (scheme.primaryContainer, scheme.onPrimaryContainer, Symbols.pending),
       InspectionStatus.draft => (scheme.tertiaryContainer, scheme.onTertiaryContainer, Symbols.edit_note),
       InspectionStatus.overdue => (scheme.errorContainer, scheme.onErrorContainer, Symbols.error),
       InspectionStatus.submitted => (scheme.surfaceContainerHighest, scheme.onSurfaceVariant, Symbols.task_alt),
     };
+    final fg = outlined ? scheme.onSecondaryContainer : statusFg;
     return Semantics(
       label: '${context.l10n.status}: ${status.localized(context.l10n)}',
       excludeSemantics: true,
       child: Container(
         constraints: const BoxConstraints(minHeight: 24),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppRadii.small)),
+        // The 1 px border adds to the padding, so the outlined chip takes 1 less.
+        padding: outlined ? const EdgeInsets.symmetric(horizontal: 7, vertical: 1) : const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: outlined ? null : bg,
+          border: outlined ? Border.all(color: fg) : null,
+          borderRadius: BorderRadius.circular(AppRadii.small),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -18,18 +18,23 @@ ProviderContainer _container([MemoryStore? store]) {
 
 void main() {
   group('ResultsController', () {
-    test('starts with our findings: iOS untested, Android and Web filled in', () {
+    test('starts with our findings: iOS untested, Android, Web and the desktop apps filled in', () {
       final s = _container().read(resultsProvider);
       expect(s.dataset, ResultsDataset.findings);
       expect(s.results, hasLength(scenarioSeed.length));
       expect(s.tested(PocPlatform.ios), 0);
-      expect(s.tested(PocPlatform.android), greaterThan(10));
-      expect(s.tested(PocPlatform.web), greaterThan(10));
+      for (final p in [PocPlatform.android, PocPlatform.web, PocPlatform.macos, PocPlatform.windows, PocPlatform.linux]) {
+        expect(s.tested(p), greaterThan(10), reason: p.label);
+      }
+      final linux = s.results.firstWhere((r) => r.id == 'geolocation').of(PocPlatform.linux);
+      expect(linux.status, ResultStatus.na, reason: 'no geolocator plugin on Linux');
+      expect(linux.device, contains('WSL 2'));
     });
 
     test('every findings id exists in the scenario seed', () {
       final ids = {for (final s in scenarioSeed) s.id};
       expect(findings.keys.where((id) => !ids.contains(id)), isEmpty);
+      expect(desktopFindings.keys.where((id) => !ids.contains(id)), isEmpty);
     });
 
     test('sample dataset matches the D05 codes', () {
@@ -136,16 +141,16 @@ void main() {
       await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
       expect(find.byType(ResultsScreen), findsOneWidget);
       expect(find.text('Findings so far'), findsOneWidget);
-      // iOS and the three desktop apps have no findings yet.
-      expect(find.text('0 of 44 tested'), findsNWidgets(4));
+      // Only iOS has no findings yet.
+      expect(find.text('0 of 44 tested'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
 
-      // Adaptive shell passes everywhere tested; the guards are partial on Android.
-      expect(find.text('Adaptive shell'), findsOneWidget);
+      // Nested routes pass everywhere tested; the guards are partial on Android.
+      expect(find.text('Nested routes and tabs'), findsOneWidget);
       expect(find.text('Auth and lock guards'), findsOneWidget);
       await tester.tap(find.text('Failing'));
       await tester.pumpAndSettle();
-      expect(find.text('Adaptive shell'), findsNothing);
+      expect(find.text('Nested routes and tabs'), findsNothing);
       expect(find.text('Auth and lock guards'), findsOneWidget);
       semantics.dispose();
     });

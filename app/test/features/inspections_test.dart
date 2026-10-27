@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:field_inspections/core/theme/color_schemes.dart';
 import 'package:field_inspections/core/widgets/inspection_widgets.dart';
 import 'package:field_inspections/data/api/api_exception.dart';
 import 'package:field_inspections/data/models/inspection.dart';
@@ -7,6 +10,7 @@ import 'package:field_inspections/data/providers.dart';
 import 'package:field_inspections/data/repositories/inspections_repository.dart';
 import 'package:field_inspections/features/inspections/inspection_screens.dart';
 import 'package:field_inspections/features/inspections/inspections_controller.dart';
+import 'package:field_inspections/l10n/l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,6 +69,71 @@ void main() {
       expect(find.text('Substation 12'), findsOneWidget);
       expect(find.text('Warehouse A – loading dock'), findsOneWidget);
       expect(find.widgetWithText(StatusChip, 'Overdue'), findsWidgets);
+    });
+
+    // The selected row's highlight is Scheduled's fill (and close to In
+    // progress's), so that row's chip is outlined, in the tiles and the table.
+    // The status colours themselves fail on it in the medium/high contrast
+    // schemes (light medium Submitted: 2.0:1), hence the check below.
+    for (final (layout, size) in [('tiles', tabletSize), ('table', desktopSize)]) {
+      testWidgets('the selected row outlines its status chip ($layout)', (tester) async {
+        await pumpApp(tester, initialLocation: '/inspections/INS-1042', store: signedInStore(), size: size);
+        final chips = tester.widgetList<StatusChip>(find.byType(StatusChip)).toList();
+        final outlined = chips.where((c) => c.outlined).toList();
+        expect(outlined, hasLength(1));
+        expect(outlined.single.status, InspectionStatus.inProgress, reason: 'INS-1042 is in progress');
+        expect(chips.length, greaterThan(1), reason: 'the other rows keep their fill');
+      });
+    }
+
+    testWidgets('no chip is outlined while nothing is selected', (tester) async {
+      await pumpApp(tester, initialLocation: '/inspections', store: signedInStore(), size: desktopSize);
+      expect(tester.widgetList<StatusChip>(find.byType(StatusChip)).where((c) => c.outlined), isEmpty);
+    });
+
+    testWidgets('outlined chips stay readable on the selection colour in every scheme', (tester) async {
+      double contrast(Color a, Color b) {
+        final (la, lb) = (a.computeLuminance(), b.computeLuminance());
+        return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+      }
+
+      const schemes = {
+        'light': AppColorSchemes.light,
+        'light medium': AppColorSchemes.lightMediumContrast,
+        'light high': AppColorSchemes.lightHighContrast,
+        'dark': AppColorSchemes.dark,
+        'dark medium': AppColorSchemes.darkMediumContrast,
+        'dark high': AppColorSchemes.darkHighContrast,
+      };
+      for (final MapEntry(key: name, value: scheme) in schemes.entries) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(colorScheme: scheme),
+            // No cross-fade from the previous scheme: the colours read are this one's.
+            themeAnimationDuration: Duration.zero,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Material(
+              color: scheme.secondaryContainer,
+              child: Column(children: [for (final s in InspectionStatus.values) StatusChip(s, outlined: true)]),
+            ),
+          ),
+        );
+        for (final s in InspectionStatus.values) {
+          final chip = find.byWidgetPredicate((w) => w is StatusChip && w.status == s);
+          final text = tester.widget<Text>(find.descendant(of: chip, matching: find.byType(Text)));
+          final box = tester.widget<Container>(find.descendant(of: chip, matching: find.byType(Container)));
+          final decoration = box.decoration! as BoxDecoration;
+          expect(decoration.color, isNull, reason: '$name ${s.name}: no fill');
+          // WCAG AA: 4.5:1 for the label, 3:1 for the outline (non-text contrast).
+          expect(contrast(text.style!.color!, scheme.secondaryContainer), greaterThanOrEqualTo(4.5), reason: '$name ${s.name} label');
+          expect(
+            contrast((decoration.border! as Border).top.color, scheme.secondaryContainer),
+            greaterThanOrEqualTo(3),
+            reason: '$name ${s.name} outline',
+          );
+        }
+      }
     });
 
     testWidgets('a status chip filters through the URL', (tester) async {

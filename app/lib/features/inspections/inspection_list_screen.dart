@@ -521,7 +521,7 @@ class _InspectionTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          StatusChip(item.status),
+          StatusChip(item.status, outlined: selected),
           if (showMenu) _RowMenu(item: item, onArchive: onArchive, onCopyLink: onCopyLink) else const SizedBox(width: 8),
         ],
       ),
@@ -658,7 +658,10 @@ class _InspectionsTable extends ConsumerWidget {
                           SizedBox(width: 140, child: Text(localizedWhen(context, item.scheduledAt, now), softWrap: false)),
                           SizedBox(
                             width: 140,
-                            child: Align(alignment: AlignmentDirectional.centerStart, child: StatusChip(item.status)),
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: StatusChip(item.status, outlined: item.id == selectedId),
+                            ),
                           ),
                           SizedBox(
                             width: 56,

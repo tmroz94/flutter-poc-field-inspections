@@ -104,6 +104,7 @@ class ResultsState {
 
 /// Evidence gathered while building the PoC (Android emulator API 37,
 /// Chrome on Windows). iOS needs the Mac; everything there is "not tested".
+/// The desktop apps are in [desktopFindings].
 /// Format: id -> (android, web, note).
 const findings = <String, (String, String, String)>{
   'adaptive-shell': ('P', 'P', 'Bar on phone; rail/extended rail when resizing Chrome'),
@@ -200,6 +201,92 @@ const findings = <String, (String, String, String)>{
   ),
 };
 
+/// The desktop apps (docs/platform-setup.md): the 7 shared flows and the
+/// platform probe on each, deep links by hand; nothing that needs a click in
+/// system UI (prompts, file dialogs) was tried. "Flows" below means those.
+/// Format: id -> (macOS, Windows, Linux, note).
+const desktopFindings = <String, (String, String, String, String)>{
+  'adaptive-shell': (
+    'H',
+    'P',
+    'H',
+    'Windows: flows at 500, 700, 1000 and 1280 px windows (bar, rail, extended rail); macOS and Linux: 1280 px only',
+  ),
+  'nested-routes': ('P', 'P', 'P', 'Detail tabs in ?tab= after a deep link (flows)'),
+  'modals': ('H', 'H', 'H', 'Filter sheet opened and applied in the flows; Esc and the focus trap not checked'),
+  'deep-links': (
+    'P',
+    'P',
+    'P',
+    'fieldinspections:// opens its page in the running app and from a cold start (release); Windows and Linux pass a second process\'s link to the open window',
+  ),
+  'guards': (
+    'H',
+    'H',
+    'P',
+    'Sign-in redirect and return in the flows; the Touch ID / Windows Hello lock prompt not tried (Linux has no lock)',
+  ),
+  'back-navigation': ('P', 'P', 'P', 'Back from a deep-linked detail to the list (flows)'),
+  'text-fields': ('P', 'P', 'P', 'Typed in the flows; validators widget-tested'),
+  'autocomplete': ('P', 'P', 'P', 'Arrow keys and Enter pick a site (flows)'),
+  'pickers': ('P', 'P', 'P', 'Date, time and dropdown pickers in the wizard (flows)'),
+  'selection-controls': ('P', 'P', 'P', 'Segmented answers, checkboxes, radios and chips (flows)'),
+  'wizard-autosave': ('P', 'P', 'P', 'Draft survives an app restart (native SQLite)'),
+  'keyboard-focus': ('P', 'P', 'P', 'Next/Done move focus and submit; arrow keys and Enter in the site suggestions (flows)'),
+  'search-filter-sort': ('P', 'P', 'P', 'Filter sheet and sort land in the URL (flows); table sort widget-tested'),
+  'infinite-scroll': ('P', 'P', 'P', 'Load more in the desktop table and the Refresh button (flows)'),
+  'swipe-actions': ('P', 'P', 'P', 'Row menu Archive and Undo; no swipe with a mouse (flows)'),
+  'list-states': ('U', 'U', 'U', 'Empty, error and offline states in widget tests only'),
+  'photo-viewer': ('P', 'P', 'P', "Opened from the detail's photos (flows)"),
+  'data-table': ('P', 'P', 'P', 'Desktop table (D03) at 1280 px: Load more and the row menu (flows)'),
+  'hero': ('P', 'P', 'P', 'Photo Hero flight; removed under reduced motion (flows)'),
+  'page-transitions': ('P', 'P', 'P', 'Transitions animate; none under reduced motion (flows)'),
+  'animated-list': ('P', 'P', 'P', 'Photo grid scales items in and out (flows)'),
+  'implicit-explicit': ('P', 'P', 'P', 'Success animation and animated grid (flows)'),
+  'reduced-motion': ('P', 'P', 'P', 'App setting removes page transitions and Hero flights (flows)'),
+  'rest-json': ('U', 'U', 'U', "The flows use the in-app fake; the mock API wasn't run against the desktop apps"),
+  'state-management': ('P', 'P', 'P', 'Riverpod throughout'),
+  'local-storage': ('P', 'P', 'P', "drift on native SQLite in the app's support folder; a draft survives a restart (flows)"),
+  'sync-retry': ('U', 'U', 'U', ''),
+  'camera': (
+    'H',
+    'H',
+    'H',
+    'No camera on desktop: Gallery and the photo grid with a fake picker (flows); the real file dialog and drag and drop not tried',
+  ),
+  'files-export': ('U', 'U', 'U', 'Export PDF opens a Save dialog; not tried'),
+  'geolocation': ('H', 'H', 'N', 'Service and permission state read by the probe (no prompt, no position); Linux has no geolocator plugin'),
+  'maps': ('H', 'H', 'H', 'OSM tiles load on /map (probe); pins and ?site= not checked'),
+  'notifications': (
+    'H',
+    'H',
+    'H',
+    "The plugin starts and reports its permission (probe); a shown notification and its tap not tried. Linux can't schedule",
+  ),
+  'share-maps': ('U', 'U', 'U', ''),
+  'biometrics': (
+    'H',
+    'H',
+    'N',
+    'Touch ID / Windows Hello available with biometrics enrolled (probe); the prompt not tried. Not offered on Linux',
+  ),
+  'permissions': ('H', 'H', 'H', 'States read by the probe; the system prompts not tried'),
+  'clipboard-haptics': ('U', 'U', 'U', ''),
+  'themes': ('P', 'P', 'P', 'Dark theme switched live (flows)'),
+  'responsive': ('H', 'P', 'H', 'Windows: flows at 500, 700, 1000 and 1280 px windows; macOS and Linux: 1280 px only'),
+  'l10n': ('P', 'P', 'P', 'Live switch to Polish (flows)'),
+  'a11y': ('H', 'H', 'H', 'Guideline and 200% text tests on the host; no VoiceOver, Narrator or Orca run'),
+  'adaptive-widgets': ('U', 'U', 'U', ''),
+  'diagnostics': ('H', 'H', 'H', 'Device and app info read by the probe; the Diagnostics screen not checked'),
+  'results-tracker': ('U', 'U', 'U', ''),
+  'automated-tests': (
+    'P',
+    'P',
+    'P',
+    'The 7 shared flows and the platform probe, one file per run; Linux on every push in CI (xvfb), Windows and macOS by hand; Windows also at 4 window widths',
+  ),
+};
+
 class ResultsController extends Notifier<ResultsState> {
   static const _key = 'poc_results';
 
@@ -227,6 +314,7 @@ class ResultsController extends Notifier<ResultsState> {
       ),
       ResultsDataset.findings => () {
         final f = findings[s.id] ?? ('U', 'U', '');
+        final d = desktopFindings[s.id] ?? ('U', 'U', 'U', '');
         return ScenarioResult(
           id: s.id,
           group: s.group,
@@ -235,6 +323,13 @@ class ResultsController extends Notifier<ResultsState> {
             PocPlatform.ios: const PlatformResult(),
             PocPlatform.android: PlatformResult(status: ResultStatus.fromCode(f.$1), device: 'Android emulator, API 37', notes: f.$3),
             PocPlatform.web: PlatformResult(status: ResultStatus.fromCode(f.$2), device: 'Chrome, Windows 11', notes: f.$3),
+            PocPlatform.macos: PlatformResult(status: ResultStatus.fromCode(d.$1), device: 'macOS 27, Apple silicon', notes: d.$4),
+            PocPlatform.windows: PlatformResult(status: ResultStatus.fromCode(d.$2), device: 'Windows 11, x64', notes: d.$4),
+            PocPlatform.linux: PlatformResult(
+              status: ResultStatus.fromCode(d.$3),
+              device: 'Ubuntu 26.04 in WSL 2 (x64), Ubuntu 24.04 container (arm64)',
+              notes: d.$4,
+            ),
           },
         );
       }(),
