@@ -728,6 +728,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get reminderChannelDescription => 'Alerty przed rozpoczęciem inspekcji';
 
   @override
+  String get notificationOpenAction => 'Otwórz';
+
+  @override
   String get biometricReason => 'Odblokuj Inspekcje terenowe';
 
   @override

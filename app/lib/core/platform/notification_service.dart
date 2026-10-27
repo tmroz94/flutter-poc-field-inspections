@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Locale, PlatformDispatcher;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../l10n/l10n.dart';
 import '../router/deep_links.dart';
 import 'platform_services.dart';
 
@@ -82,20 +84,25 @@ class NotificationService {
   /// Initialises the plugin. Returns the route of the notification that
   /// launched the app (cold start from a tap), if any.
   Future<String?> init() async {
+    // Linux's label for a click on the notification. The app's language
+    // setting is still loading here, so the device's language.
+    final strings = lookupAppLocalizations(
+      PlatformDispatcher.instance.locale.languageCode == 'pl' ? const Locale('pl') : const Locale('en'),
+    );
     try {
       tzdata.initializeTimeZones();
       await _plugin.initialize(
-        settings: const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        settings: InitializationSettings(
+          android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: _darwin,
           macOS: _darwin,
-          linux: LinuxInitializationSettings(defaultActionName: 'Open'),
-          windows: WindowsInitializationSettings(
+          linux: LinuxInitializationSettings(defaultActionName: strings.notificationOpenAction),
+          windows: const WindowsInitializationSettings(
             appName: 'Field Inspections',
             appUserModelId: 'dev.flutterpoc.FieldInspections',
             guid: '019f31a2-22eb-49e8-b857-c3967afcdfae',
           ),
-          web: WebInitializationSettings(),
+          web: const WebInitializationSettings(),
         ),
         onDidReceiveNotificationResponse: (r) {
           final route = DeepLinks.toLocation(r.payload ?? '');

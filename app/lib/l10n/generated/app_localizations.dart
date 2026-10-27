@@ -1268,6 +1268,12 @@ abstract class AppLocalizations {
   /// **'Alerts before inspections start'**
   String get reminderChannelDescription;
 
+  /// No description provided for @notificationOpenAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get notificationOpenAction;
+
   /// No description provided for @biometricReason.
   ///
   /// In en, this message translates to:

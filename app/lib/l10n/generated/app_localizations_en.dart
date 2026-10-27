@@ -675,6 +675,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reminderChannelDescription => 'Alerts before inspections start';
 
   @override
+  String get notificationOpenAction => 'Open';
+
+  @override
   String get biometricReason => 'Unlock Field Inspections';
 
   @override

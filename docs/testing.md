@@ -111,10 +111,10 @@ plugins come in through Swift Package Manager, so there is no Podfile.
 
 The same `integration_test` files run in Chrome through `flutter drive` and
 chromedriver (Chrome for Testing, matching the installed Chrome's major
-version; here `D:/tools/chromedriver/chromedriver-win64`):
+version; unpack it anywhere):
 
 ```bash
-D:/tools/chromedriver/chromedriver-win64/chromedriver.exe --port=4444
+<chromedriver folder>/chromedriver --port=4444
 ```
 
 ```bash
@@ -250,8 +250,9 @@ x64 binary.
 
 Every job installs the Flutter version from `.fvmrc`; `tool/check.sh`,
 `tool/check.ps1` and the host helper use FVM when it's installed and the plain
-`flutter`/`dart` on PATH otherwise. The repository is private, so the jobs use
-Actions minutes from the account's allowance (Windows minutes count 2×, macOS 10×).
+`flutter`/`dart` on PATH otherwise. The repository is public, so GitHub's
+standard runners cost nothing; if it goes private, the jobs use Actions minutes
+from the account's allowance (Windows minutes count 2×, macOS 10×).
 
 - The workflows' token is read-only (`permissions: contents: read`).
 - Third-party actions (`subosito/flutter-action`,

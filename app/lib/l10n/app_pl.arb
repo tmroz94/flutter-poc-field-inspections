@@ -196,6 +196,7 @@
   "reminderBody": "Zaczyna się za 30 minut",
   "reminderChannel": "Przypomnienia o inspekcjach",
   "reminderChannelDescription": "Alerty przed rozpoczęciem inspekcji",
+  "notificationOpenAction": "Otwórz",
   "biometricReason": "Odblokuj Inspekcje terenowe",
   "loading": "Wczytywanie",
   "passwordHelperSignIn": "Użyj co najmniej 8 znaków",

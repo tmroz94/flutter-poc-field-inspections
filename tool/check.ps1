@@ -4,8 +4,7 @@ param([switch]$Coverage)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 # FVM pins the SDK from .fvmrc; without it, flutter/dart from PATH (like check.sh).
-$fvmCommand = Get-Command fvm -ErrorAction SilentlyContinue
-$fvm = if ($fvmCommand) { $fvmCommand.Source } elseif (Test-Path 'D:\tools\fvm\fvm.exe') { 'D:\tools\fvm\fvm.exe' } else { $null }
+$fvm = (Get-Command fvm -ErrorAction SilentlyContinue).Source
 if (-not $fvm) { Write-Host 'FVM not found: using flutter/dart from PATH.' -ForegroundColor Yellow }
 $failed = @()
 

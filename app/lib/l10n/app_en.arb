@@ -407,6 +407,7 @@
   "reminderBody": "Starts in 30 minutes",
   "reminderChannel": "Inspection reminders",
   "reminderChannelDescription": "Alerts before inspections start",
+  "notificationOpenAction": "Open",
   "biometricReason": "Unlock Field Inspections",
   "loading": "Loading",
   "passwordHelperSignIn": "Use 8 or more characters",

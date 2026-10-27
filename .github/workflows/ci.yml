@@ -81,10 +81,12 @@ jobs:
       - name: Integration flows in Chrome
         working-directory: app
         run: |
+          status=0
           for t in app_test ui_flows_test; do
             flutter drive --driver=test_driver/integration_test.dart --target=integration_test/$t.dart \
-              -d web-server --browser-name=chrome --headless --browser-dimension=1280x860
+              -d web-server --browser-name=chrome --headless --browser-dimension=1280x860 || status=1
           done
+          exit $status
 
       # Browser prompts (notifications, location, camera) with Playwright and the
       # runner's Chrome; frame timings need a real display, so they stay local.

@@ -48,12 +48,15 @@ jobs:
           retention-days: 7
       # One file per run: a second app launch in the same `flutter test` call
       # can lose its debug connection on desktop. host_test.dart skips itself.
+      # Every file runs even after one fails; the step fails at the end.
       - name: Integration flows and platform probe (virtual display, session bus)
         working-directory: app
         run: |
+          status=0
           for f in app_test ui_flows_test platform_probe_test; do
-            dbus-run-session -- xvfb-run -a flutter test integration_test/$f.dart -d linux
+            dbus-run-session -- xvfb-run -a flutter test integration_test/$f.dart -d linux || status=1
           done
+          exit $status
 
   windows:
     name: Windows
@@ -87,9 +90,11 @@ jobs:
       - name: Integration flows
         working-directory: app
         run: |
+          status=0
           for f in app_test ui_flows_test platform_probe_test; do
-            flutter test integration_test/$f.dart -d windows
+            flutter test integration_test/$f.dart -d windows || status=1
           done
+          exit $status
 
   macos:
     name: macOS
@@ -115,6 +120,8 @@ jobs:
       - name: Integration flows
         working-directory: app
         run: |
+          status=0
           for f in app_test ui_flows_test platform_probe_test; do
-            flutter test integration_test/$f.dart -d macos
+            flutter test integration_test/$f.dart -d macos || status=1
           done
+          exit $status
