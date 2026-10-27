@@ -88,8 +88,7 @@ void main() {
     final c = await launch(tester, overrides: [mediaServiceProvider.overrideWithValue(_Camera())]);
     await signIn(tester);
 
-    await tester.tap(find.text('New inspection'));
-    await tester.pumpAndSettle();
+    await tapNewInspection(tester);
 
     // Step 1: autocomplete with the keyboard (arrow down + Enter). The keys
     // work on every platform since the inline suggestions (decision 83).
@@ -142,7 +141,8 @@ void main() {
         await tester.pumpAndSettle();
       }
     }
-    expect(find.textContaining('18 of 18 answered'), findsOneWidget);
+    // The checklist's own header; from 840 to 1199 the side steps repeat the count.
+    expect(find.text('Fire safety, annual · 18 of 18 answered'), findsOneWidget);
     await _next(tester);
     expect(_step(c), 4);
 

@@ -42,8 +42,7 @@ void main() {
   testWidgets('the session and a wizard draft survive a restart (SQLite)', (tester) async {
     final c = await launch(tester);
     await signIn(tester);
-    await tester.tap(find.text('New inspection'));
-    await tester.pumpAndSettle();
+    await tapNewInspection(tester);
     await tester.enterText(find.widgetWithText(TextFormField, 'Site'), 'Integration depot');
     await tester.pumpAndSettle(const Duration(seconds: 1));
     await tester.tap(find.byTooltip('Close'));

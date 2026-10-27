@@ -59,6 +59,15 @@ Future<void> signIn(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Opens the wizard with the New inspection button. Its label shows on Home
+/// under 600 and on the extended rail from 1200; in between the rail button
+/// is an icon with the label as its tooltip (CI desktop runners land there).
+Future<void> tapNewInspection(WidgetTester tester) async {
+  final label = find.text('New inspection');
+  await tester.tap(label.evaluate().isNotEmpty ? label : find.byTooltip('New inspection'));
+  await tester.pumpAndSettle();
+}
+
 /// Pumps for a while without requiring the tree to settle (spinners, network).
 Future<void> settle(WidgetTester tester, [Duration d = const Duration(milliseconds: 500)]) async {
   final end = DateTime.now().add(d);
