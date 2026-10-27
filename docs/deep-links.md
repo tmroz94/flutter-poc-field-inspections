@@ -55,7 +55,7 @@ Web: open or refresh any URL on a host that rewrites unknown paths to
 
 macOS, Windows and Linux open `fieldinspections://` links through `app_links`
 (Linux needs its `.desktop` file registered first). Setup and commands:
-[setup.md](setup.md#desktop-deep-links).
+[platform-setup.md](platform-setup.md#desktop-deep-links).
 
 ## Hosting checklist (not needed for local testing)
 

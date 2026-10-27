@@ -184,8 +184,55 @@ Still to check on a physical iPhone:
 ## Desktop apps (macOS, Windows, Linux)
 
 Added after M4 from the same codebase (`flutter create --platforms=macos,linux,windows`).
-What differs from the phones is in `Capabilities` and summed up in
-[setup.md](setup.md#what-differs-on-the-desktop-apps). In the repo:
+Machine setup and run commands: [README](../README.md#setup).
+
+### What differs on the desktop apps
+
+One codebase, with these platform differences (all in
+`lib/core/platform/capabilities.dart`):
+
+| | macOS | Windows | Linux |
+|---|---|---|---|
+| Layout | desktop (opens at 1280 × 720; narrower windows get the tablet and phone layouts) | same | same |
+| Photos | Gallery (file dialog) and drag and drop; no camera | same | same |
+| Export PDF | Save dialog | same | same |
+| Notifications | ✓ (asks for permission) | ✓ | shown, but can't be scheduled: reminders are off, test notifications use a timer |
+| Location | ✓ (asks for permission) | ✓ (Windows location services) | not available (geolocator has no Linux plugin) |
+| Biometric lock | Touch ID (or the Mac's password) | Windows Hello | not offered (local_auth has no Linux plugin) |
+| Deep links (`fieldinspections://`) | ✓ via `app_links` (scheme in `Info.plist`) | ✓ via `app_links` (the app registers the scheme for the user at start) | ✓ via `app_links` once the `.desktop` file is registered (below) |
+
+The macOS app runs in the App Sandbox; `macos/Runner/*.entitlements` allow
+outgoing network (map tiles, mock API), user-selected files (pickers, Save)
+and location.
+
+### Desktop deep links
+
+Phones get links from Flutter's own deep linking; the desktop apps get them
+from `app_links` (`lib/core/platform/desktop_links.dart`). A link that starts
+the app opens its page directly; one that arrives while the app runs goes to
+the open window (Windows and Linux forward it from the second process, which
+then exits).
+
+- **macOS**: nothing to do; the scheme is in `macos/Runner/Info.plist`. Try
+  `open "fieldinspections://app/inspections/INS-1042"`.
+- **Windows**: each start writes `HKEY_CURRENT_USER\Software\Classes\fieldinspections`
+  pointing at the running `.exe` (`windows/runner/main.cpp`). Try
+  `start fieldinspections://app/inspections/INS-1042` in `cmd`. An MSIX package
+  would declare the scheme instead.
+- **Linux**: register `linux/dev.flutterpoc.field_inspections.desktop` once,
+  with `Exec=` set to the built binary's absolute path:
+
+  ```bash
+  cp app/linux/dev.flutterpoc.field_inspections.desktop ~/.local/share/applications/
+  ```
+
+  ```bash
+  xdg-mime default dev.flutterpoc.field_inspections.desktop x-scheme-handler/fieldinspections
+  ```
+
+  Then `xdg-open fieldinspections://app/inspections/INS-1042`.
+
+### In the repo
 
 | Need | Where |
 |---|---|
@@ -216,7 +263,29 @@ drift kept the database in the Documents folder (moved to the app's support
 folder on desktop), connectivity_plus throws an uncaught error when there's no
 system bus (the first check now runs in its own error zone; the app assumes
 it's online), and the Linux notification plugin can't report a launch from a
-notification (no longer asked). Windows: not yet run.
+notification (no longer asked).
+
+Verified on Windows 11 (x64 PC, Visual Studio Community 2026 18.11, 27 October
+2026): release and debug builds, the 7 flows and the probe (notifications
+granted, location service on with permission while in use, Windows Hello
+supported with biometrics enrolled, map tiles drawn). The release `.exe`
+registers `fieldinspections://` for the user at start; a link opened with
+`start` goes to the running window (the second process exits) and one that
+starts the app opens its page directly. The first build failed: MSVC 14.51
+rejects the `/await` flag that `permission_handler_windows` and
+`local_auth_windows` still use (STL1011); `windows/CMakeLists.txt` now drops
+the flag from the first and silences the error for the second. Not tried by
+hand yet: Windows Hello itself, the notification and location prompts, file
+dialogs and Save.
+
+Verified on Linux x64 in WSL 2 (Ubuntu 26.04 on the same PC, window through
+WSLg, 27 October 2026): release build, the quality gate (`tool/check.sh`), the
+7 flows and the probe (notifications granted, no location plugin, no
+biometrics, map tiles drawn), and links from a cold start and from a second
+process (passed to the running window). WSL has no NetworkManager (the app
+logs "Connectivity unavailable" and assumes it's online) and, out of the box,
+no notification daemon or desktop portal, so notifications and file dialogs
+weren't tried there.
 
 Adding `app_links` didn't change the phones: on the iPhone simulator a link
 still opens its page while the app runs, after sign-in and from a cold start

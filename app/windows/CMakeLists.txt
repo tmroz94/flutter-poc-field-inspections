@@ -57,6 +57,23 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# Two plugins compile with /await, which makes C++/WinRT include
+# <experimental/coroutine>; MSVC 14.51 (Visual Studio 18.6 and later) rejects
+# that header (error STL1011, flutter/flutter#186452). Drop this once the
+# plugins stop using the flag.
+# permission_handler_windows already builds as C++20, so without /await it
+# uses the standard <coroutine> (Baseflow/flutter-permission-handler#1534).
+if(TARGET permission_handler_windows_plugin)
+  get_target_property(plugin_options permission_handler_windows_plugin COMPILE_OPTIONS)
+  list(REMOVE_ITEM plugin_options "/await")
+  set_target_properties(permission_handler_windows_plugin PROPERTIES COMPILE_OPTIONS "${plugin_options}")
+endif()
+# local_auth_windows has a coroutine that ends in `return` (C3773 without
+# /await), so it keeps the flag and only silences the header's error.
+if(TARGET local_auth_windows_plugin)
+  target_compile_definitions(local_auth_windows_plugin PRIVATE _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+endif()
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can

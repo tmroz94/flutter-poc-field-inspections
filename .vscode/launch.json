@@ -1,7 +1,7 @@
 {
   // Run and Debug view (needs the Flutter extension). Each desktop entry
   // builds only on its own OS, the iPhone simulator only on a Mac. Details:
-  // docs/setup.md, "VS Code".
+  // README.md, "VS Code".
   "version": "0.2.0",
   "configurations": [
     {

@@ -218,6 +218,14 @@ info, notification and location permission state, the biometrics the lock
 could use, and map tiles loaded over the network. It runs on any target and
 fails only when a plugin is missing or broken.
 
+On a Windows PC the Linux app's flows run inside WSL, from the clone on the
+Linux filesystem (README, "Linux app on Windows"); WSLg gives them a display
+and systemd a session bus, so no `xvfb-run` is needed:
+
+```bash
+cd ~/flutter-mcp/app && fvm flutter test integration_test/app_test.dart -d linux
+```
+
 The Linux app can be built and tested from a Mac with Docker running:
 
 ```bash
