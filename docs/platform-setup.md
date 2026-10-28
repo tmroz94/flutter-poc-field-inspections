@@ -265,7 +265,10 @@ launch in the same run lost its debug connection), and so does the platform
 probe (`platform_probe_test`: device info, notification and location state,
 Touch ID available with a finger enrolled, 21 map tiles from OSM inside the
 sandbox). `fieldinspections://` links open the right page in the running app
-and from a cold start (release build). Not tried by hand yet: Touch ID itself,
+and from a cold start (release build). Against the mock API (28 October): a
+restored session, lists, search and filters; the table-shaped loading
+skeleton, an empty search, and with the server stopped the offline banner and
+error with Try again. Not tried by hand yet: Touch ID itself,
 the notification and location prompts, file dialogs and Save (they need clicks
 in system UI).
 
@@ -327,6 +330,7 @@ them). On Android, Flutter pushes the intent's route whatever plugins return
 | Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows and the platform probe (Face ID enrolled, location service on, map tiles), iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1); again on the iPad Pro 13-inch and iPad mini simulators (iPadOS 26.5, 28 Oct) |
 | Tablet layouts (rail, list and detail side by side, two-pane Settings) | – | ✓ at tablet widths in Chrome | ✓ iPad Pro 13-inch simulator in portrait and landscape (desktop table in landscape), iPad mini in the flows (28 Oct) |
 | Against the mock API (not the in-app fake) | ✓ via 10.0.2.2 | ✓ with CORS | ✓ iPhone and iPad Pro simulators: sign-in, lists and paging, detail, notifications, reference data (28 Oct) |
+| List states: loading, empty, error | offline state seen; others in widget tests | skeleton seen; others in widget tests | ✓ iPhone simulator against the mock API: skeleton (server slowed to 3 s), empty search, offline banner and error with Try again (server stopped), recovery (28 Oct) |
 | Camera (browser file input), geolocation in the browser | n/a | ✓ (Playwright) | – |
 | Offline submit → sync when back online (airplane mode) | ✓ | – | – |
 | GPS distance and far-away warning | ✓ via LocationManager test positions; fused provider needs a real phone | – | – |

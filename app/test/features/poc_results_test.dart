@@ -143,23 +143,26 @@ void main() {
   group('Results screen', () {
     testWidgets('phone: summary, filter and per-platform icons', (tester) async {
       final semantics = tester.ensureSemantics();
-      await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
-      expect(find.byType(ResultsScreen), findsOneWidget);
-      expect(find.text('Findings so far'), findsOneWidget);
-      // iOS (the iPhone and iPad simulators): 40 of 44 tested like the web, and
-      // the only platform with 7 partial.
-      expect(find.text('40 of 44 tested'), findsNWidgets(2));
-      expect(find.text('0 fail · 7 partial'), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
+      try {
+        await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
+        expect(find.byType(ResultsScreen), findsOneWidget);
+        expect(find.text('Findings so far'), findsOneWidget);
+        // iOS (the iPhone and iPad simulators): 41 of 44 tested like Android,
+        // and the only platform with 7 partial.
+        expect(find.text('41 of 44 tested'), findsNWidgets(2));
+        expect(find.text('0 fail · 7 partial'), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
 
-      // Nested routes pass everywhere tested; the guards are partial on Android.
-      expect(find.text('Nested routes and tabs'), findsOneWidget);
-      expect(find.text('Auth and lock guards'), findsOneWidget);
-      await tester.tap(find.text('Failing'));
-      await tester.pumpAndSettle();
-      expect(find.text('Nested routes and tabs'), findsNothing);
-      expect(find.text('Auth and lock guards'), findsOneWidget);
-      semantics.dispose();
+        // Nested routes pass everywhere tested; the guards are partial on Android.
+        expect(find.text('Nested routes and tabs'), findsOneWidget);
+        expect(find.text('Auth and lock guards'), findsOneWidget);
+        await tester.tap(find.text('Failing'));
+        await tester.pumpAndSettle();
+        expect(find.text('Nested routes and tabs'), findsNothing);
+        expect(find.text('Auth and lock guards'), findsOneWidget);
+      } finally {
+        semantics.dispose();
+      }
     });
 
     testWidgets('row opens the result sheet at its URL; validators guard Save', (tester) async {
