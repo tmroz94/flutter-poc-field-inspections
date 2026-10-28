@@ -22,9 +22,14 @@ Future<void> clearDeviceData() async {
   }
 }
 
+/// Containers [quit] has already disposed.
+final _quit = Expando<bool>();
+
 /// Starts the app the way `main` does (real shared_preferences and SQLite),
 /// minus notifications and the backend probe. Returns the provider container
-/// so tests can seed storage or wait on state.
+/// so tests can seed storage or wait on state. The app is quit when the test
+/// ends, also after a failure, so the database is never left open for the
+/// next test.
 Future<ProviderContainer> launch(
   WidgetTester tester, {
   String initialLocation = '/home',
@@ -40,13 +45,18 @@ Future<ProviderContainer> launch(
       ...overrides,
     ],
   );
+  addTearDown(() => quit(tester, container));
   await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const FieldInspectionsApp()));
   await tester.pumpAndSettle();
   return container;
 }
 
-/// Disposes the app (closing the database), like quitting it.
+/// Disposes the app (closing the database), like quitting it. Tests call it to
+/// restart the app; [launch] calls it again when the test ends, which then
+/// does nothing.
 Future<void> quit(WidgetTester tester, ProviderContainer container) async {
+  if (_quit[container] ?? false) return;
+  _quit[container] = true;
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpAndSettle();
   container.dispose();

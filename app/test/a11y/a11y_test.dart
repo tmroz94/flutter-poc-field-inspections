@@ -28,13 +28,18 @@ const _screens = [
 void main() {
   for (final location in _screens) {
     testWidgets('a11y guidelines: $location', (tester) async {
+      // Disposed in finally: the end-of-test check for open handles runs
+      // before tearDowns, and would add its own error to a failed guideline.
       final semantics = tester.ensureSemantics();
-      await pumpApp(tester, store: signedInStore(), initialLocation: location);
-      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-      await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
-      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-      await expectLater(tester, meetsGuideline(textContrastGuideline));
-      semantics.dispose();
+      try {
+        await pumpApp(tester, store: signedInStore(), initialLocation: location);
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        semantics.dispose();
+      }
     });
   }
 
@@ -57,10 +62,13 @@ void main() {
 
   testWidgets('a11y guidelines: sign in', (tester) async {
     final semantics = tester.ensureSemantics();
-    await pumpApp(tester, initialLocation: '/sign-in');
-    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-    await expectLater(tester, meetsGuideline(textContrastGuideline));
-    semantics.dispose();
+    try {
+      await pumpApp(tester, initialLocation: '/sign-in');
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+    } finally {
+      semantics.dispose();
+    }
   });
 }
