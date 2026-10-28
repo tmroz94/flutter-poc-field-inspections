@@ -48,6 +48,16 @@ void main() {
     expect(preflight.headers['access-control-allow-origin'], isNull);
   });
 
+  test('the default latency skips /health, so the app still finds a slow server', () async {
+    handler = buildHandler(defaultDelay: const Duration(seconds: 3));
+    final clock = Stopwatch()..start();
+    expect((await call('GET', '/api/health')).statusCode, 200);
+    expect(clock.elapsed, lessThan(const Duration(seconds: 1)));
+    clock.reset();
+    await call('GET', '/api/inspection-types');
+    expect(clock.elapsed, greaterThanOrEqualTo(const Duration(seconds: 3)), reason: 'other routes keep it');
+  });
+
   test('--allow-origin lets another web origin in', () async {
     handler = buildHandler(defaultDelay: Duration.zero, allowedOrigins: {'http://192.168.1.20:5173'});
     final r = await call('GET', '/api/health', headers: {'origin': 'http://192.168.1.20:5173'});

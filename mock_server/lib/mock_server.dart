@@ -195,12 +195,16 @@ Middleware _cors(Set<String> allowed) =>
 
 /// `?delay=<ms>` or `X-Mock-Delay` overrides latency (0 to [maxDelay]);
 /// `?fail=<status>` or `X-Mock-Fail` forces an error response (400–599, e.g.
-/// 500, 503).
+/// 500, 503). `/api/health` skips the default latency: the app's start-up
+/// probe waits only 1.5 s, and a slow server is still the server.
 Middleware _faults(Duration defaultDelay) =>
     (inner) => (request) async {
       final q = request.url.queryParameters;
       final delayMs = int.tryParse(q['delay'] ?? request.headers['x-mock-delay'] ?? '');
-      final delay = delayMs != null ? Duration(milliseconds: delayMs.clamp(0, maxDelay.inMilliseconds)) : defaultDelay;
+      final health = request.url.path == 'api/health';
+      final delay = delayMs != null
+          ? Duration(milliseconds: delayMs.clamp(0, maxDelay.inMilliseconds))
+          : (health ? Duration.zero : defaultDelay);
       if (delay > Duration.zero) await Future<void>.delayed(delay);
       final fail = int.tryParse(q['fail'] ?? request.headers['x-mock-fail'] ?? '');
       if (fail != null && fail >= 400 && fail <= 599) return _jsonError(fail, {'error': 'injected'});
