@@ -146,8 +146,11 @@ To see what it resolved, from `app/`:
 PERMISSION_HANDLER_VERBOSE=1 swift package --package-path ~/.pub-cache/hosted/pub.dev/permission_handler_apple-9.6.4/ios/permission_handler_apple dump-package > /dev/null
 ```
 
-Checked on the iPhone 18 Pro simulator (iOS 27.0) on 26 October 2026; results
-in "Verified so far" below. How to drive the simulator for these:
+Checked on the iPhone 18 Pro simulator (iOS 27.0) on 26 October 2026 and
+again on 28 October 2026 (after the strings, wizard, notification and lock
+changes: the 7 flows and the probe pass, and the checks marked 28 Oct below);
+results in "Verified so far" below. The Results tracker's iOS column is filled
+from them (`iosFindings` in `lib/features/poc/results_model.dart`). How to drive the simulator for these:
 
 - Face ID: `xcrun simctl spawn <udid> notifyutil -s com.apple.BiometricKit.enrollmentChanged 1`
   then `-p com.apple.BiometricKit.enrollmentChanged` to enroll; while the Face ID
@@ -244,7 +247,9 @@ then exits).
 | Deep links through `app_links`: macOS `fieldinspections` scheme; Windows registers the scheme for the user at start and forwards links to the open window; Linux runs single-instance and passes links on, plus a `.desktop` file to register | `macos/Runner/Info.plist`, `windows/runner/main.cpp`, `linux/runner/my_application.cc`, `linux/dev.flutterpoc.field_inspections.desktop` |
 | Biometric lock: Touch ID (macOS) and Windows Hello through local_auth; not on Linux | `lib/core/platform/capabilities.dart` |
 
-Verified on macOS 27 (Apple silicon): the 7 shared integration flows pass
+Verified on macOS 27 (Apple silicon; again on 28 October 2026 on macOS 27.0.1,
+with Touch ID enrolled and 21 map tiles in the probe, and by hand-started
+GitHub Actions on `macos-latest`): the 7 shared integration flows pass
 (`app_test` and `ui_flows_test`, one file per `flutter test` run: a second
 launch in the same run lost its debug connection), and so does the platform
 probe (`platform_probe_test`: device info, notification and location state,
@@ -297,22 +302,22 @@ them). On Android, Flutter pushes the intent's route whatever plugins return
 
 | Check | Android emulator | Chrome | iOS |
 |---|---|---|---|
-| Map tiles, pins, `?site=` deep link | ✓ | ✓ | tiles, pins and my location ✓ (simulator) |
+| Map tiles, pins, `?site=` deep link | ✓ | ✓ | tiles, pins and my location ✓; `?site=` from a cold start while signed out lands on the site after sign-in (simulator, 28 Oct) |
 | PDF export | builds; share sheet not opened in tests | ✓ downloaded | ✓ 2 pages, same content (Polish letters transliterated, as everywhere) |
 | Notification while the app is open | ✓ | ✓ | ✓ banner over the app (the `AppDelegate` delegate answers `willPresent`) |
-| Test notification → tap opens its route (app in background) | ✓ | ✓ shown by the service worker, click opens the route; tab closed too (Playwright) | ✓ banner on the home screen; opened from Notification Center onto the route |
+| Test notification → tap opens its route (app in background) | ✓ | ✓ shown by the service worker, click opens the route; tab closed too (Playwright) | ✓ banner on the home screen; opened from Notification Center onto the route (again 28 Oct) |
 | Notification tap after the app was killed | ✓ cold start on the route (host helper; a dropped-tap bug fixed) | n/a | ✓ cold start on the route (`simctl terminate`, then opened from Notification Center) |
-| Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | ✓ simulated Face ID: turning it on asks once, cold start locks, no match shows iOS's "Face Not Recognised" and stays locked, match opens Home |
+| Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | ✓ simulated Face ID (turning it on, cold-start lock and match again 28 Oct): turning it on asks once, cold start locks, no match shows iOS's "Face Not Recognised" and stays locked, match opens Home |
 | Camera / gallery / files | ✓ camera app and photo picker (Patrol); file picker with fakes | tests with fakes | camera prompt ✓, then "Camera not available" (the simulator has none); gallery through iOS's private picker (no Photos permission needed) ✓; PDF from Files › On My iPhone ✓ |
 | Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | ✓ granted and denied (Playwright) | location, camera and notification prompts with the Info.plist texts, Allow ✓; Diagnostics then shows Granted (simulator) |
 | Denied camera / location → banner or snackbar with Settings | ✓ (Patrol) | n/a | ✓ banner (Take photo disabled) and snackbar; "Open settings" opens the Settings app but at its top page, not the app's (simulator; recheck on a phone). Diagnostics updates on return without a restart |
 | Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | ✓ iOS share sheet; Save to Files gives `inspection-INS-1042.pdf` |
-| Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | diagnostics ✓ (tracker and adaptive widgets not opened yet) |
-| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows, iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1) |
+| Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | diagnostics ✓; tracker opened from a link (summaries and grid; editing not tried); adaptive widgets in Cupertino by default, CupertinoAlertDialog ✓ (28 Oct) |
+| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows and the platform probe (Face ID enrolled, location service on, map tiles), iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1) |
 | Camera (browser file input), geolocation in the browser | n/a | ✓ (Playwright) | – |
 | Offline submit → sync when back online (airplane mode) | ✓ | – | – |
 | GPS distance and far-away warning | ✓ via LocationManager test positions; fused provider needs a real phone | – | – |
-| Pickers, swipe, pull to refresh, Hero, animated grid, reduce motion | ✓ | partly (widget tests) | ✓ simulator |
+| Pickers, swipe, pull to refresh, Hero, animated grid, reduce motion | ✓ | partly (widget tests) | ✓ simulator; the edge swipe back follows the finger (28 Oct) |
 | WebAssembly build (Skwasm, cross-origin isolated, drift on OPFS) | n/a | ✓ | n/a |
 
 ## Web builds

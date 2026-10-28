@@ -18,14 +18,16 @@ ProviderContainer _container([MemoryStore? store]) {
 
 void main() {
   group('ResultsController', () {
-    test('starts with our findings: iOS untested, Android, Web and the desktop apps filled in', () {
+    test('starts with our findings on every platform', () {
       final s = _container().read(resultsProvider);
       expect(s.dataset, ResultsDataset.findings);
       expect(s.results, hasLength(scenarioSeed.length));
-      expect(s.tested(PocPlatform.ios), 0);
-      for (final p in [PocPlatform.android, PocPlatform.web, PocPlatform.macos, PocPlatform.windows, PocPlatform.linux]) {
+      for (final p in PocPlatform.values) {
         expect(s.tested(p), greaterThan(10), reason: p.label);
       }
+      final ios = s.results.firstWhere((r) => r.id == 'data-table').of(PocPlatform.ios);
+      expect(ios.status, ResultStatus.na, reason: 'the table is desktop only');
+      expect(ios.device, contains('simulator'));
       final linux = s.results.firstWhere((r) => r.id == 'geolocation').of(PocPlatform.linux);
       expect(linux.status, ResultStatus.na, reason: 'no geolocator plugin on Linux');
       expect(linux.device, contains('WSL 2'));
@@ -35,6 +37,7 @@ void main() {
       final ids = {for (final s in scenarioSeed) s.id};
       expect(findings.keys.where((id) => !ids.contains(id)), isEmpty);
       expect(desktopFindings.keys.where((id) => !ids.contains(id)), isEmpty);
+      expect(iosFindings.keys.where((id) => !ids.contains(id)), isEmpty);
     });
 
     test('sample dataset matches the D05 codes', () {
@@ -141,8 +144,8 @@ void main() {
       await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
       expect(find.byType(ResultsScreen), findsOneWidget);
       expect(find.text('Findings so far'), findsOneWidget);
-      // Only iOS has no findings yet.
-      expect(find.text('0 of 44 tested'), findsOneWidget);
+      // iOS (the simulator) has 38 of 44 tested; no other platform has that count.
+      expect(find.text('38 of 44 tested'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
 
       // Nested routes pass everywhere tested; the guards are partial on Android.
@@ -164,10 +167,14 @@ void main() {
       expect(app.location, '/settings/poc/results/back-navigation');
       expect(find.byType(ResultSheet), findsOneWidget);
 
-      // Default platform is Android here; switch to iOS (not tested yet).
+      // Default platform is Android here; switch to iOS and empty its seeded
+      // device and notes.
       await tester.tap(find.text('iOS').last);
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ChoiceChip, 'Fail'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextFormField, 'Device and version'), '');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Notes'), '');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();

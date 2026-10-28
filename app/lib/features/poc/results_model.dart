@@ -103,8 +103,8 @@ class ResultsState {
 }
 
 /// Evidence gathered while building the PoC (Android emulator API 37,
-/// Chrome on Windows). iOS needs the Mac; everything there is "not tested".
-/// The desktop apps are in [desktopFindings].
+/// Chrome on Windows). iOS is in [iosFindings], the desktop apps in
+/// [desktopFindings].
 /// Format: id -> (android, web, note).
 const findings = <String, (String, String, String)>{
   'adaptive-shell': ('P', 'P', 'Bar on phone; rail/extended rail when resizing Chrome'),
@@ -199,6 +199,73 @@ const findings = <String, (String, String, String)>{
     'P',
     '270+ unit/widget/a11y/golden tests on the host; 9 device tests on the emulator (incl. airplane mode and GPS via the host helper); Chrome needs chromedriver. Chrome: integration_test via flutter drive; browser prompts and JS vs Wasm timings with Playwright',
   ),
+};
+
+/// The iPhone simulator (docs/platform-setup.md): the 7 shared flows and the
+/// platform probe, plus prompts, notifications, Face ID and links driven by
+/// hand with simctl. The camera, real GPS, real Face ID and the app's page in
+/// Settings need a physical iPhone. "Flows" below means the shared flows.
+/// Format: id -> (status, note).
+const iosFindings = <String, (String, String)>{
+  'adaptive-shell': ('H', 'Bottom bar on the iPhone (flows); no iPad or rotation run'),
+  'nested-routes': ('P', 'Detail tabs in ?tab= after a deep link (flows)'),
+  'modals': ('H', 'Filter sheet (flows) and the Cupertino alert dialog; other sheets not checked'),
+  'deep-links': (
+    'P',
+    'fieldinspections:// (simctl openurl) while running, after sign-in and from a cold start, ?site= included; universal links need a developer team',
+  ),
+  'guards': ('P', 'Sign-in redirect and return; simulated Face ID: a cold start locks, no match stays locked, a match opens Home'),
+  'back-navigation': ('P', 'Edge swipe back follows the finger; back from a deep-linked detail to the list (flows)'),
+  'text-fields': ('P', 'Typed in the flows; validators widget-tested'),
+  'autocomplete': ('P', 'Site suggestions picked in the wizard (flows)'),
+  'pickers': ('P', 'Date, time and dropdown pickers in the wizard (flows)'),
+  'selection-controls': ('P', 'Segmented answers, checkboxes, radios and chips (flows)'),
+  'wizard-autosave': ('P', 'Draft survives an app restart (native SQLite)'),
+  'keyboard-focus': ('P', 'Next/Done on the software keyboard move focus and submit (flows)'),
+  'search-filter-sort': ('P', 'Filter sheet selection lands in the URL (flows)'),
+  'infinite-scroll': ('P', 'Fling to the next page and pull to refresh (flows)'),
+  'swipe-actions': ('P', 'Swipe to archive and Undo (flows)'),
+  'list-states': ('U', 'Empty, error and offline states in widget tests only'),
+  'photo-viewer': ('P', "Opened from the detail's photos (flows)"),
+  'data-table': ('N', 'Desktop only (D03)'),
+  'hero': ('P', 'Photo Hero flight; removed under reduced motion (flows)'),
+  'page-transitions': ('P', 'Cupertino transitions animate; none under reduced motion (flows)'),
+  'animated-list': ('P', 'Photo grid scales items in and out (flows)'),
+  'implicit-explicit': ('P', 'Success animation and animated grid (flows)'),
+  'reduced-motion': ('P', 'App setting removes page transitions and Hero flights (flows)'),
+  'rest-json': ('U', "The flows use the in-app fake; the mock API wasn't run against the simulator"),
+  'state-management': ('P', 'Riverpod throughout'),
+  'local-storage': ('P', 'drift on native SQLite; a draft survives a restart (flows)'),
+  'sync-retry': ('U', ''),
+  'camera': (
+    'H',
+    'Camera prompt, then "Camera not available" (the simulator has none); gallery through the system picker and a PDF from Files work',
+  ),
+  'files-export': ('P', 'Export PDF opens the iOS share sheet; Save to Files gives inspection-INS-1042.pdf (2 pages)'),
+  'geolocation': ('H', 'Location prompt, then my location on the map from a simulated position; real GPS needs a phone'),
+  'maps': ('P', 'OSM tiles, pins and my location; ?site= link from a cold start (probe and by hand)'),
+  'notifications': (
+    'P',
+    'Banner over the open app; opened from Notification Center onto its route, in the background and after the app was killed',
+  ),
+  'share-maps': ('U', ''),
+  'biometrics': (
+    'H',
+    'Simulated Face ID: turning the lock on asks once, no match shows "Face Not Recognised", a match unlocks; real Face ID needs a phone',
+  ),
+  'permissions': (
+    'H',
+    'Location, camera and notification prompts with the Info.plist texts; denied camera/location show the banner and snackbar, but "Open settings" lands on the top of Settings, not the app\'s page',
+  ),
+  'clipboard-haptics': ('U', ''),
+  'themes': ('P', 'Dark theme switched live (flows)'),
+  'responsive': ('H', 'iPhone width only; no iPad run'),
+  'l10n': ('P', 'Live switch to Polish (flows)'),
+  'a11y': ('H', 'Guideline and 200% text tests on the host; no VoiceOver run'),
+  'adaptive-widgets': ('P', 'Cupertino by default on iOS: switch, slider, activity indicator, date picker, CupertinoAlertDialog'),
+  'diagnostics': ('P', 'Real device and permission values; permission states update on return from Settings'),
+  'results-tracker': ('H', 'Opened from a link: summaries and the per-platform grid; editing and export not tried on iOS'),
+  'automated-tests': ('P', 'The 7 shared flows and the platform probe on the iPhone 18 Pro simulator (iOS 27.0), one file per run'),
 };
 
 /// The desktop apps (docs/platform-setup.md): the 7 shared flows and the
@@ -313,6 +380,7 @@ class ResultsController extends Notifier<ResultsState> {
         byPlatform: {PocPlatform.ios: r(s.ios, ''), PocPlatform.android: r(s.android, ''), PocPlatform.web: r(s.web, s.note)},
       ),
       ResultsDataset.findings => () {
+        final i = iosFindings[s.id] ?? ('U', '');
         final f = findings[s.id] ?? ('U', 'U', '');
         final d = desktopFindings[s.id] ?? ('U', 'U', 'U', '');
         return ScenarioResult(
@@ -320,7 +388,7 @@ class ResultsController extends Notifier<ResultsState> {
           group: s.group,
           name: s.name,
           byPlatform: {
-            PocPlatform.ios: const PlatformResult(),
+            PocPlatform.ios: PlatformResult(status: ResultStatus.fromCode(i.$1), device: 'iPhone 18 Pro simulator, iOS 27.0', notes: i.$2),
             PocPlatform.android: PlatformResult(status: ResultStatus.fromCode(f.$1), device: 'Android emulator, API 37', notes: f.$3),
             PocPlatform.web: PlatformResult(status: ResultStatus.fromCode(f.$2), device: 'Chrome, Windows 11', notes: f.$3),
             PocPlatform.macos: PlatformResult(status: ResultStatus.fromCode(d.$1), device: 'macOS 27, Apple silicon', notes: d.$4),
