@@ -3,6 +3,8 @@
 # Usage: tool/check.sh [--coverage]
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
+# From the repo root, so the patrol_test glob below matches wherever this is started.
+cd "$root" || exit 1
 failed=()
 
 # FVM pins the SDK locally; CI runners install the same version and use flutter/dart directly.
