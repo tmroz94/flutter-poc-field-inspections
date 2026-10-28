@@ -4,6 +4,8 @@
 //   fvm flutter test integration_test/platform_probe_test.dart -d macos
 // Each check prints a PROBE line; failures mean a plugin is missing or broken,
 // not that a permission is off.
+import 'dart:async';
+
 import 'package:field_inspections/core/platform/capabilities.dart';
 import 'package:field_inspections/core/platform/device_summary.dart';
 import 'package:field_inspections/core/platform/notification_service.dart';
@@ -46,10 +48,16 @@ void main() {
   });
 
   testWidgets('location: service and permission state (no prompt)', (tester) async {
+    // Windows Server (the windows-latest CI runner) has no location service:
+    // there both calls never return, and the job ran into its timeout.
+    const wait = Duration(seconds: 10);
     try {
-      final service = await Geolocator.isLocationServiceEnabled();
-      final permission = await Geolocator.checkPermission();
+      final service = await Geolocator.isLocationServiceEnabled().timeout(wait);
+      final permission = await Geolocator.checkPermission().timeout(wait);
       _probe('location', 'service ${service ? 'on' : 'off'}, permission ${permission.name}');
+    } on TimeoutException {
+      _probe('location', 'no answer in ${wait.inSeconds} s');
+      expect(_caps.platform, TargetPlatform.windows, reason: 'only Windows Server leaves the location calls unanswered');
     } on MissingPluginException {
       _probe('location', 'no plugin on this platform');
       expect(_caps.platform, TargetPlatform.linux, reason: 'only Linux lacks a geolocator plugin');

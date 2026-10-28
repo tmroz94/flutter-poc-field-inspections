@@ -51,6 +51,7 @@ jobs:
       # Every file runs even after one fails; the step fails at the end.
       - name: Integration flows and platform probe (virtual display, session bus)
         working-directory: app
+        timeout-minutes: 25
         run: |
           status=0
           for f in app_test ui_flows_test platform_probe_test; do
@@ -89,6 +90,9 @@ jobs:
           retention-days: 7
       - name: Integration flows
         working-directory: app
+        # A hung plugin call shouldn't use up the whole job (the location
+        # probe on windows-latest did, run 40553197467).
+        timeout-minutes: 25
         run: |
           status=0
           for f in app_test ui_flows_test platform_probe_test; do
@@ -119,6 +123,9 @@ jobs:
         run: flutter build macos --release
       - name: Integration flows
         working-directory: app
+        # A hung plugin call shouldn't use up the whole job (the location
+        # probe on windows-latest did, run 40553197467).
+        timeout-minutes: 25
         run: |
           status=0
           for f in app_test ui_flows_test platform_probe_test; do
