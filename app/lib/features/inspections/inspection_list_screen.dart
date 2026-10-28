@@ -168,6 +168,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
         _search.clear();
         context.go(Routes.inspections);
       },
+      onSort: (s) => _apply(query.copyWith(sort: s)),
       showMenu: !caps.isMobile,
       table: size == WindowSize.large,
     );
@@ -329,6 +330,7 @@ class _ListBody extends ConsumerWidget {
     required this.onLoadMore,
     required this.onRetryMore,
     required this.onClearFilters,
+    required this.onSort,
     required this.showMenu,
     required this.table,
   });
@@ -343,6 +345,7 @@ class _ListBody extends ConsumerWidget {
   final VoidCallback onLoadMore;
   final VoidCallback onRetryMore;
   final VoidCallback onClearFilters;
+  final ValueChanged<SortOrder> onSort;
   final bool showMenu;
   final bool table;
 
@@ -391,6 +394,7 @@ class _ListBody extends ConsumerWidget {
         onCopyLink: onCopyLink,
         onLoadMore: onLoadMore,
         onRetryMore: onRetryMore,
+        onSort: onSort,
       );
     }
     final now = ref.watch(clockProvider)();
@@ -562,6 +566,7 @@ class _InspectionsTable extends ConsumerWidget {
     required this.onCopyLink,
     required this.onLoadMore,
     required this.onRetryMore,
+    required this.onSort,
   });
 
   final ListState state;
@@ -573,6 +578,9 @@ class _InspectionsTable extends ConsumerWidget {
   final VoidCallback onLoadMore;
   final VoidCallback onRetryMore;
 
+  /// Goes through the screen's filter navigation, so an open detail stays open.
+  final ValueChanged<SortOrder> onSort;
+
   static const _minWidth = 560.0;
 
   @override
@@ -580,8 +588,6 @@ class _InspectionsTable extends ConsumerWidget {
     final theme = Theme.of(context);
     final now = ref.watch(clockProvider)();
     final sortAsc = query.sort != SortOrder.dueDesc;
-
-    void sortBy(SortOrder s) => context.go(query.copyWith(sort: s).toLocation(Routes.inspections));
 
     Widget header(String label, {double? width, int flex = 0, SortOrder? sort, IconData? arrow}) {
       final text = Row(
@@ -594,7 +600,7 @@ class _InspectionsTable extends ConsumerWidget {
       final cell = sort == null
           ? text
           : InkWell(
-              onTap: () => sortBy(sort),
+              onTap: () => onSort(sort),
               child: Semantics(button: true, label: context.l10n.sortByColumn(label), child: text),
             );
       return width != null

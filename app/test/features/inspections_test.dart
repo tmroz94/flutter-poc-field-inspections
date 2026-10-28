@@ -266,6 +266,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(app.location, '/inspections?sort=dueDesc');
     });
+
+    testWidgets('sorting the desktop table keeps the open detail', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042?tab=checklist', store: signedInStore(), size: desktopSize);
+      expect(find.byType(InspectionDetailScreen), findsOneWidget);
+      await tester.tap(find.text('Due'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/inspections/INS-1042?sort=dueDesc&tab=checklist');
+      expect(find.byType(InspectionDetailScreen), findsOneWidget);
+    });
   });
 
   group('filter sheet (P05)', () {

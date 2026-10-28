@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_inspections/data/api/api_exception.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/models/draft.dart';
@@ -24,6 +26,19 @@ class _OfflineSave extends FakeInspectionsRepository {
       throw const ApiException('network');
 }
 
+/// Inspection types arrive only when [types] completes.
+class _SlowTypes extends FakeInspectionsRepository {
+  _SlowTypes(super.db) : super(latency: Duration.zero);
+
+  final types = Completer<void>();
+
+  @override
+  Future<List<String>> inspectionTypes() async {
+    await types.future;
+    return super.inspectionTypes();
+  }
+}
+
 Future<void> tapNext(WidgetTester tester) async {
   await tester.tap(find.widgetWithText(FilledButton, 'Next'));
   await tester.pumpAndSettle();
@@ -44,6 +59,23 @@ InspectionDraft _ready() => InspectionDraft(
 );
 
 void main() {
+  testWidgets('step 2: the type shows once the types arrive after the first build', (tester) async {
+    final store = MemoryLocalStore()..drafts['new'] = _ready().copyWith(lastStep: 2);
+    late _SlowTypes repo;
+    await pumpApp(
+      tester,
+      initialLocation: '/inspections/new?step=2',
+      store: signedInStore(),
+      localStore: store,
+      inspections: (db) => repo = _SlowTypes(db),
+    );
+    expect(find.text('Step 2 of 5'), findsOneWidget);
+    repo.types.complete();
+    await tester.pumpAndSettle();
+    final field = tester.widget<TextField>(find.descendant(of: find.byType(DropdownMenu<String>), matching: find.byType(TextField)));
+    expect(field.controller?.text, 'Fire safety, annual');
+  });
+
   testWidgets('step 1: Next needs a site; autocomplete picks one', (tester) async {
     await pumpApp(tester, initialLocation: '/inspections/new?step=1', store: signedInStore());
     expect(find.text('Step 1 of 5'), findsOneWidget);

@@ -99,6 +99,11 @@ class _DetailsStepState extends ConsumerState<DetailsStep> {
       children: [
         LayoutBuilder(
           builder: (context, c) => DropdownMenu<String>(
+            // DropdownMenu applies initialSelection to its text only when the
+            // selection changes, not when the entries arrive: types that load
+            // after the first build (cold link to step 2, Try again) would
+            // leave the field blank although a type is set.
+            key: ValueKey(Object.hashAll(types)),
             width: c.maxWidth,
             initialSelection: d.type,
             label: Text(l.inspectionType),
