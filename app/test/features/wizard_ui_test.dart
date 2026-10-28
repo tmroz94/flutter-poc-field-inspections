@@ -20,7 +20,8 @@ class _OfflineSave extends FakeInspectionsRepository {
   _OfflineSave(super.db) : super(latency: Duration.zero);
 
   @override
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async => throw const ApiException('network');
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async =>
+      throw const ApiException('network');
 }
 
 Future<void> tapNext(WidgetTester tester) async {

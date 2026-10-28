@@ -302,8 +302,17 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxData> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _requestKeyMeta = const VerificationMeta('requestKey');
   @override
-  List<GeneratedColumn> get $columns => [id, kind, inspectionId, site, body, createdAt, attempts, lastError, draftJson];
+  late final GeneratedColumn<String> requestKey = GeneratedColumn<String>(
+    'request_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, kind, inspectionId, site, body, createdAt, attempts, lastError, draftJson, requestKey];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -348,6 +357,9 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxData> {
     if (data.containsKey('draft_json')) {
       context.handle(_draftJsonMeta, draftJson.isAcceptableOrUnknown(data['draft_json']!, _draftJsonMeta));
     }
+    if (data.containsKey('request_key')) {
+      context.handle(_requestKeyMeta, requestKey.isAcceptableOrUnknown(data['request_key']!, _requestKeyMeta));
+    }
     return context;
   }
 
@@ -366,6 +378,7 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxData> {
       attempts: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}attempts'])!,
       lastError: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}last_error']),
       draftJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}draft_json']),
+      requestKey: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}request_key']),
     );
   }
 
@@ -396,6 +409,11 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
   /// The wizard draft the entry was made from (schema v3), so a rejected
   /// report can be reopened and fixed. Null for entries queued before v3.
   final String? draftJson;
+
+  /// The create's `Idempotency-Key` (schema v4), the same one the first
+  /// online attempt used, so a create whose response was lost isn't made
+  /// twice. Null for updates and for entries queued before v4.
+  final String? requestKey;
   const OutboxData({
     required this.id,
     required this.kind,
@@ -406,6 +424,7 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
     required this.attempts,
     this.lastError,
     this.draftJson,
+    this.requestKey,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -425,6 +444,9 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
     if (!nullToAbsent || draftJson != null) {
       map['draft_json'] = Variable<String>(draftJson);
     }
+    if (!nullToAbsent || requestKey != null) {
+      map['request_key'] = Variable<String>(requestKey);
+    }
     return map;
   }
 
@@ -439,6 +461,7 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
       attempts: Value(attempts),
       lastError: lastError == null && nullToAbsent ? const Value.absent() : Value(lastError),
       draftJson: draftJson == null && nullToAbsent ? const Value.absent() : Value(draftJson),
+      requestKey: requestKey == null && nullToAbsent ? const Value.absent() : Value(requestKey),
     );
   }
 
@@ -454,6 +477,7 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
       attempts: serializer.fromJson<int>(json['attempts']),
       lastError: serializer.fromJson<String?>(json['lastError']),
       draftJson: serializer.fromJson<String?>(json['draftJson']),
+      requestKey: serializer.fromJson<String?>(json['requestKey']),
     );
   }
   @override
@@ -469,6 +493,7 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
       'attempts': serializer.toJson<int>(attempts),
       'lastError': serializer.toJson<String?>(lastError),
       'draftJson': serializer.toJson<String?>(draftJson),
+      'requestKey': serializer.toJson<String?>(requestKey),
     };
   }
 
@@ -482,6 +507,7 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
     int? attempts,
     Value<String?> lastError = const Value.absent(),
     Value<String?> draftJson = const Value.absent(),
+    Value<String?> requestKey = const Value.absent(),
   }) => OutboxData(
     id: id ?? this.id,
     kind: kind ?? this.kind,
@@ -492,6 +518,7 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
     attempts: attempts ?? this.attempts,
     lastError: lastError.present ? lastError.value : this.lastError,
     draftJson: draftJson.present ? draftJson.value : this.draftJson,
+    requestKey: requestKey.present ? requestKey.value : this.requestKey,
   );
   OutboxData copyWithCompanion(OutboxCompanion data) {
     return OutboxData(
@@ -504,6 +531,7 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
       attempts: data.attempts.present ? data.attempts.value : this.attempts,
       lastError: data.lastError.present ? data.lastError.value : this.lastError,
       draftJson: data.draftJson.present ? data.draftJson.value : this.draftJson,
+      requestKey: data.requestKey.present ? data.requestKey.value : this.requestKey,
     );
   }
 
@@ -518,13 +546,14 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
           ..write('createdAt: $createdAt, ')
           ..write('attempts: $attempts, ')
           ..write('lastError: $lastError, ')
-          ..write('draftJson: $draftJson')
+          ..write('draftJson: $draftJson, ')
+          ..write('requestKey: $requestKey')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, kind, inspectionId, site, body, createdAt, attempts, lastError, draftJson);
+  int get hashCode => Object.hash(id, kind, inspectionId, site, body, createdAt, attempts, lastError, draftJson, requestKey);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -537,7 +566,8 @@ class OutboxData extends DataClass implements Insertable<OutboxData> {
           other.createdAt == this.createdAt &&
           other.attempts == this.attempts &&
           other.lastError == this.lastError &&
-          other.draftJson == this.draftJson);
+          other.draftJson == this.draftJson &&
+          other.requestKey == this.requestKey);
 }
 
 class OutboxCompanion extends UpdateCompanion<OutboxData> {
@@ -550,6 +580,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
   final Value<int> attempts;
   final Value<String?> lastError;
   final Value<String?> draftJson;
+  final Value<String?> requestKey;
   const OutboxCompanion({
     this.id = const Value.absent(),
     this.kind = const Value.absent(),
@@ -560,6 +591,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
     this.attempts = const Value.absent(),
     this.lastError = const Value.absent(),
     this.draftJson = const Value.absent(),
+    this.requestKey = const Value.absent(),
   });
   OutboxCompanion.insert({
     this.id = const Value.absent(),
@@ -571,6 +603,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
     this.attempts = const Value.absent(),
     this.lastError = const Value.absent(),
     this.draftJson = const Value.absent(),
+    this.requestKey = const Value.absent(),
   }) : kind = Value(kind),
        site = Value(site),
        body = Value(body),
@@ -585,6 +618,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
     Expression<int>? attempts,
     Expression<String>? lastError,
     Expression<String>? draftJson,
+    Expression<String>? requestKey,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -596,6 +630,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
       if (attempts != null) 'attempts': attempts,
       if (lastError != null) 'last_error': lastError,
       if (draftJson != null) 'draft_json': draftJson,
+      if (requestKey != null) 'request_key': requestKey,
     });
   }
 
@@ -609,6 +644,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
     Value<int>? attempts,
     Value<String?>? lastError,
     Value<String?>? draftJson,
+    Value<String?>? requestKey,
   }) {
     return OutboxCompanion(
       id: id ?? this.id,
@@ -620,6 +656,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
       attempts: attempts ?? this.attempts,
       lastError: lastError ?? this.lastError,
       draftJson: draftJson ?? this.draftJson,
+      requestKey: requestKey ?? this.requestKey,
     );
   }
 
@@ -653,6 +690,9 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
     if (draftJson.present) {
       map['draft_json'] = Variable<String>(draftJson.value);
     }
+    if (requestKey.present) {
+      map['request_key'] = Variable<String>(requestKey.value);
+    }
     return map;
   }
 
@@ -667,7 +707,8 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
           ..write('createdAt: $createdAt, ')
           ..write('attempts: $attempts, ')
           ..write('lastError: $lastError, ')
-          ..write('draftJson: $draftJson')
+          ..write('draftJson: $draftJson, ')
+          ..write('requestKey: $requestKey')
           ..write(')'))
         .toString();
   }
@@ -1061,6 +1102,7 @@ typedef $$OutboxTableCreateCompanionBuilder = OutboxCompanion Function({
   Value<int> attempts,
   Value<String?> lastError,
   Value<String?> draftJson,
+  Value<String?> requestKey,
 });
 typedef $$OutboxTableUpdateCompanionBuilder = OutboxCompanion Function({
   Value<int> id,
@@ -1072,6 +1114,7 @@ typedef $$OutboxTableUpdateCompanionBuilder = OutboxCompanion Function({
   Value<int> attempts,
   Value<String?> lastError,
   Value<String?> draftJson,
+  Value<String?> requestKey,
 });
 
 class $$OutboxTableFilterComposer extends Composer<_$AppDatabase, $OutboxTable> {
@@ -1099,6 +1142,8 @@ class $$OutboxTableFilterComposer extends Composer<_$AppDatabase, $OutboxTable> 
   ColumnFilters<String> get lastError => $composableBuilder(column: $table.lastError, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get draftJson => $composableBuilder(column: $table.draftJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get requestKey => $composableBuilder(column: $table.requestKey, builder: (column) => ColumnFilters(column));
 }
 
 class $$OutboxTableOrderingComposer extends Composer<_$AppDatabase, $OutboxTable> {
@@ -1126,6 +1171,8 @@ class $$OutboxTableOrderingComposer extends Composer<_$AppDatabase, $OutboxTable
   ColumnOrderings<String> get lastError => $composableBuilder(column: $table.lastError, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get draftJson => $composableBuilder(column: $table.draftJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get requestKey => $composableBuilder(column: $table.requestKey, builder: (column) => ColumnOrderings(column));
 }
 
 class $$OutboxTableAnnotationComposer extends Composer<_$AppDatabase, $OutboxTable> {
@@ -1153,6 +1200,8 @@ class $$OutboxTableAnnotationComposer extends Composer<_$AppDatabase, $OutboxTab
   GeneratedColumn<String> get lastError => $composableBuilder(column: $table.lastError, builder: (column) => column);
 
   GeneratedColumn<String> get draftJson => $composableBuilder(column: $table.draftJson, builder: (column) => column);
+
+  GeneratedColumn<String> get requestKey => $composableBuilder(column: $table.requestKey, builder: (column) => column);
 }
 
 class $$OutboxTableTableManager
@@ -1189,6 +1238,7 @@ class $$OutboxTableTableManager
                 Value<int> attempts = const Value.absent(),
                 Value<String?> lastError = const Value.absent(),
                 Value<String?> draftJson = const Value.absent(),
+                Value<String?> requestKey = const Value.absent(),
               }) => OutboxCompanion(
                 id: id,
                 kind: kind,
@@ -1199,6 +1249,7 @@ class $$OutboxTableTableManager
                 attempts: attempts,
                 lastError: lastError,
                 draftJson: draftJson,
+                requestKey: requestKey,
               ),
           createCompanionCallback:
               ({
@@ -1211,6 +1262,7 @@ class $$OutboxTableTableManager
                 Value<int> attempts = const Value.absent(),
                 Value<String?> lastError = const Value.absent(),
                 Value<String?> draftJson = const Value.absent(),
+                Value<String?> requestKey = const Value.absent(),
               }) => OutboxCompanion.insert(
                 id: id,
                 kind: kind,
@@ -1221,6 +1273,7 @@ class $$OutboxTableTableManager
                 attempts: attempts,
                 lastError: lastError,
                 draftJson: draftJson,
+                requestKey: requestKey,
               ),
           withReferenceMapper: (p0) => p0
               .map(

@@ -37,9 +37,9 @@ class _Repo extends FakeInspectionsRepository {
   }
 
   @override
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async {
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async {
     if (saveError case final e?) throw e;
-    return super.save(body, id: id, submit: submit);
+    return super.save(body, id: id, submit: submit, requestKey: requestKey);
   }
 
   @override

@@ -26,20 +26,31 @@ class ApiClient {
   final void Function()? onUnauthorized;
 
   /// [bearer] overrides the session token (used to validate a stored token on start-up).
-  Future<Object?> get(String path, {Map<String, Object?>? query, String? bearer}) =>
-      _send(() => _dio.get<Object?>(path, queryParameters: query, options: _auth(bearer)));
+  Future<Object?> get(String path, {Map<String, Object?>? query, String? bearer}) => _send(
+    () => _dio.get<Object?>(
+      path,
+      queryParameters: query,
+      options: _auth(bearer: bearer),
+    ),
+  );
 
-  Future<Object?> post(String path, {Object? body, Map<String, Object?>? query}) =>
-      _send(() => _dio.post<Object?>(path, data: body, queryParameters: query, options: _auth()));
+  Future<Object?> post(String path, {Object? body, Map<String, Object?>? query, Map<String, String>? headers}) => _send(
+    () => _dio.post<Object?>(
+      path,
+      data: body,
+      queryParameters: query,
+      options: _auth(headers: headers),
+    ),
+  );
 
   Future<Object?> put(String path, {Object? body, Map<String, Object?>? query}) =>
       _send(() => _dio.put<Object?>(path, data: body, queryParameters: query, options: _auth()));
 
   Future<Object?> delete(String path) => _send(() => _dio.delete<Object?>(path, options: _auth()));
 
-  Options _auth([String? bearer]) {
+  Options _auth({String? bearer, Map<String, String>? headers}) {
     final t = bearer ?? token();
-    return Options(headers: {if (t != null) 'Authorization': 'Bearer $t'});
+    return Options(headers: {...?headers, if (t != null) 'Authorization': 'Bearer $t'});
   }
 
   Future<Object?> _send(Future<Response<Object?>> Function() call) async {

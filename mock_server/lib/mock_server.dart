@@ -89,7 +89,7 @@ Handler buildHandler({MockDatabase Function()? database, Duration defaultDelay =
     ..post('/inspections', (Request r) async {
       requireAuth(r);
       final submit = r.url.queryParameters['submit'] == 'true';
-      return json(db.createInspection(await readBody(r), submit: submit), status: 201);
+      return json(db.createInspection(await readBody(r), submit: submit, requestKey: r.headers['idempotency-key']), status: 201);
     })
     ..get('/inspections/<id>', (Request r, String id) {
       requireAuth(r);
@@ -158,7 +158,7 @@ Response _jsonError(int status, Map<String, Object?> body) =>
 const _corsHeaders = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'access-control-allow-headers': 'authorization, content-type, x-mock-delay, x-mock-fail',
+  'access-control-allow-headers': 'authorization, content-type, idempotency-key, x-mock-delay, x-mock-fail',
   'access-control-max-age': '600',
 };
 

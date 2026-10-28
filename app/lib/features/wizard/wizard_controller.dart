@@ -23,6 +23,12 @@ final _random = Random();
 String newAttachmentId({required bool photo}) =>
     '${photo ? 'ph' : 'f'}-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${_random.nextInt(0xFFFFFFFF).toRadixString(36)}';
 
+/// One per submit of a new inspection: the online attempt and, if that
+/// fails for lack of network, the outbox entry send the same key, so the
+/// server makes one inspection even when the first response was lost.
+String newRequestKey() =>
+    'sub-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${_random.nextInt(0xFFFFFFFF).toRadixString(36)}-${_random.nextInt(0xFFFFFFFF).toRadixString(36)}';
+
 @immutable
 class WizardState {
   const WizardState({
@@ -240,9 +246,10 @@ class WizardController extends Notifier<WizardState> {
     final store = _store;
     final repository = ref.read(inspectionsRepositoryProvider);
     final revision = ref.read(inspectionsRevisionProvider.notifier);
+    final requestKey = draft.inspectionId == null ? newRequestKey() : null;
     state = state.copyWith(submitting: true, submitError: () => null);
     try {
-      final saved = await repository.save(draft.toApiBody(), id: draft.inspectionId, submit: true);
+      final saved = await repository.save(draft.toApiBody(), id: draft.inspectionId, submit: true, requestKey: requestKey);
       await store.deleteDraft(key);
       revision.changed();
       return (outcome: SubmitOutcome.sent, id: saved.id);
@@ -254,6 +261,7 @@ class WizardController extends Notifier<WizardState> {
           site: draft.siteName,
           body: draft.toApiBody(),
           draft: draft,
+          requestKey: requestKey,
         );
         await store.deleteDraft(key);
         return (outcome: SubmitOutcome.queued, id: draft.inspectionId);

@@ -125,6 +125,15 @@ void main() {
       'priority': 'normal',
     };
 
+    test('a create repeated with the same idempotency key returns the first inspection', () {
+      final first = db.createInspection(validDraft(), requestKey: 'k1');
+      final again = db.createInspection(validDraft(), requestKey: 'k1');
+      final other = db.createInspection(validDraft(), requestKey: 'k2');
+      expect(again['id'], first['id']);
+      expect(other['id'], isNot(first['id']));
+      expect(db.createInspection(validDraft())['id'], isNot(other['id']), reason: 'no key, no dedupe');
+    });
+
     test('creates a draft and validates fields', () {
       final created = db.createInspection(validDraft());
       expect(created['id'], 'INS-1046');

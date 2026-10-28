@@ -40,7 +40,7 @@ class _OfflineRepository implements InspectionsRepository {
   @override
   Future<List<String>> inspectionTypes() async => _fail();
   @override
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async => _fail();
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async => _fail();
 }
 
 /// The fake backend, with pages after the first failing while [pagesDown].

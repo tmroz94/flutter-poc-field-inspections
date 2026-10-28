@@ -142,6 +142,16 @@ void main() {
     );
   });
 
+  test('save: a create sent again with its Idempotency-Key returns the first inspection', () async {
+    final c = await start(store: signedInStore());
+    final repo = c.read(inspectionsRepositoryProvider);
+    final first = await repo.save(_body(), submit: true, requestKey: 'sub-test-1');
+    final again = await repo.save(_body(), submit: true, requestKey: 'sub-test-1');
+    final other = await repo.save(_body(), submit: true);
+    expect(again.summary.id, first.summary.id, reason: 'the header reached the server');
+    expect(other.summary.id, isNot(first.summary.id));
+  });
+
   test('the stored session is checked with the server on start', () async {
     final good = await start(store: signedInStore());
     expect(good.read(authControllerProvider).status, AuthStatus.signedIn);

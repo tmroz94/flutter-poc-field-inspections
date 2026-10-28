@@ -32,6 +32,10 @@ class MockDatabase {
   late final List<Map<String, Object?>> _notifications;
   late final List<Map<String, Object?>> _users;
   final Map<String, String> _tokens = {};
+
+  /// Inspections created per `Idempotency-Key`, so a create retried after a
+  /// lost response returns the first one instead of making a second.
+  final Map<String, String> _createdByKey = {};
   int _nextId = 1046;
 
   static const statuses = {'scheduled', 'inProgress', 'draft', 'overdue', 'submitted'};
@@ -235,7 +239,11 @@ class MockDatabase {
     return f;
   }
 
-  Map<String, Object?> createInspection(Map<String, Object?> body, {bool submit = false}) {
+  ///
+  /// [requestKey]: the client's idempotency key. A create with a key seen
+  /// before returns the inspection that key created and changes nothing.
+  Map<String, Object?> createInspection(Map<String, Object?> body, {bool submit = false, String? requestKey}) {
+    if (_createdByKey[requestKey] case final existing?) return getInspection(existing);
     final id = 'INS-$_nextId';
     final record = _prepare(body, id: id, submit: submit);
     _nextId++;
@@ -249,6 +257,7 @@ class MockDatabase {
       'archived': false,
       'updatedAt': _clock().toIso8601String(),
     });
+    if (requestKey != null) _createdByKey[requestKey] = id;
     return getInspection(id);
   }
 

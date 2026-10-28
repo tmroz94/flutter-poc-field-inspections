@@ -21,6 +21,7 @@ class OutboxEntry {
     this.lastError,
     this.attempts = 0,
     this.draft,
+    this.requestKey,
   });
 
   final int id;
@@ -37,6 +38,9 @@ class OutboxEntry {
   /// The draft the entry was made from, to reopen a rejected report.
   final InspectionDraft? draft;
 
+  /// Sent as `Idempotency-Key` with a create (see [InspectionsRepository.save]).
+  final String? requestKey;
+
   OutboxEntry _copy({String? Function()? lastError, int? attempts}) => OutboxEntry(
     id: id,
     kind: kind,
@@ -47,6 +51,7 @@ class OutboxEntry {
     lastError: lastError != null ? lastError() : this.lastError,
     attempts: attempts ?? this.attempts,
     draft: draft,
+    requestKey: requestKey,
   );
 }
 
@@ -63,6 +68,7 @@ abstract interface class LocalStore {
     required Map<String, Object?> body,
     String? inspectionId,
     InspectionDraft? draft,
+    String? requestKey,
   });
   Future<List<OutboxEntry>> outbox();
   Stream<List<OutboxEntry>> watchOutbox();
@@ -119,6 +125,7 @@ class DriftLocalStore implements LocalStore {
     lastError: r.lastError,
     attempts: r.attempts,
     draft: r.draftJson == null ? null : InspectionDraft.fromJson(jsonDecode(r.draftJson!) as Map<String, Object?>),
+    requestKey: r.requestKey,
   );
 
   @override
@@ -128,6 +135,7 @@ class DriftLocalStore implements LocalStore {
     required Map<String, Object?> body,
     String? inspectionId,
     InspectionDraft? draft,
+    String? requestKey,
   }) => _db
       .into(_db.outbox)
       .insert(
@@ -138,6 +146,7 @@ class DriftLocalStore implements LocalStore {
           createdAt: DateTime.now(),
           inspectionId: Value(inspectionId),
           draftJson: Value(draft == null ? null : jsonEncode(draft.toJson())),
+          requestKey: Value(requestKey),
         ),
       );
 
@@ -227,6 +236,7 @@ class MemoryLocalStore implements LocalStore {
     required Map<String, Object?> body,
     String? inspectionId,
     InspectionDraft? draft,
+    String? requestKey,
   }) async {
     final id = _nextId++;
     entries.add(
@@ -238,6 +248,7 @@ class MemoryLocalStore implements LocalStore {
         createdAt: DateTime.now(),
         inspectionId: inspectionId,
         draft: draft == null ? null : _roundTrip(draft),
+        requestKey: requestKey,
       ),
     );
     _emit();

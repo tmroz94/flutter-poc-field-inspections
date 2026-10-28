@@ -93,7 +93,9 @@ class SyncService extends Notifier<SyncState> {
       final pending = (await store.outbox()).where((e) => e.lastError == null).toList();
       for (final entry in pending) {
         try {
-          await ref.read(inspectionsRepositoryProvider).save(entry.body, id: entry.inspectionId, submit: true);
+          await ref
+              .read(inspectionsRepositoryProvider)
+              .save(entry.body, id: entry.inspectionId, submit: true, requestKey: entry.requestKey);
           await store.removeFromOutbox(entry.id);
           sent++;
         } on ApiException catch (e) {

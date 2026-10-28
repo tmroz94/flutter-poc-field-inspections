@@ -43,6 +43,9 @@ class _Repo extends FakeInspectionsRepository {
   /// Reference data fails like a device without network.
   bool offline = false;
 
+  /// The server stores the save, then the answer is lost on the way back.
+  bool loseResponse = false;
+
   @override
   Future<List<ChecklistItem>> checklist(String templateId) =>
       offline ? Future.error(const ApiException('network')) : super.checklist(templateId);
@@ -51,11 +54,13 @@ class _Repo extends FakeInspectionsRepository {
   Future<List<String>> inspectionTypes() => offline ? Future.error(const ApiException('network')) : super.inspectionTypes();
 
   @override
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async {
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async {
     saves++;
     await hold?.future;
     if (failWith case final e?) throw e;
-    return super.save(body, id: id, submit: submit);
+    final saved = await super.save(body, id: id, submit: submit, requestKey: requestKey);
+    if (loseResponse) throw const ApiException('network');
+    return saved;
   }
 }
 
@@ -111,6 +116,21 @@ void main() {
     expect(repo.saves, 1);
     expect(store.entries, isEmpty);
     expect(c.read(syncServiceProvider).syncing, isFalse);
+  });
+
+  test('a create whose answer was lost is not made twice when sync sends it again', () async {
+    final c = await signedIn();
+    final before = created();
+    await store.enqueue(kind: 'create', site: 'Riverside', body: _body('s-riverside-office'), requestKey: 'sub-1');
+    repo.loseResponse = true;
+    await c.read(syncServiceProvider.notifier).run();
+    expect(store.entries, hasLength(1), reason: 'looks like no network, so the entry stays');
+
+    repo.loseResponse = false;
+    await c.read(syncServiceProvider.notifier).run();
+    expect(store.entries, isEmpty);
+    expect(repo.saves, 2);
+    expect(created(), before + 1, reason: 'the second send returned the first inspection');
   });
 
   test('a rejected entry is marked, the next one still goes, and it is not resent', () async {

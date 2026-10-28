@@ -19,8 +19,10 @@ abstract interface class InspectionsRepository {
   Future<List<String>> inspectionTypes();
 
   /// Creates (no [id]) or updates an inspection; [submit] marks it submitted.
+  /// [requestKey] makes a create safe to retry: the server returns the
+  /// inspection that key already created (`Idempotency-Key`).
   /// Throws [ApiException] `validation` with field codes, or `network`.
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false});
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey});
 }
 
 /// A site suggestion for the wizard's autocomplete (P09).
@@ -117,10 +119,10 @@ class HttpInspectionsRepository implements InspectionsRepository {
   Future<List<String>> inspectionTypes() async => [for (final t in (await _api.get('/inspection-types'))! as List) t as String];
 
   @override
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) async {
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async {
     final query = {'submit': '$submit'};
     final json = id == null
-        ? await _api.post('/inspections', body: body, query: query)
+        ? await _api.post('/inspections', body: body, query: query, headers: {'Idempotency-Key': ?requestKey})
         : await _api.put('/inspections/${Uri.encodeComponent(id)}', body: body, query: query);
     return InspectionDetail.fromJson(_map(json));
   }
@@ -186,8 +188,9 @@ class FakeInspectionsRepository implements InspectionsRepository {
   Future<List<String>> inspectionTypes() => _run(() => List.of(mock.inspectionTypes));
 
   @override
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) => _run(
-    () =>
-        InspectionDetail.fromJson(id == null ? _db.createInspection(body, submit: submit) : _db.updateInspection(id, body, submit: submit)),
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) => _run(
+    () => InspectionDetail.fromJson(
+      id == null ? _db.createInspection(body, submit: submit, requestKey: requestKey) : _db.updateInspection(id, body, submit: submit),
+    ),
   );
 }

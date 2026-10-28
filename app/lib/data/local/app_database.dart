@@ -40,6 +40,11 @@ class Outbox extends Table {
   /// The wizard draft the entry was made from (schema v3), so a rejected
   /// report can be reopened and fixed. Null for entries queued before v3.
   TextColumn get draftJson => text().nullable()();
+
+  /// The create's `Idempotency-Key` (schema v4), the same one the first
+  /// online attempt used, so a create whose response was lost isn't made
+  /// twice. Null for updates and for entries queued before v4.
+  TextColumn get requestKey => text().nullable()();
 }
 
 /// Photo and file bytes for drafts (camera, gallery, file picker, drop, paste).
@@ -60,13 +65,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) await m.createTable(blobs);
       if (from < 3) await m.addColumn(outbox, outbox.draftJson);
+      if (from < 4) await m.addColumn(outbox, outbox.requestKey);
     },
   );
 

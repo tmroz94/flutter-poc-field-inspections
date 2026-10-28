@@ -37,10 +37,15 @@ class _SwitchableRepository extends FakeInspectionsRepository {
 
   bool online = false;
 
+  /// The server stores the save, then the answer is lost on the way back.
+  bool loseResponse = false;
+
   @override
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false}) {
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async {
     if (!online) throw const ApiException('network');
-    return super.save(body, id: id, submit: submit);
+    final saved = await super.save(body, id: id, submit: submit, requestKey: requestKey);
+    if (loseResponse) throw const ApiException('network');
+    return saved;
   }
 }
 
@@ -218,6 +223,28 @@ void main() {
       await c.read(syncServiceProvider.notifier).run();
       expect(store.entries, isEmpty);
       expect(db.listInspections(q: 'INS-1046')['total'], 1, reason: 'created from the outbox');
+    });
+
+    test('a submit whose answer was lost is queued with its key and not created twice', () async {
+      final c = container();
+      final w = await open(c, 'new');
+      w.update(
+        (_) =>
+            _complete().copyWith(answers: {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id'] as String: Answer.pass}),
+      );
+      repo
+        ..online = true
+        ..loseResponse = true;
+      final result = await w.submit();
+      expect(result?.outcome, SubmitOutcome.queued);
+      expect(store.entries.single.requestKey, isNotNull);
+
+      repo.loseResponse = false;
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await c.read(syncServiceProvider.notifier).run();
+      expect(store.entries, isEmpty);
+      expect(db.listInspections(q: 'INS-1046')['total'], 1);
+      expect(db.listInspections(q: 'INS-1047')['total'], 0, reason: 'the outbox resend returned INS-1046');
     });
 
     test('a server rejection marks the outbox entry and keeps going', () async {
