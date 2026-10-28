@@ -103,7 +103,8 @@ Limits:
 On the Mac, the same files run on an iOS simulator
 (`cd app && fvm flutter test integration_test -d <simulator-id>`); the host
 helper is Android-only for now. On an iPhone 18 Pro simulator (iOS 27.0,
-Xcode 27.1, 26 and 28 October 2026) the 7 shared flows and the platform probe
+Xcode 27.1, 26 and 28 October 2026), and on the iPad Pro 13-inch and iPad mini
+simulators (iPadOS 26.5, 28 October), the 7 shared flows and the platform probe
 pass and the 2 host-driven ones skip; the first run builds once per file (~45 s, then ~27 s) and the
 plugins come in through Swift Package Manager, so there is no Podfile.
 

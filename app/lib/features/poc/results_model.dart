@@ -201,18 +201,22 @@ const findings = <String, (String, String, String)>{
   ),
 };
 
-/// The iPhone simulator (docs/platform-setup.md): the 7 shared flows and the
-/// platform probe, plus prompts, notifications, Face ID and links driven by
-/// hand with simctl. The camera, real GPS, real Face ID and the app's page in
-/// Settings need a physical iPhone. "Flows" below means the shared flows.
+/// The iPhone and iPad simulators (docs/platform-setup.md): the 7 shared flows
+/// and the platform probe on each, plus prompts, notifications, Face ID, links
+/// and the tablet layouts driven by hand with simctl. The PoC has no physical
+/// devices (decision 117), so the camera, real GPS, real Face ID and the app's
+/// page in Settings stay partial. "Flows" below means the shared flows.
 /// Format: id -> (status, note).
 const iosFindings = <String, (String, String)>{
-  'adaptive-shell': ('H', 'Bottom bar on the iPhone (flows); no iPad or rotation run'),
+  'adaptive-shell': (
+    'P',
+    'Bottom bar on the iPhone; rail on the iPad Pro 13" in portrait (1032 pt), extended rail with New inspection in landscape (1376 pt); flows on the iPhone, iPad mini and iPad Pro',
+  ),
   'nested-routes': ('P', 'Detail tabs in ?tab= after a deep link (flows)'),
   'modals': ('H', 'Filter sheet (flows) and the Cupertino alert dialog; other sheets not checked'),
   'deep-links': (
     'P',
-    'fieldinspections:// (simctl openurl) while running, after sign-in and from a cold start, ?site= included; universal links need a developer team',
+    'fieldinspections:// (simctl openurl) while running, after sign-in and from a cold start, ?site= included; on the iPad a detail link with ?tab= opens beside the list. Universal links need a developer team',
   ),
   'guards': ('P', 'Sign-in redirect and return; simulated Face ID: a cold start locks, no match stays locked, a match opens Home'),
   'back-navigation': ('P', 'Edge swipe back follows the finger; back from a deep-linked detail to the list (flows)'),
@@ -227,13 +231,19 @@ const iosFindings = <String, (String, String)>{
   'swipe-actions': ('P', 'Swipe to archive and Undo (flows)'),
   'list-states': ('U', 'Empty, error and offline states in widget tests only'),
   'photo-viewer': ('P', "Opened from the detail's photos (flows)"),
-  'data-table': ('N', 'Desktop only (D03)'),
+  'data-table': (
+    'P',
+    'iPad Pro 13" in landscape (1376 pt): the sortable table beside the detail, selected row outlined. Phones and portrait iPads use the list',
+  ),
   'hero': ('P', 'Photo Hero flight; removed under reduced motion (flows)'),
   'page-transitions': ('P', 'Cupertino transitions animate; none under reduced motion (flows)'),
   'animated-list': ('P', 'Photo grid scales items in and out (flows)'),
   'implicit-explicit': ('P', 'Success animation and animated grid (flows)'),
   'reduced-motion': ('P', 'App setting removes page transitions and Hero flights (flows)'),
-  'rest-json': ('U', "The flows use the in-app fake; the mock API wasn't run against the simulator"),
+  'rest-json': (
+    'P',
+    'iPhone and iPad Pro against the mock API (BACKEND=auto found it): sign-in, lists and paging, detail, notifications, reference data; the flows use the in-app fake',
+  ),
   'state-management': ('P', 'Riverpod throughout'),
   'local-storage': ('P', 'drift on native SQLite; a draft survives a restart (flows)'),
   'sync-retry': ('U', ''),
@@ -259,13 +269,19 @@ const iosFindings = <String, (String, String)>{
   ),
   'clipboard-haptics': ('U', ''),
   'themes': ('P', 'Dark theme switched live (flows)'),
-  'responsive': ('H', 'iPhone width only; no iPad run'),
+  'responsive': (
+    'P',
+    'iPhone, iPad mini and iPad Pro 13" (portrait and landscape): list and detail side by side, Settings with Appearance beside it, the two-pane sign-in card, the wizard step bar',
+  ),
   'l10n': ('P', 'Live switch to Polish (flows)'),
   'a11y': ('H', 'Guideline and 200% text tests on the host; no VoiceOver run'),
   'adaptive-widgets': ('P', 'Cupertino by default on iOS: switch, slider, activity indicator, date picker, CupertinoAlertDialog'),
   'diagnostics': ('P', 'Real device and permission values; permission states update on return from Settings'),
   'results-tracker': ('H', 'Opened from a link: summaries and the per-platform grid; editing and export not tried on iOS'),
-  'automated-tests': ('P', 'The 7 shared flows and the platform probe on the iPhone 18 Pro simulator (iOS 27.0), one file per run'),
+  'automated-tests': (
+    'P',
+    'The 7 shared flows and the platform probe on the iPhone 18 Pro (iOS 27.0), iPad mini and iPad Pro 13" (iPadOS 26.5) simulators, one file per run',
+  ),
 };
 
 /// The desktop apps (docs/platform-setup.md): the 7 shared flows and the
@@ -388,7 +404,11 @@ class ResultsController extends Notifier<ResultsState> {
           group: s.group,
           name: s.name,
           byPlatform: {
-            PocPlatform.ios: PlatformResult(status: ResultStatus.fromCode(i.$1), device: 'iPhone 18 Pro simulator, iOS 27.0', notes: i.$2),
+            PocPlatform.ios: PlatformResult(
+              status: ResultStatus.fromCode(i.$1),
+              device: 'iPhone 18 Pro (iOS 27.0), iPad mini and iPad Pro 13" (iPadOS 26.5) simulators',
+              notes: i.$2,
+            ),
             PocPlatform.android: PlatformResult(status: ResultStatus.fromCode(f.$1), device: 'Android emulator, API 37', notes: f.$3),
             PocPlatform.web: PlatformResult(status: ResultStatus.fromCode(f.$2), device: 'Chrome, Windows 11', notes: f.$3),
             PocPlatform.macos: PlatformResult(status: ResultStatus.fromCode(d.$1), device: 'macOS 27, Apple silicon', notes: d.$4),

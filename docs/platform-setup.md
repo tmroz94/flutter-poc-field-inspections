@@ -1,7 +1,8 @@
 # Platform setup
 
-What each platform needed for M3 (platform integrations), and what to check
-on a real device.
+What each platform needed for M3 (platform integrations), and what a real
+device would still show (the PoC runs on emulators and simulators only,
+decision 117).
 
 ## Android (done in the repo)
 
@@ -164,7 +165,16 @@ from them (`iosFindings` in `lib/features/poc/results_model.dart`). How to drive
   `group.com.apple.FileProvider.LocalStorage` app group's `File Provider Storage`
   folder under the simulator's data, and it shows in On My iPhone.
 
-Still to check on a physical iPhone:
+On the iPad simulators (iPad Pro 13-inch and iPad mini, iPadOS 26.5, 28 October
+2026) the 7 flows and the probe pass too. Driven by hand on the iPad Pro
+against the mock API: the rail in portrait (1032 pt) and the extended rail
+with New inspection in landscape (1376 pt); the list with the detail beside it
+(a `?tab=` link opens there), and in landscape the desktop table (D03);
+Settings with Appearance beside it; the two-pane sign-in card; the wizard's
+step bar; the Results tracker's wide grid. Diagnostics names the iPad mini
+(device_info_plus doesn't know it; the device's name stands in).
+
+Not checked, since the PoC has no physical devices (decision 117):
 
 - "Open settings" should land on Settings › Field Inspections; on the simulator it opened the top of Settings.
 - The camera itself, real GPS and real Face ID (the simulator showed no separate "allow Face ID" alert).
@@ -314,7 +324,9 @@ them). On Android, Flutter pushes the intent's route whatever plugins return
 | Denied camera / location → banner or snackbar with Settings | ✓ (Patrol) | n/a | ✓ banner (Take photo disabled) and snackbar; "Open settings" opens the Settings app but at its top page, not the app's (simulator; recheck on a phone). Diagnostics updates on return without a restart. After the review fixes (28 Oct): with the camera revoked, a checklist item's Add photo says camera access is off and offers Open settings |
 | Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | ✓ iOS share sheet; Save to Files gives `inspection-INS-1042.pdf` |
 | Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | diagnostics ✓; tracker opened from a link (summaries and grid; editing not tried); adaptive widgets in Cupertino by default, CupertinoAlertDialog ✓ (28 Oct) |
-| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows and the platform probe (Face ID enrolled, location service on, map tiles), iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1) |
+| Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows and the platform probe (Face ID enrolled, location service on, map tiles), iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1); again on the iPad Pro 13-inch and iPad mini simulators (iPadOS 26.5, 28 Oct) |
+| Tablet layouts (rail, list and detail side by side, two-pane Settings) | – | ✓ at tablet widths in Chrome | ✓ iPad Pro 13-inch simulator in portrait and landscape (desktop table in landscape), iPad mini in the flows (28 Oct) |
+| Against the mock API (not the in-app fake) | ✓ via 10.0.2.2 | ✓ with CORS | ✓ iPhone and iPad Pro simulators: sign-in, lists and paging, detail, notifications, reference data (28 Oct) |
 | Camera (browser file input), geolocation in the browser | n/a | ✓ (Playwright) | – |
 | Offline submit → sync when back online (airplane mode) | ✓ | – | – |
 | GPS distance and far-away warning | ✓ via LocationManager test positions; fused provider needs a real phone | – | – |

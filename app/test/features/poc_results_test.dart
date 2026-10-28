@@ -25,9 +25,11 @@ void main() {
       for (final p in PocPlatform.values) {
         expect(s.tested(p), greaterThan(10), reason: p.label);
       }
+      final android = s.results.firstWhere((r) => r.id == 'data-table').of(PocPlatform.android);
+      expect(android.status, ResultStatus.na, reason: 'no Android tablet was tried, so the table is desktop only there');
       final ios = s.results.firstWhere((r) => r.id == 'data-table').of(PocPlatform.ios);
-      expect(ios.status, ResultStatus.na, reason: 'the table is desktop only');
-      expect(ios.device, contains('simulator'));
+      expect(ios.status, ResultStatus.pass, reason: 'the landscape iPad Pro shows the table');
+      expect(ios.device, contains('iPad'));
       final linux = s.results.firstWhere((r) => r.id == 'geolocation').of(PocPlatform.linux);
       expect(linux.status, ResultStatus.na, reason: 'no geolocator plugin on Linux');
       expect(linux.device, contains('WSL 2'));
@@ -144,8 +146,10 @@ void main() {
       await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
       expect(find.byType(ResultsScreen), findsOneWidget);
       expect(find.text('Findings so far'), findsOneWidget);
-      // iOS (the simulator) has 38 of 44 tested; no other platform has that count.
-      expect(find.text('38 of 44 tested'), findsOneWidget);
+      // iOS (the iPhone and iPad simulators): 40 of 44 tested like the web, and
+      // the only platform with 7 partial.
+      expect(find.text('40 of 44 tested'), findsNWidgets(2));
+      expect(find.text('0 fail · 7 partial'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
 
       // Nested routes pass everywhere tested; the guards are partial on Android.
