@@ -352,6 +352,39 @@ void main() {
       });
     }
 
+    testWidgets('opened from its link, the sheet has the keyboard: Tab stays inside, Esc closes it', (tester) async {
+      final app = await pumpApp(
+        tester,
+        initialLocation: '/inspections/filter?status=draft',
+        store: signedInStore(),
+        size: desktopSize,
+        capabilities: macos,
+      );
+      for (var i = 0; i < 20; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final focused = FocusManager.instance.primaryFocus?.context;
+        expect(focused?.findAncestorWidgetOfExactType<FilterSheet>(), isNotNull, reason: 'Tab $i went behind the sheet');
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(FilterSheet), findsNothing);
+      expect(app.location, startsWith('/inspections'));
+    });
+
+    testWidgets('reached through sign-in, the sheet still has the keyboard', (tester) async {
+      await pumpApp(tester, initialLocation: '/inspections/filter', size: desktopSize, capabilities: macos);
+      await tester.tap(find.text('Use demo account'));
+      await tester.pumpAndSettle();
+      expect(find.byType(FilterSheet), findsOneWidget);
+      for (var i = 0; i < 10; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final focused = FocusManager.instance.primaryFocus?.context;
+        expect(focused?.findAncestorWidgetOfExactType<FilterSheet>(), isNotNull, reason: 'Tab $i went behind the sheet');
+      }
+    });
+
     testWidgets('at least one status is required', (tester) async {
       await pumpApp(tester, initialLocation: '/inspections/filter', store: signedInStore());
       for (final s in ['Scheduled', 'In progress', 'Draft', 'Overdue', 'Submitted']) {
