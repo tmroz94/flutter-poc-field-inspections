@@ -14,6 +14,7 @@ import 'package:field_inspections/l10n/l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../helpers/test_app.dart';
@@ -285,6 +286,25 @@ void main() {
       expect(find.byType(FilterSheet), findsNothing);
       expect(find.byTooltip('Filter and sort, 2 active'), findsOneWidget);
     });
+
+    for (final (name, from, to) in [
+      ('older than the picker allows', '2024-01-01', '2024-02-01'),
+      ('end before start', '2026-11-20', '2026-11-10'),
+    ]) {
+      testWidgets('a link with a custom range $name still opens the date picker', (tester) async {
+        // Tablet width: on a phone the picker's own header overflows with the test font.
+        await pumpApp(
+          tester,
+          initialLocation: '/inspections/filter?due=custom&from=$from&to=$to',
+          store: signedInStore(),
+          size: tabletSize,
+        );
+        await tester.tap(find.byIcon(Symbols.date_range));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byType(DateRangePickerDialog), findsOneWidget);
+      });
+    }
 
     testWidgets('at least one status is required', (tester) async {
       await pumpApp(tester, initialLocation: '/inspections/filter', store: signedInStore());

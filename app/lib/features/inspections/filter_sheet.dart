@@ -80,13 +80,25 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
 
   Future<void> _pickRange() async {
     final now = DateTime.now();
+    final first = DateTime(now.year - 1);
+    final last = DateTime(now.year + 1, 12, 31);
     final picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 1, 12, 31),
-      initialDateRange: _draft.from != null && _draft.to != null ? DateTimeRange(start: _draft.from!, end: _draft.to!) : null,
+      firstDate: first,
+      lastDate: last,
+      initialDateRange: _initialRange(first, last),
     );
-    if (picked != null) _change(() => _draft = _draft.copyWith(from: () => picked.start, to: () => picked.end));
+    if (picked != null && mounted) _change(() => _draft = _draft.copyWith(from: () => picked.start, to: () => picked.end));
+  }
+
+  /// The range from the URL, if the picker can show it: clamped to what it
+  /// offers, and none when it ends before it starts (the picker asserts on both).
+  DateTimeRange? _initialRange(DateTime first, DateTime last) {
+    final (from, to) = (_draft.from, _draft.to);
+    if (from == null || to == null || to.isBefore(from)) return null;
+    final start = from.isBefore(first) ? first : from;
+    final end = to.isAfter(last) ? last : to;
+    return end.isBefore(start) ? null : DateTimeRange(start: start, end: end);
   }
 
   void _reset() => _change(() {
