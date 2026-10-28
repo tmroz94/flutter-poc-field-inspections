@@ -14,6 +14,7 @@ import 'package:field_inspections/features/notifications/reminders.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart';
 
@@ -279,6 +280,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(app.fakes.biometrics.calls, 1);
       expect(app.container.read(lockControllerProvider).enabled, isTrue);
+    });
+
+    testWidgets('the biometric row shows a face on Face ID devices, else a fingerprint', (tester) async {
+      final faceId = Fakes(capabilities: ios)..biometrics.enrolled = BiometricKind.face;
+      await pumpApp(tester, initialLocation: '/settings', store: signedInStore(), capabilities: ios, fakes: faceId);
+      final row = find.widgetWithText(SwitchListTile, 'Biometric unlock');
+      expect(find.descendant(of: row, matching: find.byIcon(Symbols.face)), findsOneWidget);
+
+      final touchId = Fakes(capabilities: macos)..biometrics.enrolled = BiometricKind.fingerprint;
+      await pumpApp(tester, initialLocation: '/settings', store: signedInStore(), capabilities: macos, fakes: touchId);
+      expect(find.descendant(of: row, matching: find.byIcon(Symbols.fingerprint)), findsOneWidget);
     });
 
     testWidgets('web hides biometric unlock and disables reminders', (tester) async {

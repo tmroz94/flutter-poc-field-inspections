@@ -138,7 +138,8 @@ class SettingsScreen extends ConsumerWidget {
         ),
         if (caps.biometricLock)
           SwitchListTile(
-            secondary: const Icon(Symbols.fingerprint),
+            // Face ID devices get a face, like the unlock screen.
+            secondary: Icon(ref.watch(biometricKindProvider).value == BiometricKind.face ? Symbols.face : Symbols.fingerprint),
             title: Text(context.l10n.biometricUnlock),
             subtitle: Text(context.l10n.biometricSubtitle),
             value: lock.enabled,
