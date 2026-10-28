@@ -95,7 +95,7 @@ class FakeShare extends ShareService {
   final contents = <String, Uint8List>{};
 
   @override
-  Future<ShareOutcome> shareLink({required String text, required Uri link, String? subject}) async {
+  Future<ShareOutcome> shareLink({required String text, required Uri link, required Capabilities caps, String? subject}) async {
     links.add(link);
     texts.add(text);
     return ShareOutcome.shared;

@@ -67,7 +67,9 @@ class InspectionActions {
       for (final p in paths ?? [Routes.inspection(s.id)]) link(p),
     ];
     final text = ['${s.site} (${s.id})', ...links.take(links.length - 1)].join('\n');
-    final outcome = await ref.read(shareServiceProvider).shareLink(text: text, subject: l.inspectionNamed(s.id), link: links.last);
+    final outcome = await ref
+        .read(shareServiceProvider)
+        .shareLink(text: text, subject: l.inspectionNamed(s.id), link: links.last, caps: ref.read(capabilitiesProvider));
     if (outcome == ShareOutcome.copied) _say(l.sharingUnavailable);
   }
 

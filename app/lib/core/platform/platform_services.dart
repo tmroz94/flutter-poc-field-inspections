@@ -129,19 +129,31 @@ class LocationService {
 
 enum ShareOutcome { shared, saved, copied, dismissed }
 
-/// Share sheet on iOS/Android; the Web Share API where the browser has it,
-/// otherwise the link is copied (some desktop browsers lack navigator.share).
+/// Share sheet on iOS/Android, macOS and Windows; the Web Share API where the
+/// browser has it. Otherwise the link is copied: a browser without
+/// navigator.share, and Linux, where share_plus only opens a mail composer.
 class ShareService {
-  const ShareService();
+  const ShareService({this.sharer});
 
-  Future<ShareOutcome> shareLink({required String text, required Uri link, String? subject}) async {
+  /// Replaces share_plus (tests).
+  final Future<ShareResult> Function(ShareParams params)? sharer;
+
+  Future<ShareResult> _share(ShareParams params) => (sharer ?? SharePlus.instance.share)(params);
+
+  Future<ShareOutcome> shareLink({required String text, required Uri link, required Capabilities caps, String? subject}) async {
+    if (!caps.isWeb && caps.platform == TargetPlatform.linux) return _copy(link);
     try {
-      final r = await SharePlus.instance.share(ShareParams(text: '$text\n$link', subject: subject));
+      // No mailto: fallback on the web: without a mail client it does nothing.
+      final r = await _share(ShareParams(text: '$text\n$link', subject: subject, mailToFallbackEnabled: false));
       return r.status == ShareResultStatus.dismissed ? ShareOutcome.dismissed : ShareOutcome.shared;
     } on Object {
-      await Clipboard.setData(ClipboardData(text: link.toString()));
-      return ShareOutcome.copied;
+      return _copy(link);
     }
+  }
+
+  Future<ShareOutcome> _copy(Uri link) async {
+    await Clipboard.setData(ClipboardData(text: link.toString()));
+    return ShareOutcome.copied;
   }
 
   /// Mobile: share sheet with the file. Web: the file downloads. Desktop: a
