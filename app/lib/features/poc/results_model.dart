@@ -314,7 +314,12 @@ const desktopFindings = <String, (String, String, String, String)>{
     'Windows and macOS: flows at 500, 700, 1000 and 1280 px windows (bar, rail, extended rail; on the Mac 1000 px is the GitHub runner); Linux: 1280 px only',
   ),
   'nested-routes': ('P', 'P', 'P', 'Detail tabs in ?tab= after a deep link (flows)'),
-  'modals': ('H', 'H', 'H', 'Filter sheet opened and applied in the flows; Esc and the focus trap not checked'),
+  'modals': (
+    'P',
+    'H',
+    'H',
+    'Filter sheet opened and applied in the flows. macOS: opened from its link, Tab stays inside it and Esc closes it (fixed: focus went to the page behind); Windows and Linux: Esc and the focus trap not checked',
+  ),
   'deep-links': (
     'P',
     'P',
@@ -358,7 +363,12 @@ const desktopFindings = <String, (String, String, String, String)>{
   ),
   'state-management': ('P', 'P', 'P', 'Riverpod throughout'),
   'local-storage': ('P', 'P', 'P', "drift on native SQLite in the app's support folder; a draft survives a restart (flows)"),
-  'sync-retry': ('U', 'U', 'U', ''),
+  'sync-retry': (
+    'P',
+    'U',
+    'U',
+    'macOS against the mock API: online first (reference data cached), then with the server stopped the submit was queued with its idempotency key; once it was back, sync sent it once',
+  ),
   'camera': (
     'H',
     'H',
@@ -367,14 +377,19 @@ const desktopFindings = <String, (String, String, String, String)>{
   ),
   'files-export': ('U', 'U', 'U', 'Export PDF opens a Save dialog; not tried'),
   'geolocation': ('H', 'H', 'N', 'Service and permission state read by the probe (no prompt, no position); Linux has no geolocator plugin'),
-  'maps': ('H', 'H', 'H', 'OSM tiles load on /map (probe); pins and ?site= not checked'),
+  'maps': ('H', 'H', 'H', 'OSM tiles load on /map (probe). macOS: ?site= opens the map on that site with its card; the pins not looked at'),
   'notifications': (
     'H',
     'H',
     'H',
     "The plugin starts and reports its permission (probe); a shown notification and its tap not tried. Linux can't schedule",
   ),
-  'share-maps': ('U', 'U', 'U', ''),
+  'share-maps': (
+    'H',
+    'U',
+    'U',
+    'macOS: Directions opens maps in the default browser; Call site not tried (it would start a FaceTime call)',
+  ),
   'biometrics': (
     'H',
     'H',
@@ -392,8 +407,13 @@ const desktopFindings = <String, (String, String, String, String)>{
   'responsive': ('P', 'P', 'H', 'Windows and macOS: flows at 500, 700, 1000 and 1280 px windows; Linux: 1280 px only'),
   'l10n': ('P', 'P', 'P', 'Live switch to Polish (flows)'),
   'a11y': ('H', 'H', 'H', 'Guideline and 200% text tests on the host; no VoiceOver, Narrator or Orca run'),
-  'adaptive-widgets': ('U', 'U', 'U', ''),
-  'diagnostics': ('H', 'H', 'H', 'Device and app info read by the probe; the Diagnostics screen not checked'),
+  'adaptive-widgets': ('P', 'U', 'U', 'macOS: Cupertino by default, as on iOS (14 Cupertino widgets on the screen)'),
+  'diagnostics': (
+    'P',
+    'H',
+    'H',
+    'Device and app info read by the probe. macOS: the Diagnostics screen shows "macOS 27.0.1 · MacBook Pro (14-inch, 2023)", Impeller, SQLite and the Flutter/Dart versions',
+  ),
   'results-tracker': ('H', 'U', 'U', 'macOS: an edited result survives a restart; export and import need the file dialogs, not tried'),
   'automated-tests': (
     'P',

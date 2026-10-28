@@ -270,7 +270,13 @@ restored session, lists, search and filters; the table-shaped loading
 skeleton, an empty search, and with the server stopped the offline banner and
 error with Try again. The flows also pass with the window starting at 500
 and 700 px (a temporary change to `MainFlutterWindow.swift`), and Copy link
-reaches the system pasteboard. Not tried by hand yet: Touch ID itself,
+reaches the system pasteboard. With temporary integration tests: the filter
+sheet opened from its link keeps Tab inside and closes on Esc (it didn't
+before: focus went to the page behind); offline submit with the mock API
+stopped is queued with its key and sent once when it is back; `?site=` opens
+the map on that site; Diagnostics shows the Mac's model and versions; the
+adaptive widgets are Cupertino; Directions opens maps in the browser. Not
+tried by hand yet: Touch ID itself,
 the notification and location prompts, file dialogs and Save (they need clicks
 in system UI).
 
