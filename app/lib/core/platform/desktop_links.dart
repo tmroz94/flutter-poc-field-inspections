@@ -55,4 +55,4 @@ class DesktopLinks {
 /// Overridden in `main` with the instance that read the launch link.
 final desktopLinksProvider = Provider<DesktopLinks>((ref) => DesktopLinks(enabled: false));
 
-final desktopLinkRoutesProvider = StreamProvider<String>((ref) => ref.watch(desktopLinksProvider).routes());
+final desktopLinkRoutesProvider = StreamProvider<RouteRequest>((ref) => ref.watch(desktopLinksProvider).routes().map(RouteRequest.new));

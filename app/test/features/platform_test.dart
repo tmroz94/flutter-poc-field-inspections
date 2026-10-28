@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:field_inspections/core/platform/capabilities.dart';
+import 'package:field_inspections/core/platform/desktop_links.dart';
 import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/models/draft.dart';
@@ -185,6 +187,36 @@ void main() {
       app.fakes.notifications.debugTap('https://evil.example/home');
       await tester.pumpAndSettle();
       expect(app.location, '/inspections/INS-1042?tab=photos', reason: 'foreign payloads are ignored');
+    });
+
+    testWidgets('a second tap for the same route opens it again', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore());
+      app.fakes.notifications.debugTap('/inspections/INS-1042');
+      await tester.pumpAndSettle();
+      await app.go('/map');
+      app.fakes.notifications.debugTap('/inspections/INS-1042');
+      await tester.pumpAndSettle();
+      expect(app.location, '/inspections/INS-1042');
+    });
+
+    testWidgets('a desktop link for the same route opens it again', (tester) async {
+      final links = StreamController<String>.broadcast();
+      addTearDown(links.close);
+      final app = await pumpApp(
+        tester,
+        store: signedInStore(),
+        capabilities: macos,
+        overrides: [
+          desktopLinksProvider.overrideWithValue(DesktopLinks(enabled: true, initialLink: () async => null, links: () => links.stream)),
+        ],
+      );
+      links.add('fieldinspections://app/map');
+      await tester.pumpAndSettle();
+      expect(app.location, '/map');
+      await app.go('/home');
+      links.add('fieldinspections://app/map');
+      await tester.pumpAndSettle();
+      expect(app.location, '/map');
     });
   });
 

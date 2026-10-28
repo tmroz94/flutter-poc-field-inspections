@@ -1,5 +1,17 @@
 import 'routes.dart';
 
+/// One request to open [route] (a notification tap, a desktop link). Each is
+/// its own object with no value equality: a provider holding the latest one
+/// would drop a second request for the same route as "unchanged".
+final class RouteRequest {
+  RouteRequest(this.route);
+
+  final String route;
+
+  @override
+  String toString() => 'RouteRequest($route)';
+}
+
 /// Turns external links and notification payloads into in-app locations, and
 /// checks `?from=` return targets so they can't redirect off-site.
 abstract final class DeepLinks {

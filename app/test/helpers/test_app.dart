@@ -16,6 +16,7 @@ import 'package:field_inspections/data/sync/sync_service.dart';
 import 'package:field_inspections/features/auth/auth_repository.dart';
 import 'package:field_inspections/features/map/map_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -82,6 +83,9 @@ Future<TestApp> pumpApp(
   /// Runs the real HTTP repositories against this in-process mock server
   /// instead of the in-app fakes.
   MockServerAdapter? http,
+
+  /// Applied last, so they win over the defaults above.
+  List<Override> overrides = const [],
 }) async {
   final f = fakes ?? Fakes(capabilities: capabilities);
   tester.view
@@ -122,6 +126,7 @@ Future<TestApp> pumpApp(
         mockDatabaseProvider.overrideWithValue(MockDatabase(clock: () => now)),
       ],
       deviceSummaryProvider.overrideWith((ref) async => const DeviceSummary(version: '0.1.0', build: '1', device: 'Test device')),
+      ...overrides,
     ],
   );
   addTearDown(container.dispose);

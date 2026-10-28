@@ -28,12 +28,13 @@ class FieldInspectionsApp extends ConsumerWidget {
       ..listen(syncServiceProvider, (_, _) {})
       ..listen(remindersProvider, (_, _) {});
     // Notification taps while the app runs open the notification's route.
+    // Each tap is its own RouteRequest, so tapping the same route again works.
     ref.listen(notificationTapsProvider, (_, next) {
-      if (next.value case final route?) router.go(route);
+      if (next.value case final request?) router.go(request.route);
     });
     // So do fieldinspections:// links opened while a desktop app runs.
     ref.listen(desktopLinkRoutesProvider, (_, next) {
-      if (next.value case final route?) router.go(route);
+      if (next.value case final request?) router.go(request.route);
     });
     final contrast = settings.contrast ?? AppContrast.standard;
     // While the stored session loads, the router isn't built at all: the

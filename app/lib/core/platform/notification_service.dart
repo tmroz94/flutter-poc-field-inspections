@@ -223,4 +223,4 @@ class NotificationService {
 /// Overridden in `main` with the initialised instance.
 final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());
 
-final notificationTapsProvider = StreamProvider<String>((ref) => ref.watch(notificationServiceProvider).taps);
+final notificationTapsProvider = StreamProvider<RouteRequest>((ref) => ref.watch(notificationServiceProvider).taps.map(RouteRequest.new));
