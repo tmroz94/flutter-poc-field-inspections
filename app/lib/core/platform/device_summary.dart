@@ -15,6 +15,14 @@ class DeviceSummary {
   final String device;
 }
 
+/// device_info_plus names iOS models from its own table, which lacks some
+/// (every iPad mini, models newer than the plugin) and says "Unknown device".
+/// Then the device's name stands in: the model on a simulator ("iPad mini
+/// (A17 Pro)"), the generic "iPad"/"iPhone" on a device since iOS 16.
+@visibleForTesting
+String iosModel({required String modelName, required String name}) =>
+    modelName.isEmpty || modelName.startsWith('Unknown') ? name : modelName;
+
 Future<String> _device() async {
   final info = DeviceInfoPlugin();
   try {
@@ -28,7 +36,7 @@ Future<String> _device() async {
         return 'Android ${a.version.release} (API ${a.version.sdkInt}) · ${a.model}';
       case TargetPlatform.iOS:
         final i = await info.iosInfo;
-        return '${i.systemName} ${i.systemVersion} · ${i.modelName}';
+        return '${i.systemName} ${i.systemVersion} · ${iosModel(modelName: i.modelName, name: i.name)}';
       case TargetPlatform.macOS:
         final m = await info.macOsInfo;
         return 'macOS ${m.majorVersion}.${m.minorVersion}.${m.patchVersion} · ${m.modelName}';
