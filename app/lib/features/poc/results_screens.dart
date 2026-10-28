@@ -58,7 +58,10 @@ class ResultsScreen extends ConsumerStatefulWidget {
 class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   _Filter _filter = _Filter.all;
 
-  void _say(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  /// Also after an await: the screen may have closed meanwhile (file picker open).
+  void _say(String m) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  }
 
   Future<void> _export({required bool csv}) async {
     final s = ref.read(resultsProvider);

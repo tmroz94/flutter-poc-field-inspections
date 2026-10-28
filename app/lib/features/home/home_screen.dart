@@ -404,6 +404,11 @@ class _LocalWork extends ConsumerWidget {
         ],
       ),
     );
-    if (ok ?? false) await store.removeFromOutbox(e.id);
+    if (!(ok ?? false)) return;
+    await store.removeFromOutbox(e.id);
+    // Its photos and files never reached the server and nothing else uses them.
+    for (final a in e.draft?.attachments ?? const <DraftAttachment>[]) {
+      if (!a.stored) await store.deleteBlob(a.id);
+    }
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/models/draft.dart';
 import 'package:field_inspections/data/models/inspection.dart';
@@ -94,8 +96,15 @@ void main() {
       expect(store.drafts['new']?.siteName, 'Riverside office, floor 4');
     });
 
-    testWidgets('can be deleted after confirming', (tester) async {
-      final store = await rejected();
+    testWidgets('can be deleted after confirming, with its photos', (tester) async {
+      final store = MemoryLocalStore();
+      final withPhoto = draft.copyWith(
+        attachments: [const DraftAttachment(id: 'ph-1', name: 'a.png', sizeBytes: 3, isPhoto: true)],
+      );
+      await store.putBlob('ph-1', Uint8List.fromList([1, 2, 3]), 'image/png');
+      await store.putBlob('ph-other', Uint8List.fromList([4]), 'image/png');
+      final id = await store.enqueue(kind: 'create', site: draft.siteName, body: withPhoto.toApiBody(), draft: withPhoto);
+      await store.markFailed(id, 'server');
       await pumpApp(tester, store: signedInStore(), localStore: store, now: now);
       await openMenu(tester);
       await tester.tap(find.text('Delete'));
@@ -104,6 +113,7 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Delete'));
       await tester.pumpAndSettle();
       expect(store.entries, isEmpty);
+      expect(store.blobs.keys, ['ph-other'], reason: "the report's photo goes, others stay");
     });
   });
 

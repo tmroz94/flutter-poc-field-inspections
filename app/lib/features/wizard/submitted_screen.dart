@@ -64,7 +64,10 @@ class _SubmittedScreenState extends ConsumerState<SubmittedScreen> with SingleTi
     final messenger = ScaffoldMessenger.of(context);
     final failed = context.l10n.pdfFailed;
     try {
-      await actions.exportPdf(await ref.read(inspectionsRepositoryProvider).get(widget.id));
+      final inspection = await ref.read(inspectionsRepositoryProvider).get(widget.id);
+      // Left the screen while the inspection loaded: the export needs this context.
+      if (!mounted) return;
+      await actions.exportPdf(inspection);
     } on Object {
       messenger.showSnackBar(SnackBar(content: Text(failed)));
     }
