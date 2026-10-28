@@ -43,6 +43,14 @@ class _OfflineRepository implements InspectionsRepository {
   Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async => _fail();
 }
 
+/// A list answer that isn't the API's (e.g. a cast failing on a portal page).
+class _Unreadable extends FakeInspectionsRepository {
+  _Unreadable(super.db) : super(latency: Duration.zero);
+
+  @override
+  Future<PageResult<InspectionSummary>> list(ListQuery query, {int page = 1, int pageSize = 20}) async => throw TypeError();
+}
+
 /// The fake backend, with pages after the first failing while [pagesDown].
 class _FlakyPages extends FakeInspectionsRepository {
   _FlakyPages(super.db) : super(latency: Duration.zero);
@@ -171,6 +179,12 @@ void main() {
       await pumpApp(tester, initialLocation: '/inspections', store: signedInStore(), inspections: (_) => _OfflineRepository());
       expect(find.text("Couldn't load inspections"), findsOneWidget);
       expect(find.text('Error code: NETWORK_UNREACHABLE'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Try again'), findsOneWidget);
+    });
+
+    testWidgets("an answer the app can't read shows the error state, not an endless skeleton", (tester) async {
+      await pumpApp(tester, initialLocation: '/inspections', store: signedInStore(), inspections: _Unreadable.new);
+      expect(find.text("Couldn't load inspections"), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Try again'), findsOneWidget);
     });
 

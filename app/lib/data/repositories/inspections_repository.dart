@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:mock_data/mock_data.dart';
 import 'package:mock_data/mock_data.dart' as mock show inspectionTypes;
 
@@ -76,33 +77,46 @@ PageResult<InspectionSummary> _page(Map<String, Object?> json) => PageResult(
 
 Map<String, Object?> _map(Object? data) => (data! as Map).cast<String, Object?>();
 
+/// Reads a successful answer with [read]. One the app can't read (a captive
+/// portal's HTML page, a changed shape) fails like any other call, as
+/// [ApiException] `unknown`, so screens show their error state instead of
+/// waiting forever.
+Future<T> _read<T>(Future<Object?> call, T Function(Object? data) read) async {
+  final data = await call;
+  try {
+    return read(data);
+  } on Object catch (e) {
+    debugPrint('Unreadable answer: $e');
+    throw const ApiException('unknown');
+  }
+}
+
 class HttpInspectionsRepository implements InspectionsRepository {
   HttpInspectionsRepository(this._api);
 
   final ApiClient _api;
 
   @override
-  Future<PageResult<InspectionSummary>> list(ListQuery query, {int page = 1, int pageSize = 20}) async =>
-      _page(_map(await _api.get('/inspections', query: _listParams(query, page, pageSize))));
+  Future<PageResult<InspectionSummary>> list(ListQuery query, {int page = 1, int pageSize = 20}) =>
+      _read(_api.get('/inspections', query: _listParams(query, page, pageSize)), (d) => _page(_map(d)));
 
   @override
-  Future<InspectionDetail> get(String id) async =>
-      InspectionDetail.fromJson(_map(await _api.get('/inspections/${Uri.encodeComponent(id)}')));
+  Future<InspectionDetail> get(String id) =>
+      _read(_api.get('/inspections/${Uri.encodeComponent(id)}'), (d) => InspectionDetail.fromJson(_map(d)));
 
   @override
   Future<void> setArchived(String id, {required bool archived}) =>
       _api.post('/inspections/${Uri.encodeComponent(id)}/${archived ? 'archive' : 'unarchive'}');
 
   @override
-  Future<List<ChecklistItem>> checklist(String templateId) async {
-    final json = _map(await _api.get('/checklist-templates/${Uri.encodeComponent(templateId)}'));
-    return [for (final i in json['items']! as List) ChecklistItem.fromJson((i as Map).cast<String, Object?>())];
-  }
+  Future<List<ChecklistItem>> checklist(String templateId) => _read(
+    _api.get('/checklist-templates/${Uri.encodeComponent(templateId)}'),
+    (d) => [for (final i in _map(d)['items']! as List) ChecklistItem.fromJson((i as Map).cast<String, Object?>())],
+  );
 
   @override
-  Future<List<AppNotification>> notifications() async => [
-    for (final n in (await _api.get('/notifications'))! as List) AppNotification.fromJson((n as Map).cast<String, Object?>()),
-  ];
+  Future<List<AppNotification>> notifications() =>
+      _read(_api.get('/notifications'), (d) => [for (final n in d! as List) AppNotification.fromJson((n as Map).cast<String, Object?>())]);
 
   @override
   Future<void> markNotificationsRead({String? id}) => _api.post('/notifications/read', body: {'id': ?id});
@@ -111,20 +125,21 @@ class HttpInspectionsRepository implements InspectionsRepository {
   Future<void> deleteNotification(String id) => _api.delete('/notifications/${Uri.encodeComponent(id)}');
 
   @override
-  Future<List<SiteOption>> searchSites(String query) async => [
-    for (final s in (await _api.get('/sites', query: {'q': query}))! as List) SiteOption.fromJson((s as Map).cast<String, Object?>()),
-  ];
+  Future<List<SiteOption>> searchSites(String query) => _read(
+    _api.get('/sites', query: {'q': query}),
+    (d) => [for (final s in d! as List) SiteOption.fromJson((s as Map).cast<String, Object?>())],
+  );
 
   @override
-  Future<List<String>> inspectionTypes() async => [for (final t in (await _api.get('/inspection-types'))! as List) t as String];
+  Future<List<String>> inspectionTypes() => _read(_api.get('/inspection-types'), (d) => [for (final t in d! as List) t as String]);
 
   @override
-  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async {
+  Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) {
     final query = {'submit': '$submit'};
-    final json = id == null
-        ? await _api.post('/inspections', body: body, query: query, headers: {'Idempotency-Key': ?requestKey})
-        : await _api.put('/inspections/${Uri.encodeComponent(id)}', body: body, query: query);
-    return InspectionDetail.fromJson(_map(json));
+    final call = id == null
+        ? _api.post('/inspections', body: body, query: query, headers: {'Idempotency-Key': ?requestKey})
+        : _api.put('/inspections/${Uri.encodeComponent(id)}', body: body, query: query);
+    return _read(call, (d) => InspectionDetail.fromJson(_map(d)));
   }
 }
 

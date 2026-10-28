@@ -63,6 +63,11 @@ class ListState {
   );
 }
 
+/// Any failure as the list's error: an answer the app couldn't read becomes
+/// `unknown`, so the list shows its error and Retry instead of a skeleton
+/// that never ends.
+ApiException _asApiError(Object e) => e is ApiException ? e : const ApiException('unknown');
+
 /// One paged list per filter combination. Infinite scroll calls [loadMore];
 /// pull-to-refresh and the Refresh button call [refresh].
 class InspectionListController extends Notifier<ListState> {
@@ -97,9 +102,9 @@ class InspectionListController extends Notifier<ListState> {
       final page = await _repo.list(query, pageSize: pageSize);
       if (!ref.mounted || gen != _generation) return;
       state = ListState(items: page.items, total: page.total, page: 1, hasMore: page.hasMore, loading: false);
-    } on ApiException catch (e) {
+    } on Object catch (e) {
       if (!ref.mounted || gen != _generation) return;
-      state = state.copyWith(loading: false, error: () => e);
+      state = state.copyWith(loading: false, error: () => _asApiError(e));
     } finally {
       if (gen == _generation) _refreshing = false;
     }
@@ -122,9 +127,9 @@ class InspectionListController extends Notifier<ListState> {
         total: page.total,
         loadingMore: false,
       );
-    } on ApiException catch (e) {
+    } on Object catch (e) {
       if (!ref.mounted || gen != _generation) return;
-      state = state.copyWith(loadingMore: false, moreError: () => e);
+      state = state.copyWith(loadingMore: false, moreError: () => _asApiError(e));
     }
   }
 

@@ -1,7 +1,11 @@
 // The real HTTP repositories and API client against the mock server's own
 // handler (in-process): request encoding, the server's auth checks, JSON
 // decoding, and the 401 → sign-out wiring in data/providers.dart.
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
+import 'package:field_inspections/data/api/api_client.dart';
 import 'package:field_inspections/data/api/api_exception.dart';
 import 'package:field_inspections/data/api/backend_config.dart';
 import 'package:field_inspections/data/local/local_store.dart';
@@ -152,6 +156,15 @@ void main() {
     expect(other.summary.id, isNot(first.summary.id));
   });
 
+  test("a 200 answer that is not the API's (captive portal page) fails as unknown", () async {
+    final repo = HttpInspectionsRepository(ApiClient(baseUrl: mockServerUrl, token: () => 't', adapter: _HtmlPage()));
+    final unknown = throwsA(isA<ApiException>().having((e) => e.code, 'code', 'unknown'));
+    await expectLater(repo.list(const ListQuery()), unknown);
+    await expectLater(repo.get('INS-1042'), unknown);
+    await expectLater(repo.notifications(), unknown);
+    await expectLater(repo.save(_body()), unknown);
+  });
+
   test('the stored session is checked with the server on start', () async {
     final good = await start(store: signedInStore());
     expect(good.read(authControllerProvider).status, AuthStatus.signedIn);
@@ -204,4 +217,20 @@ void main() {
     await app.go('/inspections/INS-1042');
     expect(find.text('Warehouse A – loading dock'), findsWidgets);
   });
+}
+
+/// Answers every request like a captive portal: 200 with an HTML page.
+class _HtmlPage implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async =>
+      ResponseBody.fromString(
+        '<html><body>Sign in to the Wi-Fi</body></html>',
+        200,
+        headers: {
+          Headers.contentTypeHeader: ['text/html'],
+        },
+      );
+
+  @override
+  void close({bool force = false}) {}
 }
