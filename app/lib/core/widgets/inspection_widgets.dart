@@ -172,6 +172,69 @@ class SkeletonList extends StatelessWidget {
   }
 }
 
+/// Grey placeholder rows shaped like the desktop table (D03): ID, site, due
+/// and status columns, so the page doesn't jump from list rows to a table
+/// when the data arrives.
+class SkeletonTable extends StatelessWidget {
+  const SkeletonTable({this.rows = 10, super.key});
+
+  final int rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget bar(double w, double h, Color c) => Container(
+      height: h,
+      width: w,
+      decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(h)),
+    );
+    const siteWidths = [0.62, 0.48, 0.7, 0.54, 0.66, 0.42, 0.58];
+    return Semantics(
+      label: context.l10n.loadingInspections,
+      child: ExcludeSemantics(
+        child: Column(
+          children: [
+            Container(height: 44, color: scheme.surfaceContainerLow),
+            for (var i = 0; i < rows; i++)
+              Container(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 96,
+                      child: Align(alignment: AlignmentDirectional.centerStart, child: bar(64, 12, scheme.surfaceContainerHigh)),
+                    ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, c) => Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: bar(c.maxWidth * siteWidths[i % siteWidths.length], 14, scheme.surfaceContainerHighest),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 140,
+                      child: Align(alignment: AlignmentDirectional.centerStart, child: bar(96, 12, scheme.surfaceContainerHigh)),
+                    ),
+                    SizedBox(
+                      width: 140,
+                      child: Align(alignment: AlignmentDirectional.centerStart, child: bar(88, 24, scheme.surfaceContainerHigh)),
+                    ),
+                    const SizedBox(width: 56),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Centered icon + title + text + action, for empty and error states (P04).
 class MessageState extends StatelessWidget {
   const MessageState({

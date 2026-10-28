@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:field_inspections/core/theme/color_schemes.dart';
@@ -42,6 +43,19 @@ class _OfflineRepository implements InspectionsRepository {
   Future<List<String>> inspectionTypes() async => _fail();
   @override
   Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async => _fail();
+}
+
+/// The list answers only when [answer] completes.
+class _SlowList extends FakeInspectionsRepository {
+  _SlowList(super.db) : super(latency: Duration.zero);
+
+  final answer = Completer<void>();
+
+  @override
+  Future<PageResult<InspectionSummary>> list(ListQuery query, {int page = 1, int pageSize = 20}) async {
+    await answer.future;
+    return super.list(query, page: page, pageSize: pageSize);
+  }
 }
 
 /// A list answer that isn't the API's (e.g. a cast failing on a portal page).
@@ -188,6 +202,29 @@ void main() {
       expect(find.text("Couldn't load inspections"), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Try again'), findsOneWidget);
     });
+
+    for (final (layout, size, skeleton, other) in [
+      ('phone', phoneSize, SkeletonList, SkeletonTable),
+      ('desktop', desktopSize, SkeletonTable, SkeletonList),
+    ]) {
+      testWidgets('$layout: the loading skeleton has the shape of what loads', (tester) async {
+        late _SlowList repo;
+        await pumpApp(
+          tester,
+          initialLocation: '/inspections',
+          store: signedInStore(),
+          size: size,
+          inspections: (db) => repo = _SlowList(db),
+          settle: false,
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.byType(skeleton), findsOneWidget);
+        expect(find.byType(other), findsNothing);
+        repo.answer.complete();
+        await tester.pumpAndSettle();
+        expect(find.byType(skeleton), findsNothing);
+      });
+    }
 
     testWidgets('infinite scroll loads the second page', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/inspections', store: signedInStore());

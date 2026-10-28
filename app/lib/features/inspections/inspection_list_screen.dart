@@ -353,7 +353,7 @@ class _ListBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final error = state.error;
     final l = context.l10n;
-    if (state.loading) return const SingleChildScrollView(child: SkeletonList());
+    if (state.loading) return SingleChildScrollView(child: table ? const SkeletonTable() : const SkeletonList());
     if (error != null && state.items.isEmpty) {
       return Column(
         children: [
