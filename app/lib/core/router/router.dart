@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../features/auth/auth_controller.dart';
+import '../../features/auth/auth_models.dart';
 import '../../features/auth/auth_screens.dart';
 import '../../features/auth/lock_controller.dart';
 import '../../features/home/home_screen.dart';
@@ -69,6 +70,14 @@ Future<bool> _confirmWizardExit(BuildContext context, GoRouterState state) async
   final key = wizardKey(state.pathParameters['id']);
   // An untouched wizard with no saved draft has nothing to lose.
   if (!container.read(wizardControllerProvider(key)).hasDraft) return true;
+  // The guard is moving to unlock or sign-in (lock timeout, rejected token):
+  // keep the draft and go. Asking would let "Stay" cancel the redirect and
+  // leave the wizard open on a locked or signed-out app.
+  final forced = container.read(authControllerProvider).status != AuthStatus.signedIn || container.read(lockControllerProvider).locked;
+  if (forced) {
+    await container.read(wizardControllerProvider(key).notifier).saveNow();
+    return true;
+  }
   final choice = await showLeaveDialog(context);
   if (choice == LeaveChoice.discard) await container.read(wizardControllerProvider(key).notifier).discard();
   if (choice == LeaveChoice.leave) await container.read(wizardControllerProvider(key).notifier).saveNow();

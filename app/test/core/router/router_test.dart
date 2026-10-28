@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:field_inspections/core/router/routes.dart';
+import 'package:field_inspections/data/local/local_store.dart';
+import 'package:field_inspections/features/auth/auth_controller.dart';
 import 'package:field_inspections/features/auth/auth_screens.dart';
 import 'package:field_inspections/features/auth/lock_controller.dart';
 import 'package:field_inspections/features/home/home_screen.dart';
@@ -14,6 +16,7 @@ import 'package:field_inspections/features/poc/results_screens.dart';
 import 'package:field_inspections/features/settings/appearance_screen.dart';
 import 'package:field_inspections/features/settings/settings_screens.dart';
 import 'package:field_inspections/features/wizard/submitted_screen.dart';
+import 'package:field_inspections/features/wizard/wizard_controller.dart';
 import 'package:field_inspections/features/wizard/wizard_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -214,6 +217,42 @@ void main() {
       lock.onShown();
       await tester.pumpAndSettle();
       expect(app.location, '/unlock?from=%2Fmap');
+    });
+
+    testWidgets('locking in the wizard with a draft goes to unlock without asking, and keeps the draft', (tester) async {
+      final fakes = Fakes();
+      final app = await pumpApp(tester, store: signedInStore(biometricLock: true), fakes: fakes);
+      await app.go('/inspections/new?step=1');
+      app.container.read(wizardControllerProvider('new').notifier).update((d) => d.copyWith(siteName: 'Riverside'));
+      await tester.pumpAndSettle();
+      fakes.biometrics.ok = false;
+
+      final lock = app.container.read(lockControllerProvider.notifier);
+      var now = DateTime(2026, 10, 24, 12);
+      lock.clock = () => now;
+      lock.onHidden();
+      now = now.add(const Duration(minutes: 6));
+      lock.onShown();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing, reason: 'no "Leave?" dialog whose Stay could cancel the lock');
+      expect(find.byType(UnlockScreen), findsOneWidget);
+      expect(find.byType(WizardScreen), findsNothing);
+      expect(app.location, startsWith('/unlock'));
+      expect((await app.container.read(localStoreProvider).draft('new'))?.siteName, 'Riverside');
+    });
+
+    testWidgets('a rejected session in the wizard goes to sign-in without asking', (tester) async {
+      final app = await pumpApp(tester, store: signedInStore());
+      await app.go('/inspections/new?step=1');
+      app.container.read(wizardControllerProvider('new').notifier).update((d) => d.copyWith(siteName: 'Riverside'));
+      await tester.pumpAndSettle();
+
+      await app.container.read(authControllerProvider.notifier).signOut();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(SignInScreen), findsOneWidget);
     });
 
     testWidgets('web never locks, even with the setting stored', (tester) async {
