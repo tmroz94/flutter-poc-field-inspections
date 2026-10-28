@@ -1,10 +1,12 @@
-# Every push and pull request: the quality gate, both web builds, and the web
-# tests in Chrome (integration flows via flutter drive, browser prompts via
-# Playwright). Linux runners only.
+# Pushes to main and every pull request: the quality gate, both web builds,
+# and the web tests in Chrome (integration flows via flutter drive, browser
+# prompts via Playwright). Linux runners only. Pushes to other branches run
+# through their pull request, so a PR branch isn't tested twice.
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -77,7 +79,9 @@ jobs:
       - name: Start chromedriver
         run: |
           "$CHROMEWEBDRIVER/chromedriver" --port=4444 &
-          sleep 2
+          for _ in $(seq 30); do curl -fsS http://localhost:4444/status >/dev/null && exit 0; sleep 1; done
+          echo "chromedriver did not start" >&2
+          exit 1
       - name: Integration flows in Chrome
         working-directory: app
         run: |
@@ -90,12 +94,15 @@ jobs:
 
       # Browser prompts (notifications, location, camera) with Playwright and the
       # runner's Chrome; frame timings need a real display, so they stay local.
+      # They run even when the flows above failed, so one suite can't hide the other.
       - uses: actions/setup-node@v7
+        if: ${{ !cancelled() }}
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web_e2e/package-lock.json
       - name: Playwright prompt tests
+        if: ${{ !cancelled() }}
         working-directory: web_e2e
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'

@@ -349,8 +349,8 @@ emulator id. More, all in [docs/testing.md](docs/testing.md):
   prompts and JS vs WebAssembly timings with Playwright in `web_e2e/`.
 
 CI (GitHub Actions): the quality gate, both web builds and the Chrome tests run
-on every push (`ci.yml`), and so does the Linux app build with the integration
-flows (`desktop.yml`); the Android emulator, iOS simulator, Windows and macOS
+on pushes to main and on every pull request (`ci.yml`), and so does the Linux
+app build with the integration flows (`desktop.yml`); the Android emulator, iOS simulator, Windows and macOS
 app jobs and the Windows golden-test job (`goldens.yml`) run when started by
 hand from the Actions tab.
 

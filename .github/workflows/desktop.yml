@@ -1,11 +1,13 @@
 # Desktop apps: build each one and run the shared integration_test flows on it.
-# Linux runs on every push and pull request (Linux minutes are the cheap ones,
-# and nothing else builds the Linux app). Windows (2x minutes) and macOS (10x)
-# run only when started by hand (Actions › Desktop apps › Run workflow).
+# Linux runs on pushes to main and every pull request (Linux minutes are the
+# cheap ones, and nothing else builds the Linux app). Windows (2x minutes) and
+# macOS (10x) run only when started by hand (Actions › Desktop apps › Run
+# workflow).
 name: Desktop apps
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
