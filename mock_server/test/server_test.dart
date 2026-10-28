@@ -32,6 +32,29 @@ void main() {
     expect(r.headers['access-control-allow-origin'], '*');
   });
 
+  test("this machine's pages may call the API; other sites are refused before anything runs", () async {
+    final local = await call('GET', '/api/health', headers: {'origin': 'http://localhost:5173'});
+    expect(local.statusCode, 200);
+    expect(local.headers['access-control-allow-origin'], 'http://localhost:5173');
+    expect((await call('GET', '/api/health', headers: {'origin': 'http://127.0.0.1:5176'})).statusCode, 200);
+
+    final token = await signIn();
+    final created = await call('POST', '/api/inspections', token: token, body: {'site': 'x'}, headers: {'origin': 'https://evil.example'});
+    expect(created.statusCode, 403);
+    expect(created.headers['access-control-allow-origin'], isNull);
+    final reset = await call('POST', '/api/admin/reset', headers: {'origin': 'https://evil.example'});
+    expect(reset.statusCode, 403);
+    final preflight = await call('OPTIONS', '/api/inspections', headers: {'origin': 'https://evil.example'});
+    expect(preflight.headers['access-control-allow-origin'], isNull);
+  });
+
+  test('--allow-origin lets another web origin in', () async {
+    handler = buildHandler(defaultDelay: Duration.zero, allowedOrigins: {'http://192.168.1.20:5173'});
+    final r = await call('GET', '/api/health', headers: {'origin': 'http://192.168.1.20:5173'});
+    expect(r.statusCode, 200);
+    expect(r.headers['access-control-allow-origin'], 'http://192.168.1.20:5173');
+  });
+
   test('CORS preflight answers 204 with allowed headers', () async {
     final r = await call('OPTIONS', '/api/inspections');
     expect(r.statusCode, 204);

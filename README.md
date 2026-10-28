@@ -254,6 +254,9 @@ default NAT networking), so for it run the same command inside WSL, in
 `~/flutter-mcp`. For a phone on the same Wi-Fi add `--host 0.0.0.0` and run the
 app with `--dart-define=API_URL=http://<pc-ip>:8080/api`; anyone on that
 network can then use the mock API, so only do it on a network you trust.
+Browsers may call it only from this machine's pages (`localhost`,
+`127.0.0.1`); to open the web build from another device, add
+`--allow-origin http://<pc-ip>:<port>`.
 
 Force a mode with `--dart-define=BACKEND=http|fake|auto` (default `auto`: the
 mock API when it answers, else the fake).

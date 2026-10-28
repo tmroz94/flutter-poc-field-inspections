@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'fixtures.dart';
 
 /// Thrown for request errors; [fields] maps a field name to an error code
@@ -25,12 +27,19 @@ class MockDatabase {
     _users = [
       {...inspectorAnna, 'password': demoPassword},
     ];
+    _fixtureUserIds = {for (final u in _users) u['id']! as String};
   }
+
+  static final _random = Random();
 
   final DateTime Function() _clock;
   late final List<Map<String, Object?>> _inspections;
   late final List<Map<String, Object?>> _notifications;
   late final List<Map<String, Object?>> _users;
+
+  /// Users that exist on every start (the demo account). Only their tokens
+  /// outlive the database; see [authenticate].
+  late final Set<String> _fixtureUserIds;
   final Map<String, String> _tokens = {};
 
   /// Inspections created per `Idempotency-Key`, so a create retried after a
@@ -75,7 +84,8 @@ class MockDatabase {
     if (fields.isNotEmpty) throw MockError(422, 'validation', fields: fields);
     final parts = name.trim().split(RegExp(r'\s+'));
     final user = {
-      'id': 'u-${_users.length + 1}',
+      // Random, so a token from before a reset can't match the next sign-up.
+      'id': 'u-${_random.nextInt(0x3FFFFFFF).toRadixString(36)}${_users.length}',
       'name': name.trim(),
       'email': email.toLowerCase(),
       'initials': parts.take(2).map((p) => p[0].toUpperCase()).join(),
@@ -86,6 +96,11 @@ class MockDatabase {
     return _session(user);
   }
 
+  String? _fixtureToken(String token) {
+    final id = RegExp(r'^mock-(u-[\w]+)-\d+$').firstMatch(token)?.group(1);
+    return _fixtureUserIds.contains(id) ? id : null;
+  }
+
   Map<String, Object?> _session(Map<String, Object?> user) {
     final token = 'mock-${user['id']}-${_clock().microsecondsSinceEpoch}';
     _tokens[token] = user['id']! as String;
@@ -94,10 +109,13 @@ class MockDatabase {
 
   /// Returns the user for a bearer token, or throws 401.
   ///
-  /// Tokens look like `mock-<userId>-<micros>`, so a session survives a mock
-  /// server restart or an app restart in offline-fake mode.
+  /// Tokens look like `mock-<userId>-<micros>`. Tokens this database issued
+  /// are checked against the ones it handed out. The demo account's tokens
+  /// are also accepted by shape, so its session survives a mock server
+  /// restart or an app restart in offline-fake mode (its password is public
+  /// anyway); a signed-up user's token ends with the database.
   Map<String, Object?> authenticate(String? token) {
-    final id = token == null ? null : _tokens[token] ?? RegExp(r'^mock-(u-[\w]+)-\d+$').firstMatch(token)?.group(1);
+    final id = token == null ? null : _tokens[token] ?? _fixtureToken(token);
     final user = _users.where((u) => u['id'] == id).firstOrNull;
     if (user == null) throw MockError(401, 'unauthorized');
     return Map.of(user)..remove('password');

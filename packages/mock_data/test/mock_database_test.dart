@@ -63,6 +63,23 @@ void main() {
     test('unknown token is unauthorized', () {
       expect(() => db.authenticate('nope'), throwsA(isA<MockError>().having((e) => e.status, 'status', 401)));
     });
+
+    test("only the demo account's tokens are accepted by shape; a signed-up user's must be issued", () {
+      expect(db.authenticate('mock-u-anna-1')['email'], demoEmail, reason: 'survives a server restart');
+      final s = db.signUp(name: 'Jan Kowalski', email: 'jan@example.com', password: 'abcd1234');
+      final id = (s['user']! as Map)['id'];
+      expect(db.authenticate(s['token']! as String)['email'], 'jan@example.com');
+      expect(() => db.authenticate('mock-$id-0'), throwsA(isA<MockError>().having((e) => e.status, 'status', 401)));
+      expect(() => db.authenticate('mock-u-2-0'), throwsA(isA<MockError>().having((e) => e.status, 'status', 401)));
+    });
+
+    test("a token from before a restart doesn't sign in the next account that signs up", () {
+      final before = db.signUp(name: 'Jan Kowalski', email: 'jan@example.com', password: 'abcd1234');
+      final restarted = MockDatabase();
+      final after = restarted.signUp(name: 'Ola Nowak', email: 'ola@example.com', password: 'abcd1234');
+      expect((after['user']! as Map)['id'], isNot((before['user']! as Map)['id']));
+      expect(() => restarted.authenticate(before['token']! as String), throwsA(isA<MockError>()));
+    });
   });
 
   group('inspections list', () {
