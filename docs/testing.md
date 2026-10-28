@@ -233,8 +233,9 @@ tool/linux_container/test.sh
 ```
 
 It builds the image in `tool/linux_container/` (Ubuntu 24.04, Flutter from
-`.fvmrc`, a virtual display and a session bus), copies the tracked files in,
-builds the release app and runs both flow files and the probe. On Apple
+`.fvmrc`, a virtual display and a session bus), copies the repository in
+(tracked files plus new ones that aren't ignored), builds the release app and
+runs both flow files and the probe, each even after another fails. On Apple
 silicon the container is arm64, so it checks the Linux code rather than CI's
 x64 binary.
 

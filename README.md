@@ -27,8 +27,9 @@ Claude Design canvas "Flutter PoC – Field Inspections" (Material 3).
 | iOS (simulator or iPhone) | – | ✓ | – |
 
 Flutter doesn't cross-compile desktop apps: each one builds on its own OS
-(on Windows, the Linux app builds inside WSL). CI builds all three
-(`desktop.yml`).
+(on Windows, the Linux app builds inside WSL). CI (`desktop.yml`) builds the
+Linux app on pushes to main and pull requests; the Windows and macOS jobs run
+when started by hand.
 
 ## Setup
 
@@ -306,7 +307,8 @@ cd app && fvm flutter build web --wasm -o build/web-wasm && cd .. && python3 too
 Install the Flutter extension (VS Code suggests it from
 `.vscode/extensions.json`). `.vscode/settings.json` points it at the FVM SDK,
 `.fvm/versions/<version>`: a link FVM makes when it sets up the project (if
-it's missing, run `fvm use <the version in .fvmrc>` in the repository root).
+it's missing, run `fvm use <the version in .fvmrc>` in the repository root;
+`fvm use` also updates this path when the version changes).
 The Run and Debug view then has:
 
 | Configuration | Runs on |
