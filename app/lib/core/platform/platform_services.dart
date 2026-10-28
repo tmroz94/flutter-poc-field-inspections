@@ -184,6 +184,11 @@ class LauncherService {
 }
 
 /// Biometric check for the lock screen (P26). Unsupported on the web.
+/// What the unlock screen asks for: the face or fingerprint the device has
+/// enrolled, or [other] when it doesn't say (many Android phones report only
+/// "strong"/"weak").
+enum BiometricKind { face, fingerprint, other }
+
 class BiometricService {
   BiometricService([LocalAuthentication? auth]) : _auth = auth ?? LocalAuthentication();
 
@@ -195,6 +200,17 @@ class BiometricService {
     } on Object {
       return false;
     }
+  }
+
+  Future<BiometricKind> kind() async {
+    try {
+      final types = await _auth.getAvailableBiometrics();
+      if (types.contains(BiometricType.face)) return BiometricKind.face;
+      if (types.contains(BiometricType.fingerprint)) return BiometricKind.fingerprint;
+    } on Object catch (e) {
+      debugPrint('Biometric types unavailable: $e');
+    }
+    return BiometricKind.other;
   }
 
   /// True when the user passed biometrics or the device PIN. [reason] is shown
@@ -271,5 +287,7 @@ final locationServiceProvider = Provider<LocationService>((ref) => const Locatio
 final shareServiceProvider = Provider<ShareService>((ref) => const ShareService());
 final launcherServiceProvider = Provider<LauncherService>((ref) => const LauncherService());
 final biometricServiceProvider = Provider<BiometricService>((ref) => BiometricService());
+
+final biometricKindProvider = FutureProvider<BiometricKind>((ref) => ref.watch(biometricServiceProvider).kind());
 final permissionServiceProvider = Provider<PermissionService>((ref) => const PermissionService());
 final hapticsProvider = Provider<Haptics>((ref) => Haptics(ref.watch(capabilitiesProvider).haptics));

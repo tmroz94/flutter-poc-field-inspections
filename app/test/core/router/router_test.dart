@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:field_inspections/core/platform/capabilities.dart';
+import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:field_inspections/core/router/routes.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/features/auth/auth_controller.dart';
@@ -20,6 +22,7 @@ import 'package:field_inspections/features/wizard/wizard_controller.dart';
 import 'package:field_inspections/features/wizard/wizard_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../helpers/fakes.dart';
@@ -254,6 +257,28 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byType(SignInScreen), findsOneWidget);
     });
+
+    for (final (platform, kind, prompt) in [
+      (TargetPlatform.iOS, BiometricKind.face, 'Use Face ID to unlock'),
+      (TargetPlatform.iOS, BiometricKind.fingerprint, 'Use Touch ID to unlock'),
+      (TargetPlatform.android, BiometricKind.face, 'Use your face to unlock'),
+      (TargetPlatform.android, BiometricKind.fingerprint, 'Use your fingerprint to unlock'),
+      (TargetPlatform.android, BiometricKind.other, 'Use your fingerprint or face to unlock'),
+    ]) {
+      testWidgets('the unlock screen names what the device uses: ${platform.name}, ${kind.name}', (tester) async {
+        final capabilities = Capabilities(isWeb: false, platform: platform);
+        final fakes = Fakes(capabilities: capabilities)
+          ..biometrics.enrolled = kind
+          ..biometrics.hold = Completer<void>();
+        await pumpApp(tester, store: signedInStore(biometricLock: true), fakes: fakes, capabilities: capabilities);
+        // The system prompt is open; the screen says what it waits for.
+        expect(find.byType(UnlockScreen), findsOneWidget);
+        expect(find.text(prompt), findsOneWidget);
+        expect(find.byIcon(kind == BiometricKind.face ? Symbols.face : Symbols.fingerprint), findsOneWidget);
+        fakes.biometrics.hold!.complete();
+        await tester.pumpAndSettle();
+      });
+    }
 
     testWidgets('web never locks, even with the setting stored', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/map', store: signedInStore(biometricLock: true), capabilities: web);

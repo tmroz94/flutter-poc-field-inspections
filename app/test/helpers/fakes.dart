@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_inspections/core/platform/capabilities.dart';
 import 'package:field_inspections/core/platform/notification_service.dart';
 import 'package:field_inspections/core/platform/platform_services.dart';
@@ -16,10 +18,17 @@ class FakeBiometrics extends BiometricService {
 
   bool ok;
   bool isAvailable;
+  BiometricKind enrolled = BiometricKind.other;
+
+  /// While set, the system prompt stays open.
+  Completer<void>? hold;
   int calls = 0;
 
   @override
   Future<bool> available() async => isAvailable;
+
+  @override
+  Future<BiometricKind> kind() async => enrolled;
 
   String? lastReason;
 
@@ -27,6 +36,7 @@ class FakeBiometrics extends BiometricService {
   Future<bool> authenticate({required String reason}) async {
     calls++;
     lastReason = reason;
+    await hold?.future;
     return ok;
   }
 }

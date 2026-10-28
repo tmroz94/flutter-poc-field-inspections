@@ -1478,6 +1478,30 @@ abstract class AppLocalizations {
   /// **'Use your fingerprint or face to unlock'**
   String get unlockPrompt;
 
+  /// No description provided for @unlockPromptFaceId.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Face ID to unlock'**
+  String get unlockPromptFaceId;
+
+  /// No description provided for @unlockPromptTouchId.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Touch ID to unlock'**
+  String get unlockPromptTouchId;
+
+  /// No description provided for @unlockPromptFace.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your face to unlock'**
+  String get unlockPromptFace;
+
+  /// No description provided for @unlockPromptFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your fingerprint to unlock'**
+  String get unlockPromptFingerprint;
+
   /// No description provided for @unlockFailed.
   ///
   /// In en, this message translates to:

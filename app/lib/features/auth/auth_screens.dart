@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mock_data/mock_data.dart' show demoEmail, demoPassword;
 
+import '../../core/platform/capabilities.dart';
 import '../../core/platform/platform_services.dart';
 import '../../core/router/deep_links.dart';
 import '../../core/router/routes.dart';
@@ -648,6 +649,14 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
     final l = context.l10n;
     final user = ref.watch(authControllerProvider).user;
     final timedOut = ref.watch(lockControllerProvider.select((s) => s.timedOut));
+    // Name what this device uses: Face ID / Touch ID on Apple devices.
+    final kind = ref.watch(biometricKindProvider).value ?? BiometricKind.other;
+    final apple = ref.watch(capabilitiesProvider).platform == TargetPlatform.iOS;
+    final prompt = switch (kind) {
+      BiometricKind.face => apple ? l.unlockPromptFaceId : l.unlockPromptFace,
+      BiometricKind.fingerprint => apple ? l.unlockPromptTouchId : l.unlockPromptFingerprint,
+      BiometricKind.other => l.unlockPrompt,
+    };
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -668,13 +677,13 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                 FloatingActionButton.large(
                   tooltip: l.unlockButton,
                   onPressed: _busy ? null : _unlock,
-                  child: const Icon(Symbols.fingerprint),
+                  child: Icon(kind == BiometricKind.face ? Symbols.face : Symbols.fingerprint),
                 ),
                 const SizedBox(height: 16),
                 Semantics(
                   liveRegion: true,
                   child: Text(
-                    _failed ? l.unlockFailed : l.unlockPrompt,
+                    _failed ? l.unlockFailed : prompt,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: _failed ? theme.colorScheme.error : null),
                   ),

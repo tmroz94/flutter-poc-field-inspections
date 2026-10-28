@@ -839,6 +839,18 @@ class AppLocalizationsPl extends AppLocalizations {
   String get unlockPrompt => 'Użyj odcisku palca lub twarzy, aby odblokować';
 
   @override
+  String get unlockPromptFaceId => 'Użyj Face ID, aby odblokować';
+
+  @override
+  String get unlockPromptTouchId => 'Użyj Touch ID, aby odblokować';
+
+  @override
+  String get unlockPromptFace => 'Użyj twarzy, aby odblokować';
+
+  @override
+  String get unlockPromptFingerprint => 'Użyj odcisku palca, aby odblokować';
+
+  @override
   String get unlockFailed => 'Nie rozpoznano. Spróbuj ponownie lub użyj hasła.';
 
   @override

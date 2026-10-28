@@ -786,6 +786,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unlockPrompt => 'Use your fingerprint or face to unlock';
 
   @override
+  String get unlockPromptFaceId => 'Use Face ID to unlock';
+
+  @override
+  String get unlockPromptTouchId => 'Use Touch ID to unlock';
+
+  @override
+  String get unlockPromptFace => 'Use your face to unlock';
+
+  @override
+  String get unlockPromptFingerprint => 'Use your fingerprint to unlock';
+
+  @override
   String get unlockFailed => 'Not recognised. Try again or use your password.';
 
   @override
