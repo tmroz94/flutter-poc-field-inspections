@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -68,7 +69,13 @@ class FieldInspectionsApp extends ConsumerWidget {
             textScaler: settings.textScale == null ? media.textScaler : TextScaler.linear(settings.textScale!),
             disableAnimations: media.disableAnimations || settings.reduceMotion,
           ),
-          child: restoring ? const SplashScreen() : child!,
+          // The base status bar style follows the theme. Screens without an
+          // app bar (the phone detail's header image) would otherwise keep
+          // whatever came before, e.g. the dark photo viewer's light icons.
+          child: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: Theme.of(context).brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+            child: restoring ? const SplashScreen() : child!,
+          ),
         );
       },
     );

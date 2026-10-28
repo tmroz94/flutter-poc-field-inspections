@@ -411,6 +411,20 @@ void main() {
       expect(app.location, '/inspections/INS-1042/photos/p4');
     });
 
+    testWidgets('closing the dark photo viewer gives the light detail its dark status bar icons back', (tester) async {
+      await pumpApp(tester, initialLocation: '/inspections/INS-1042?tab=photos', store: signedInStore());
+      expect(SystemChrome.latestStyle?.statusBarIconBrightness, Brightness.dark);
+      await tester.ensureVisible(find.bySemanticsLabel('Open photo 3 of 6'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Open photo 3 of 6'));
+      await tester.pumpAndSettle();
+      expect(SystemChrome.latestStyle?.statusBarIconBrightness, Brightness.light, reason: 'the viewer is dark');
+      await tester.tap(find.byTooltip('Close viewer'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PhotoViewerScreen), findsNothing);
+      expect(SystemChrome.latestStyle?.statusBarIconBrightness, Brightness.dark);
+    });
+
     testWidgets('desktop: opening a row keeps the list filters', (tester) async {
       final app = await pumpApp(
         tester,
