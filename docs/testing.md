@@ -245,7 +245,7 @@ x64 binary.
 |---|---|---|
 | `ci.yml` | pushes to main and every pull request | quality gate (`tool/check.sh --coverage`; goldens skip on Linux), both web builds as artifacts, the integration flows in headless Chrome (`flutter drive`), the Playwright prompt tests |
 | `android.yml` | by hand only | emulator with the local image (API 37, Google Play): `tool/android_device_tests.dart` (including airplane mode and GPS), then `--patrol` (native UI, notification after kill) |
-| `ios.yml` | by hand only | iPhone simulator on a macOS runner: builds for iOS and runs the integration flows |
+| `ios.yml` | by hand only | iPhone simulator on a macOS runner: builds for iOS and runs the integration flows (first run 28 October 2026 on `aeb63aa`: the 7 flows and the probe pass on an iPhone 17 with iOS 26.5, about 27 minutes) |
 | `desktop.yml` | Linux: pushes to main and every pull request; Windows and macOS: by hand | builds each desktop app (Linux bundle and Windows release as artifacts) and runs `app_test`, `ui_flows_test` and the platform probe on it, one file per run (Linux under `xvfb-run` with a session bus) |
 | `goldens.yml` | by hand only | golden image tests on a Windows runner (the OS the reference images are made on); diff images as an artifact on failure |
 

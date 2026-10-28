@@ -260,7 +260,8 @@ the notification and location prompts, file dialogs and Save (they need clicks
 in system UI).
 
 Verified on Linux (Ubuntu 24.04 arm64 in a container on the Mac,
-`tool/linux_container/test.sh`): release build, the 7 flows, the probe
+`tool/linux_container/test.sh`; again on 28 October 2026 after the review
+fixes, with the Flutter version now read from `.fvmrc`): release build, the 7 flows, the probe
 (notifications on, no location plugin, no biometrics, map tiles drawn), and
 links from a cold start, from a second process and through `xdg-open` with the
 `.desktop` file registered. Running there turned up three things, now fixed:
@@ -307,10 +308,10 @@ them). On Android, Flutter pushes the intent's route whatever plugins return
 | Notification while the app is open | ✓ | ✓ | ✓ banner over the app (the `AppDelegate` delegate answers `willPresent`) |
 | Test notification → tap opens its route (app in background) | ✓ | ✓ shown by the service worker, click opens the route; tab closed too (Playwright) | ✓ banner on the home screen; opened from Notification Center onto the route (again 28 Oct) |
 | Notification tap after the app was killed | ✓ cold start on the route (host helper; a dropped-tap bug fixed) | n/a | ✓ cold start on the route (`simctl terminate`, then opened from Notification Center) |
-| Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | ✓ simulated Face ID (turning it on, cold-start lock and match again 28 Oct): turning it on asks once, cold start locks, no match shows iOS's "Face Not Recognised" and stays locked, match opens Home |
+| Biometric unlock | ✓ system prompt with the device PIN (Patrol); fingerprint not enrolled | n/a | ✓ simulated Face ID (turning it on, cold-start lock and match again 28 Oct): turning it on asks once, cold start locks, no match shows iOS's "Face Not Recognised" and stays locked, match opens Home. After the review fixes (28 Oct): the unlock screen says "Use Face ID to unlock" with a face icon, and a lock that hits while the wizard holds a draft goes straight to Unlock (no "Leave?"), saves the draft and returns to it after the match |
 | Camera / gallery / files | ✓ camera app and photo picker (Patrol); file picker with fakes | tests with fakes | camera prompt ✓, then "Camera not available" (the simulator has none); gallery through iOS's private picker (no Photos permission needed) ✓; PDF from Files › On My iPhone ✓ |
 | Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | ✓ granted and denied (Playwright) | location, camera and notification prompts with the Info.plist texts, Allow ✓; Diagnostics then shows Granted (simulator) |
-| Denied camera / location → banner or snackbar with Settings | ✓ (Patrol) | n/a | ✓ banner (Take photo disabled) and snackbar; "Open settings" opens the Settings app but at its top page, not the app's (simulator; recheck on a phone). Diagnostics updates on return without a restart |
+| Denied camera / location → banner or snackbar with Settings | ✓ (Patrol) | n/a | ✓ banner (Take photo disabled) and snackbar; "Open settings" opens the Settings app but at its top page, not the app's (simulator; recheck on a phone). Diagnostics updates on return without a restart. After the review fixes (28 Oct): with the camera revoked, a checklist item's Add photo says camera access is off and offers Open settings |
 | Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | ✓ iOS share sheet; Save to Files gives `inspection-INS-1042.pdf` |
 | Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | diagnostics ✓; tracker opened from a link (summaries and grid; editing not tried); adaptive widgets in Cupertino by default, CupertinoAlertDialog ✓ (28 Oct) |
 | Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows and the platform probe (Face ID enrolled, location service on, map tiles), iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1) |
