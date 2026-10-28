@@ -17,12 +17,23 @@ import '../wizard_controller.dart';
 
 enum CaptureResult { added, cancelled, rejected, denied, failed }
 
-/// Camera or gallery into the draft. Handles cancel and a denied camera.
-Future<CaptureResult> addPickedPhoto(WidgetRef ref, BuildContext context, String wizardKey, {required bool camera, String? forItem}) async {
+/// Camera or gallery into the draft. Handles cancel and denied access: a
+/// denied gallery, and with [explainDeniedCamera] a denied camera, say so in
+/// a snackbar with Open settings (step 4 shows its own camera banner).
+Future<CaptureResult> addPickedPhoto(
+  WidgetRef ref,
+  BuildContext context,
+  String wizardKey, {
+  required bool camera,
+  String? forItem,
+  bool explainDeniedCamera = false,
+}) async {
   final wizard = ref.read(wizardControllerProvider(wizardKey).notifier);
   final media = ref.read(mediaServiceProvider);
   final messenger = ScaffoldMessenger.of(context);
   final l = context.l10n;
+  final permissions = ref.read(permissionServiceProvider);
+  final canOpenSettings = ref.read(capabilitiesProvider).openSystemSettings;
   try {
     final file = await media.photo(camera: camera);
     if (file == null) return CaptureResult.cancelled;
@@ -31,7 +42,17 @@ Future<CaptureResult> addPickedPhoto(WidgetRef ref, BuildContext context, String
     return ok ? CaptureResult.added : CaptureResult.rejected;
   } on PlatformException catch (e) {
     // iOS reports camera_access_denied / photo_access_denied.
-    if (e.code.contains('access_denied')) return CaptureResult.denied;
+    if (e.code.contains('access_denied')) {
+      if ((!camera || explainDeniedCamera) && context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(camera ? l.cameraOff : l.photoLibraryOff),
+            action: canOpenSettings ? SnackBarAction(label: l.openSettings, onPressed: permissions.openSettings) : null,
+          ),
+        );
+      }
+      return CaptureResult.denied;
+    }
     if (context.mounted) messenger.showSnackBar(SnackBar(content: Text(camera ? l.cameraOpenFailed : l.galleryOpenFailed)));
     return CaptureResult.failed;
   }
@@ -79,18 +100,29 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
   bool _cameraDenied = false;
   bool _dragging = false;
   void Function()? _stopPaste;
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
+    // Back from Settings: if camera access was turned on there, drop the banner.
+    _lifecycle = AppLifecycleListener(onResume: _recheckCamera);
     // Web: Ctrl/Cmd+V of a screenshot or copied image adds it (D04 "Paste image").
     if (ref.read(capabilitiesProvider).isWeb) _stopPaste = ref.read(mediaServiceProvider).onPaste(_add);
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _stopPaste?.call();
     super.dispose();
+  }
+
+  Future<void> _recheckCamera() async {
+    if (!_cameraDenied) return;
+    final state = await ref.read(permissionServiceProvider).status(AppPermission.camera);
+    final stillOff = state == PermissionState.denied || state == PermissionState.permanentlyDenied;
+    if (!stillOff && mounted) setState(() => _cameraDenied = false);
   }
 
   Duration get _duration => MediaQuery.disableAnimationsOf(context) ? Duration.zero : Durations.medium2;
@@ -115,7 +147,8 @@ class _PhotosStepState extends ConsumerState<PhotosStep> {
 
   Future<void> _capture({required bool camera}) async {
     final result = await addPickedPhoto(ref, context, widget.wizardKey, camera: camera);
-    if (result == CaptureResult.denied && mounted) setState(() => _cameraDenied = true);
+    // Only the camera gets the banner; a denied gallery says so in a snackbar.
+    if (camera && result == CaptureResult.denied && mounted) setState(() => _cameraDenied = true);
   }
 
   Future<void> _attachFiles() async {

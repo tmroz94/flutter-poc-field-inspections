@@ -1249,6 +1249,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get cameraOff => 'Dostęp do aparatu jest wyłączony. Nadal możesz wybrać zdjęcia z galerii.';
 
   @override
+  String get photoLibraryOff => 'Dostęp do zdjęć jest wyłączony. Możesz go włączyć w Ustawieniach.';
+
+  @override
   String photosCount(int count) {
     return 'Zdjęcia · $count';
   }

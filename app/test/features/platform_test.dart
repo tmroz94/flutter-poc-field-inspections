@@ -399,6 +399,94 @@ void main() {
       await tester.tap(find.text('Open settings'));
       expect(fakes.permissions.settingsOpened, 1);
       expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Take photo')).onPressed, isNull);
+
+      // Camera turned on in Settings, then back to the app: the banner goes.
+      fakes.media.deniedCamera = false;
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(find.text('Camera access is off. You can still choose photos from the gallery.'), findsNothing);
+      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Take photo')).onPressed, isNotNull);
+    });
+
+    testWidgets('camera still off after Settings keeps the banner', (tester) async {
+      final store = MemoryLocalStore()
+        ..drafts['new'] = site(lastStep: 4).copyWith(
+          type: () => 'Fire safety, annual',
+          date: () => DateTime.now().add(const Duration(days: 1)),
+          startMinutes: () => 600,
+          duration: '60',
+          answers: {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id'] as String: Answer.pass},
+        );
+      final fakes = Fakes(capabilities: ios)..media.deniedCamera = true;
+      fakes.permissions.states[AppPermission.camera] = PermissionState.permanentlyDenied;
+      await pumpApp(
+        tester,
+        initialLocation: '/inspections/new?step=4',
+        store: signedInStore(),
+        localStore: store,
+        fakes: fakes,
+        capabilities: ios,
+      );
+      await tester.tap(find.text('Take photo'));
+      await tester.pumpAndSettle();
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(find.text('Camera access is off. You can still choose photos from the gallery.'), findsOneWidget);
+    });
+
+    testWidgets('a denied photo library says so, without blaming the camera', (tester) async {
+      final store = MemoryLocalStore()
+        ..drafts['new'] = site(lastStep: 4).copyWith(
+          type: () => 'Fire safety, annual',
+          date: () => DateTime.now().add(const Duration(days: 1)),
+          startMinutes: () => 600,
+          duration: '60',
+          answers: {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id'] as String: Answer.pass},
+        );
+      final fakes = Fakes(capabilities: ios)..media.deniedGallery = true;
+      await pumpApp(
+        tester,
+        initialLocation: '/inspections/new?step=4',
+        store: signedInStore(),
+        localStore: store,
+        fakes: fakes,
+        capabilities: ios,
+      );
+      await tester.tap(find.text('Gallery'));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo library access is off. You can turn it on in Settings.'), findsOneWidget);
+      expect(find.text('Camera access is off. You can still choose photos from the gallery.'), findsNothing);
+      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Take photo')).onPressed, isNotNull);
+      await tester.tap(find.text('Open settings'));
+      expect(fakes.permissions.settingsOpened, 1);
+    });
+
+    testWidgets("a checklist failure's Add photo with the camera off says so", (tester) async {
+      final store = MemoryLocalStore()
+        ..drafts['new'] = site(lastStep: 3).copyWith(
+          type: () => 'Fire safety, annual',
+          date: () => DateTime.now().add(const Duration(days: 1)),
+          startMinutes: () => 600,
+          duration: '60',
+          answers: {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id'] as String: Answer.pass, 'c02': Answer.fail},
+        );
+      final fakes = Fakes(capabilities: ios)..media.deniedCamera = true;
+      await pumpApp(
+        tester,
+        initialLocation: '/inspections/new?step=3',
+        store: signedInStore(),
+        localStore: store,
+        fakes: fakes,
+        capabilities: ios,
+      );
+      await tester.scrollUntilVisible(find.text('Add photo'), 200, scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.text('Add photo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Camera access is off. You can still choose photos from the gallery.'), findsOneWidget);
     });
 
     testWidgets('web and desktop get a drop zone (D04)', (tester) async {

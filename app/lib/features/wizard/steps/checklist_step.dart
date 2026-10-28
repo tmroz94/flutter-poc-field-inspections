@@ -96,8 +96,14 @@ class _ChecklistStepState extends ConsumerState<ChecklistStep> {
             },
             onFailure: (f) => wizard.update((x) => x.copyWith(failures: {...x.failures, item.id: f})),
             // Desktop apps have no camera picker: the photo comes from a file.
-            onAddPhoto: () =>
-                addPickedPhoto(ref, context, widget.wizardKey, camera: ref.read(capabilitiesProvider).camera, forItem: item.id),
+            onAddPhoto: () => addPickedPhoto(
+              ref,
+              context,
+              widget.wizardKey,
+              camera: ref.read(capabilitiesProvider).camera,
+              forItem: item.id,
+              explainDeniedCamera: true,
+            ),
           ),
           const SizedBox(height: 12),
         ],

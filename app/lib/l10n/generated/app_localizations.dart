@@ -2150,6 +2150,12 @@ abstract class AppLocalizations {
   /// **'Camera access is off. You can still choose photos from the gallery.'**
   String get cameraOff;
 
+  /// No description provided for @photoLibraryOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo library access is off. You can turn it on in Settings.'**
+  String get photoLibraryOff;
+
   /// No description provided for @photosCount.
   ///
   /// In en, this message translates to:

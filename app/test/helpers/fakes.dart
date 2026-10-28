@@ -44,12 +44,14 @@ class FakeMedia extends MediaService {
   FakeMedia({this.deniedCamera = false});
 
   bool deniedCamera;
+  bool deniedGallery = false;
   List<PickedFile> nextFiles = [];
   int photos = 0;
 
   @override
   Future<PickedFile?> photo({required bool camera}) async {
     if (camera && deniedCamera) throw PlatformException(code: 'camera_access_denied');
+    if (!camera && deniedGallery) throw PlatformException(code: 'photo_access_denied');
     photos++;
     return PickedFile(name: 'IMG_${photos.toString().padLeft(4, '0')}.png', bytes: tinyPng, mime: 'image/png');
   }

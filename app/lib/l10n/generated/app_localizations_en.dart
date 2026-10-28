@@ -1182,6 +1182,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cameraOff => 'Camera access is off. You can still choose photos from the gallery.';
 
   @override
+  String get photoLibraryOff => 'Photo library access is off. You can turn it on in Settings.';
+
+  @override
   String photosCount(int count) {
     return 'Photos · $count';
   }

@@ -343,6 +343,7 @@
   "fileTypesHint": "JPG, PNG, HEIC lub PDF, do 20 MB każdy.",
   "photosIntro": "Dodaj zdjęcia ustaleń i dokumenty otrzymane na obiekcie.",
   "cameraOff": "Dostęp do aparatu jest wyłączony. Nadal możesz wybrać zdjęcia z galerii.",
+  "photoLibraryOff": "Dostęp do zdjęć jest wyłączony. Możesz go włączyć w Ustawieniach.",
   "photosCount": "Zdjęcia · {count}",
   "filesCount": "Pliki · {count}",
   "attachFile": "Dołącz plik",

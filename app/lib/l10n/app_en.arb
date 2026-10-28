@@ -796,6 +796,7 @@
   "fileTypesHint": "JPG, PNG, HEIC or PDF, up to 20 MB each.",
   "photosIntro": "Add photos of the findings and any documents the site gave you.",
   "cameraOff": "Camera access is off. You can still choose photos from the gallery.",
+  "photoLibraryOff": "Photo library access is off. You can turn it on in Settings.",
   "photosCount": "Photos · {count}",
   "@photosCount": {
     "placeholders": {
