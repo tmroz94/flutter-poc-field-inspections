@@ -213,7 +213,10 @@ const iosFindings = <String, (String, String)>{
     'Bottom bar on the iPhone; rail on the iPad Pro 13" in portrait (1032 pt), extended rail with New inspection in landscape (1376 pt); flows on the iPhone, iPad mini and iPad Pro',
   ),
   'nested-routes': ('P', 'Detail tabs in ?tab= after a deep link (flows)'),
-  'modals': ('H', 'Filter sheet (flows) and the Cupertino alert dialog; other sheets not checked'),
+  'modals': (
+    'P',
+    'Filter sheet (flows); the result sheet from its URL, closed by dragging down; the full-screen photo viewer; the "Leave without submitting?" dialog; the Cupertino alert dialog',
+  ),
   'deep-links': (
     'P',
     'fieldinspections:// (simctl openurl) while running, after sign-in and from a cold start, ?site= included; on the iPad a detail link with ?tab= opens beside the list. Universal links need a developer team',
@@ -249,7 +252,10 @@ const iosFindings = <String, (String, String)>{
   ),
   'state-management': ('P', 'Riverpod throughout'),
   'local-storage': ('P', 'drift on native SQLite; a draft survives a restart (flows)'),
-  'sync-retry': ('U', ''),
+  'sync-retry': (
+    'P',
+    'Server stopped: the submit was queued with its idempotency key; once it was back, Sync now sent it once. Nothing retries by itself while only the server is down (no network change)',
+  ),
   'camera': (
     'H',
     'Camera prompt, then "Camera not available" (the simulator has none); gallery through the system picker and a PDF from Files work',
@@ -261,7 +267,10 @@ const iosFindings = <String, (String, String)>{
     'P',
     'Banner over the open app; opened from Notification Center onto its route, in the background and after the app was killed',
   ),
-  'share-maps': ('U', ''),
+  'share-maps': (
+    'P',
+    "Directions opens Apple Maps with the site's coordinates; Call site shows the number instead (the simulator can't call)",
+  ),
   'biometrics': (
     'H',
     'Simulated Face ID: turning the lock on asks once, no match shows "Face Not Recognised", a match unlocks; real Face ID needs a phone',
@@ -270,7 +279,10 @@ const iosFindings = <String, (String, String)>{
     'H',
     'Location, camera and notification prompts with the Info.plist texts; denied camera/location show the banner and snackbar, but "Open settings" lands on the top of Settings, not the app\'s page',
   ),
-  'clipboard-haptics': ('U', ''),
+  'clipboard-haptics': (
+    'H',
+    "Copy link puts fieldinspections://app/… on the system clipboard (read back with simctl pbpaste); haptics can't be felt on a simulator",
+  ),
   'themes': ('P', 'Dark theme switched live (flows)'),
   'responsive': (
     'P',
@@ -280,7 +292,10 @@ const iosFindings = <String, (String, String)>{
   'a11y': ('H', 'Guideline and 200% text tests on the host; no VoiceOver run'),
   'adaptive-widgets': ('P', 'Cupertino by default on iOS: switch, slider, activity indicator, date picker, CupertinoAlertDialog'),
   'diagnostics': ('P', 'Real device and permission values; permission states update on return from Settings'),
-  'results-tracker': ('H', 'Opened from a link: summaries and the per-platform grid; editing and export not tried on iOS'),
+  'results-tracker': (
+    'P',
+    'An edited result survives a restart; Export JSON through the share sheet (Copy, Save to Files) and Import back from Files',
+  ),
   'automated-tests': (
     'P',
     'The 7 shared flows and the platform probe on the iPhone 18 Pro (iOS 27.0), iPad mini and iPad Pro 13" (iPadOS 26.5) simulators, one file per run',
@@ -293,10 +308,10 @@ const iosFindings = <String, (String, String)>{
 /// Format: id -> (macOS, Windows, Linux, note).
 const desktopFindings = <String, (String, String, String, String)>{
   'adaptive-shell': (
-    'H',
+    'P',
     'P',
     'H',
-    'Windows: flows at 500, 700, 1000 and 1280 px windows (bar, rail, extended rail); macOS and Linux: 1280 px only',
+    'Windows and macOS: flows at 500, 700, 1000 and 1280 px windows (bar, rail, extended rail; on the Mac 1000 px is the GitHub runner); Linux: 1280 px only',
   ),
   'nested-routes': ('P', 'P', 'P', 'Detail tabs in ?tab= after a deep link (flows)'),
   'modals': ('H', 'H', 'H', 'Filter sheet opened and applied in the flows; Esc and the focus trap not checked'),
@@ -367,14 +382,19 @@ const desktopFindings = <String, (String, String, String, String)>{
     'Touch ID / Windows Hello available with biometrics enrolled (probe); the prompt not tried. Not offered on Linux',
   ),
   'permissions': ('H', 'H', 'H', 'States read by the probe; the system prompts not tried'),
-  'clipboard-haptics': ('U', 'U', 'U', ''),
+  'clipboard-haptics': (
+    'H',
+    'U',
+    'U',
+    'macOS: Copy link puts fieldinspections://app/… on the system pasteboard (pbpaste); no haptics on a Mac',
+  ),
   'themes': ('P', 'P', 'P', 'Dark theme switched live (flows)'),
-  'responsive': ('H', 'P', 'H', 'Windows: flows at 500, 700, 1000 and 1280 px windows; macOS and Linux: 1280 px only'),
+  'responsive': ('P', 'P', 'H', 'Windows and macOS: flows at 500, 700, 1000 and 1280 px windows; Linux: 1280 px only'),
   'l10n': ('P', 'P', 'P', 'Live switch to Polish (flows)'),
   'a11y': ('H', 'H', 'H', 'Guideline and 200% text tests on the host; no VoiceOver, Narrator or Orca run'),
   'adaptive-widgets': ('U', 'U', 'U', ''),
   'diagnostics': ('H', 'H', 'H', 'Device and app info read by the probe; the Diagnostics screen not checked'),
-  'results-tracker': ('U', 'U', 'U', ''),
+  'results-tracker': ('H', 'U', 'U', 'macOS: an edited result survives a restart; export and import need the file dialogs, not tried'),
   'automated-tests': (
     'P',
     'P',

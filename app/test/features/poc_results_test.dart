@@ -147,10 +147,9 @@ void main() {
         await pumpApp(tester, store: signedInStore(), initialLocation: '/settings/poc/results');
         expect(find.byType(ResultsScreen), findsOneWidget);
         expect(find.text('Findings so far'), findsOneWidget);
-        // iOS (the iPhone and iPad simulators): 41 of 44 tested like Android,
-        // and the only platform with 7 partial.
-        expect(find.text('41 of 44 tested'), findsNWidgets(2));
-        expect(find.text('0 fail · 7 partial'), findsOneWidget);
+        // iOS (the iPhone and iPad simulators) is the only platform with
+        // every scenario tested.
+        expect(find.text('44 of 44 tested'), findsOneWidget);
         expect(find.bySemanticsLabel(RegExp('Adaptive shell.*Android: Pass.*Web: Pass', dotAll: true)), findsWidgets);
 
         // Nested routes pass everywhere tested; the guards are partial on Android.

@@ -268,7 +268,9 @@ sandbox). `fieldinspections://` links open the right page in the running app
 and from a cold start (release build). Against the mock API (28 October): a
 restored session, lists, search and filters; the table-shaped loading
 skeleton, an empty search, and with the server stopped the offline banner and
-error with Try again. Not tried by hand yet: Touch ID itself,
+error with Try again. The flows also pass with the window starting at 500
+and 700 px (a temporary change to `MainFlutterWindow.swift`), and Copy link
+reaches the system pasteboard. Not tried by hand yet: Touch ID itself,
 the notification and location prompts, file dialogs and Save (they need clicks
 in system UI).
 
@@ -326,11 +328,14 @@ them). On Android, Flutter pushes the intent's route whatever plugins return
 | Permission dialogs (location Allow/Deny, notifications) | ✓ (Patrol) | ✓ granted and denied (Playwright) | location, camera and notification prompts with the Info.plist texts, Allow ✓; Diagnostics then shows Granted (simulator) |
 | Denied camera / location → banner or snackbar with Settings | ✓ (Patrol) | n/a | ✓ banner (Take photo disabled) and snackbar; "Open settings" opens the Settings app but at its top page, not the app's (simulator; recheck on a phone). Diagnostics updates on return without a restart. After the review fixes (28 Oct): with the camera revoked, a checklist item's Add photo says camera access is off and offers Open settings |
 | Share sheet (Export PDF) | ✓ (Patrol) | download ✓ | ✓ iOS share sheet; Save to Files gives `inspection-INS-1042.pdf` |
-| Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | diagnostics ✓; tracker opened from a link (summaries and grid; editing not tried); adaptive widgets in Cupertino by default, CupertinoAlertDialog ✓ (28 Oct) |
+| Results tracker, adaptive widgets (Material and Cupertino dialog), diagnostics | ✓ | ✓ (wasm build) | diagnostics ✓; tracker: an edit survives a restart, Export JSON via the share sheet (Copy, Save to Files), Import from Files; adaptive widgets in Cupertino by default, CupertinoAlertDialog ✓ (28 Oct) |
 | Device tests (`integration_test/`, 9 flows incl. airplane mode and GPS) | ✓ all pass | ✓ 7 shared flows via `flutter drive` (host-driven ones are Android-only) | ✓ 7 shared flows and the platform probe (Face ID enrolled, location service on, map tiles), iPhone 18 Pro simulator (iOS 27.0, Xcode 27.1); again on the iPad Pro 13-inch and iPad mini simulators (iPadOS 26.5, 28 Oct) |
 | Tablet layouts (rail, list and detail side by side, two-pane Settings) | – | ✓ at tablet widths in Chrome | ✓ iPad Pro 13-inch simulator in portrait and landscape (desktop table in landscape), iPad mini in the flows (28 Oct) |
 | Against the mock API (not the in-app fake) | ✓ via 10.0.2.2 | ✓ with CORS | ✓ iPhone and iPad Pro simulators: sign-in, lists and paging, detail, notifications, reference data (28 Oct) |
 | List states: loading, empty, error | offline state seen; others in widget tests | skeleton seen; others in widget tests | ✓ iPhone simulator against the mock API: skeleton (server slowed to 3 s), empty search, offline banner and error with Try again (server stopped), recovery (28 Oct) |
+| Offline submit → sync | ✓ airplane mode | – | ✓ server stopped: queued with its idempotency key, sent once with Sync now when it was back; nothing retries by itself while only the server is down (28 Oct) |
+| Sheets, dialogs, full screen | ✓ | ✓ | ✓ result sheet from its URL (drag down closes), photo viewer, "Leave without submitting?", Cupertino alert (28 Oct) |
+| Directions, call, clipboard | – | – | ✓ Directions opens Apple Maps at the site; Call site shows the number (no calls on a simulator); Copy link reaches the clipboard (28 Oct) |
 | Camera (browser file input), geolocation in the browser | n/a | ✓ (Playwright) | – |
 | Offline submit → sync when back online (airplane mode) | ✓ | – | – |
 | GPS distance and far-away warning | ✓ via LocationManager test positions; fused provider needs a real phone | – | – |
