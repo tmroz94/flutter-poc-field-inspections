@@ -587,7 +587,7 @@
       }
     }
   },
-  "wizardHintPhotos": "{photos} photos · {files} files",
+  "wizardHintPhotos": "{photos, plural, =1{1 photo} other{{photos} photos}} · {files, plural, =1{1 file} other{{files} files}}",
   "@wizardHintPhotos": {
     "placeholders": {
       "photos": {

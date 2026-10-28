@@ -1727,7 +1727,7 @@ abstract class AppLocalizations {
   /// No description provided for @wizardHintPhotos.
   ///
   /// In en, this message translates to:
-  /// **'{photos} photos · {files} files'**
+  /// **'{photos, plural, =1{1 photo} other{{photos} photos}} · {files, plural, =1{1 file} other{{files} files}}'**
   String wizardHintPhotos(int photos, int files);
 
   /// No description provided for @wizardHintReview.

@@ -34,4 +34,12 @@ void main() {
     final en = await contextFor(tester, const Locale('en', 'GB'));
     expect(coordinatesText(en, -33.8688, -70.6693), '33.8688° S, 70.6693° W');
   });
+
+  testWidgets('photo and file counts agree with their number', (tester) async {
+    final en = (await contextFor(tester, const Locale('en', 'GB'))).l10n;
+    expect(en.wizardHintPhotos(1, 1), '1 photo · 1 file');
+    expect(en.wizardHintPhotos(3, 0), '3 photos · 0 files');
+    final pl = (await contextFor(tester, const Locale('pl'))).l10n;
+    expect(pl.wizardHintPhotos(1, 2), 'Zdjęcia: 1 · pliki: 2');
+  });
 }

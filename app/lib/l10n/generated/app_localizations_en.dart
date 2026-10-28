@@ -933,7 +933,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String wizardHintPhotos(int photos, int files) {
-    return '$photos photos · $files files';
+    String _temp0 = intl.Intl.pluralLogic(photos, locale: localeName, other: '$photos photos', one: '1 photo');
+    String _temp1 = intl.Intl.pluralLogic(files, locale: localeName, other: '$files files', one: '1 file');
+    return '$_temp0 · $_temp1';
   }
 
   @override
