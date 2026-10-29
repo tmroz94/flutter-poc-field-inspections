@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/inspection_widgets.dart';
+import '../../data/api/api_exception.dart';
 import '../../data/models/inspection.dart';
 import '../../l10n/l10n.dart';
 import 'inspection_actions.dart';
@@ -26,18 +27,31 @@ class PhotoViewerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = buildTheme(colorSchemeFor(Brightness.dark, AppContrast.standard), reduceMotion: MediaQuery.disableAnimationsOf(context));
     final detail = ref.watch(inspectionDetailProvider(inspectionId));
+    final l = context.l10n;
+    Widget page(Widget body) => Scaffold(
+      appBar: AppBar(
+        leading: CloseButton(onPressed: () => context.go(Routes.inspection(inspectionId, tab: 'photos'))),
+      ),
+      body: body,
+    );
+    final notFound = MessageState(icon: Symbols.hide_image, title: l.photoNotFound, message: l.photoNotFoundBody(photoId, inspectionId));
     return Theme(
       data: theme,
       child: switch (detail) {
         AsyncData(:final value) when value.photos.any((p) => p.id == photoId) => _Viewer(detail: value, photoId: photoId),
-        AsyncData() || AsyncError() => Scaffold(
-          appBar: AppBar(
-            leading: CloseButton(onPressed: () => context.go(Routes.inspection(inspectionId, tab: 'photos'))),
-          ),
-          body: MessageState(
-            icon: Symbols.hide_image,
-            title: context.l10n.photoNotFound,
-            message: context.l10n.photoNotFoundBody(photoId, inspectionId),
+        AsyncData() => page(notFound),
+        AsyncError(:final error) when error is ApiException && error.code == 'notFound' => page(notFound),
+        AsyncError(:final error) => page(
+          MessageState(
+            icon: Symbols.sync_problem,
+            isError: true,
+            title: l.loadDetailFailed(inspectionId),
+            message: error is ApiException && error.isNetwork ? l.offlineTryAgain : l.somethingWentWrong,
+            action: FilledButton.icon(
+              onPressed: () => ref.invalidate(inspectionDetailProvider(inspectionId)),
+              icon: const Icon(Symbols.refresh),
+              label: Text(l.tryAgain),
+            ),
           ),
         ),
         _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -63,6 +77,18 @@ class _ViewerState extends ConsumerState<_Viewer> {
   TapDownDetails? _doubleTap;
 
   List<Photo> get _photos => widget.detail.photos;
+
+  @override
+  void didUpdateWidget(_Viewer old) {
+    super.didUpdateWidget(old);
+    // The detail refreshed (e.g. a sync) and photos may have moved: stay on
+    // the one in the URL, which the screen guarantees is still there.
+    final i = _photos.indexWhere((p) => p.id == widget.photoId);
+    if (i < 0 || i == _index) return;
+    _index = i;
+    _target = null;
+    if (_pages.hasClients) _pages.jumpToPage(i);
+  }
 
   @override
   void dispose() {

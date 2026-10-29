@@ -218,6 +218,9 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get refreshHome => 'Odśwież';
+
+  @override
   String get refreshList => 'Odśwież listę';
 
   @override
@@ -225,6 +228,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get clearFilters => 'Wyczyść filtry';
+
+  @override
+  String get refreshFailed => 'Nie udało się odświeżyć. Lista pokazuje ostatnio wczytane dane.';
 
   @override
   String get loadErrorTitle => 'Nie udało się wczytać inspekcji';
@@ -248,6 +254,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get copyLink => 'Kopiuj link';
+
+  @override
+  String get notOnMap => 'Tej inspekcji nie ma na mapie: pokazuje ona otwarte inspekcje, które mają lokalizację.';
 
   @override
   String get showOnMap => 'Pokaż na mapie';
@@ -565,51 +574,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get resultsTitle => 'Wyniki PoC';
 
   @override
-  String get sampleData => 'Dane przykładowe';
-
-  @override
-  String get filterAll => 'Wszystkie';
-
-  @override
-  String get filterFailing => 'Problemy';
-
-  @override
-  String get filterNotTested => 'Nieprzetestowane';
-
-  @override
-  String get resultPass => 'Zaliczone';
-
-  @override
-  String get resultPartial => 'Częściowo';
-
-  @override
-  String get resultFail => 'Niezaliczone';
-
-  @override
-  String get resultNotTested => 'Nieprzetestowane';
-
-  @override
-  String get resultNa => 'N/D';
-
-  @override
-  String testedOf(int tested, int total) {
-    return 'Przetestowano $tested z $total';
-  }
-
-  @override
-  String get exportResults => 'Eksportuj wyniki';
-
-  @override
-  String get importResults => 'Importuj';
-
-  @override
-  String get device => 'Urządzenie i wersja';
-
-  @override
   String get notes => 'Notatki';
-
-  @override
-  String get platform => 'Platforma';
 
   @override
   String get dueAny => 'Dowolny';
@@ -1314,9 +1279,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get reviewOffline => 'Jesteś offline. Raport zostanie zapisany na tym urządzeniu i wysłany automatycznie po powrocie sieci.';
 
   @override
-  String submitFailed(String code) {
-    return 'Nie udało się wysłać ($code). Spróbuj ponownie.';
-  }
+  String get submitFailed => 'Nie udało się wysłać. Spróbuj ponownie.';
+
+  @override
+  String get submitFailedServer => 'Serwer nie może teraz tego zapisać. Spróbuj ponownie.';
+
+  @override
+  String get submitFailedNotFound => 'Tej inspekcji nie ma już na serwerze, więc nie można jej zapisać.';
 
   @override
   String serverRejected(String fields) {

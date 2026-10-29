@@ -16,12 +16,13 @@ import 'results_model.dart';
 
 enum _Filter { all, failing, notTested }
 
-(IconData, Color, String) _look(ResultStatus s, ColorScheme c, AppLocalizations l) => switch (s) {
-  ResultStatus.pass => (Symbols.check_circle, c.primary, l.resultPass),
-  ResultStatus.partial => (Symbols.contrast, c.tertiary, l.resultPartial),
-  ResultStatus.fail => (Symbols.cancel, c.error, l.resultFail),
-  ResultStatus.notTested => (Symbols.radio_button_unchecked, c.onSurfaceVariant, l.resultNotTested),
-  ResultStatus.na => (Symbols.block, c.onSurfaceVariant, l.resultNa),
+/// English like the rest of the PoC tools; only their titles are translated (decision 54).
+(IconData, Color, String) _look(ResultStatus s, ColorScheme c) => switch (s) {
+  ResultStatus.pass => (Symbols.check_circle, c.primary, 'Pass'),
+  ResultStatus.partial => (Symbols.contrast, c.tertiary, 'Partial'),
+  ResultStatus.fail => (Symbols.cancel, c.error, 'Fail'),
+  ResultStatus.notTested => (Symbols.radio_button_unchecked, c.onSurfaceVariant, 'Not tested'),
+  ResultStatus.na => (Symbols.block, c.onSurfaceVariant, 'N/A'),
 };
 
 /// Width of each platform's status column in the phone list: six of them still
@@ -36,7 +37,7 @@ class _StatusIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (icon, color, label) = _look(status, Theme.of(context).colorScheme, context.l10n);
+    final (icon, color, label) = _look(status, Theme.of(context).colorScheme);
     final filled = status != ResultStatus.notTested && status != ResultStatus.na;
     return Semantics(
       label: '${platform.label}: $label',
@@ -77,11 +78,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
   Future<void> _import() async {
+    // Read before the picker opens: `ref` can't be used once the screen closed.
+    final results = ref.read(resultsProvider.notifier);
     try {
       // Reading is inside the try too: a file that isn't UTF-8 fails here.
       final text = await ref.read(mediaServiceProvider).jsonText();
       if (text == null) return;
-      ref.read(resultsProvider.notifier).importJson(text);
+      results.importJson(text);
       _say('Results imported.');
     } on FormatException {
       _say('That file is not a PoC results export.');
@@ -108,7 +111,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
     final datasetLabel = switch (state.dataset) {
       ResultsDataset.findings => 'Findings so far',
-      ResultsDataset.sample => l.sampleData,
+      ResultsDataset.sample => 'Sample data',
       ResultsDataset.blank => 'Blank',
       ResultsDataset.custom => 'Your results',
     };
@@ -121,7 +124,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           onPressed: () => _export(csv: false),
           child: const Text('Export JSON'),
         ),
-        MenuItemButton(leadingIcon: const Icon(Symbols.upload_file), onPressed: _import, child: Text(l.importResults)),
+        MenuItemButton(leadingIcon: const Icon(Symbols.upload_file), onPressed: _import, child: const Text('Import')),
         const Divider(),
         MenuItemButton(
           onPressed: () => ref.read(resultsProvider.notifier).load(ResultsDataset.findings),
@@ -134,7 +137,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         MenuItemButton(onPressed: () => ref.read(resultsProvider.notifier).load(ResultsDataset.blank), child: const Text('Start blank')),
       ],
       builder: (context, c, _) =>
-          IconButton(tooltip: l.exportResults, onPressed: () => c.isOpen ? c.close() : c.open(), icon: const Icon(Symbols.ios_share)),
+          IconButton(tooltip: 'Export results', onPressed: () => c.isOpen ? c.close() : c.open(), icon: const Icon(Symbols.ios_share)),
     );
 
     return Scaffold(
@@ -176,7 +179,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: AdaptiveSegments<_Filter>(
-              segments: [(_Filter.all, l.filterAll), (_Filter.failing, l.filterFailing), (_Filter.notTested, l.filterNotTested)],
+              segments: const [(_Filter.all, 'All'), (_Filter.failing, 'Failing'), (_Filter.notTested, 'Not tested')],
               selected: _filter,
               onChanged: (v) => setState(() => _filter = v),
             ),
@@ -200,13 +203,14 @@ class _PlatformCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = theme.colorScheme;
-    final total = state.results.length;
+    // N/A scenarios don't apply to the platform: left out of the bar and the count.
     final segments = [
       (state.count(platform, ResultStatus.pass), c.primary),
       (state.count(platform, ResultStatus.partial), c.tertiary),
       (state.count(platform, ResultStatus.fail), c.error),
-      (state.count(platform, ResultStatus.notTested) + state.count(platform, ResultStatus.na), c.outlineVariant),
+      (state.count(platform, ResultStatus.notTested), c.outlineVariant),
     ];
+    final na = state.count(platform, ResultStatus.na);
     final icon = switch (platform) {
       PocPlatform.ios => Symbols.phone_iphone,
       PocPlatform.android => Symbols.android,
@@ -230,7 +234,10 @@ class _PlatformCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text(context.l10n.testedOf(state.tested(platform), total), style: theme.textTheme.bodySmall),
+            Text(
+              '${state.tested(platform)} of ${state.applicable(platform)} tested${na > 0 ? ' · $na N/A' : ''}',
+              style: theme.textTheme.bodySmall,
+            ),
             const SizedBox(height: 8),
             Semantics(
               label:
@@ -325,7 +332,7 @@ class _Group extends StatelessWidget {
   }
 }
 
-/// D05: table with a notes column; horizontal scroll when narrow.
+/// D05: table with a notes column, on large windows only (phones get the list).
 class _ResultsTable extends StatelessWidget {
   const _ResultsTable({required this.groups});
 
@@ -357,7 +364,8 @@ class _ResultsTable extends StatelessWidget {
           TableRow(
             decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerLow),
             children: [
-              for (final h in ['Scenario', for (final p in PocPlatform.values) p.label, context.l10n.notes])
+              // Short names: "Windows" doesn't fit a 76 dp column whole.
+              for (final h in ['Scenario', for (final p in PocPlatform.values) p.short, 'Notes'])
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(h, style: theme.textTheme.labelLarge),
@@ -404,7 +412,6 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
-    final l = context.l10n;
     return Container(
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(12),
@@ -417,9 +424,9 @@ class _Legend extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(_look(s, c, l).$1, size: 18, color: _look(s, c, l).$2, fill: s.isTested ? 1 : 0),
+                Icon(_look(s, c).$1, size: 18, color: _look(s, c).$2, fill: s.isTested ? 1 : 0),
                 const SizedBox(width: 4),
-                Text(_look(s, c, l).$3),
+                Text(_look(s, c).$3),
               ],
             ),
         ],
@@ -478,7 +485,6 @@ class _ResultSheetState extends ConsumerState<ResultSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l = context.l10n;
     final theme = Theme.of(context);
     final row = _row;
     if (row == null) {
@@ -498,7 +504,7 @@ class _ResultSheetState extends ConsumerState<ResultSheet> {
               Text(row.group, style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary)),
               Text(row.name, style: theme.textTheme.titleLarge),
               const SizedBox(height: 16),
-              Text(l.platform, style: theme.textTheme.bodySmall),
+              Text('Platform', style: theme.textTheme.bodySmall),
               const SizedBox(height: 4),
               AdaptiveSegments<PocPlatform>(
                 segments: [for (final p in PocPlatform.values) (p, p.label)],
@@ -515,7 +521,7 @@ class _ResultSheetState extends ConsumerState<ResultSheet> {
                 children: [
                   for (final s in ResultStatus.values)
                     ChoiceChip(
-                      label: Text(_look(s, theme.colorScheme, l).$3),
+                      label: Text(_look(s, theme.colorScheme).$3),
                       selected: _status == s,
                       onSelected: (_) => setState(() => _status = s),
                     ),
@@ -524,7 +530,10 @@ class _ResultSheetState extends ConsumerState<ResultSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _device,
-                decoration: InputDecoration(labelText: l.device, helperText: needsDevice ? 'e.g. Pixel 8, Android 16' : 'Optional'),
+                decoration: InputDecoration(
+                  labelText: 'Device and version',
+                  helperText: needsDevice ? 'e.g. Pixel 8, Android 16' : 'Optional',
+                ),
                 validator: (v) => needsDevice && (v == null || v.trim().isEmpty) ? 'Which device and version did you test on?' : null,
               ),
               const SizedBox(height: 16),
@@ -533,7 +542,7 @@ class _ResultSheetState extends ConsumerState<ResultSheet> {
                 minLines: 3,
                 maxLines: 6,
                 maxLength: 1000,
-                decoration: InputDecoration(labelText: l.notes, alignLabelWithHint: true),
+                decoration: const InputDecoration(labelText: 'Notes', alignLabelWithHint: true),
                 validator: (v) => needsNotes && (v == null || v.trim().isEmpty) ? 'Describe what failed or only partly worked' : null,
               ),
               const SizedBox(height: 8),
@@ -543,8 +552,8 @@ class _ResultSheetState extends ConsumerState<ResultSheet> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  TextButton(onPressed: () => context.pop(), child: Text(l.cancel)),
-                  FilledButton(onPressed: _save, child: Text(l.save)),
+                  TextButton(onPressed: () => context.pop(), child: const Text('Cancel')),
+                  FilledButton(onPressed: _save, child: const Text('Save')),
                 ],
               ),
             ],

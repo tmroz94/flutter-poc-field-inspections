@@ -25,6 +25,8 @@ final mapTilesEnabledProvider = Provider<bool>((ref) => true);
 /// Open inspections with a location, for the map pins.
 /// No automatic retry (like the other screens): an offline map says so and offers Try again.
 final mapInspectionsProvider = FutureProvider.autoDispose<List<InspectionSummary>>((ref) async {
+  // The map tab stays alive: reload when this app changes inspections.
+  ref.watch(inspectionsRevisionProvider);
   final page = await ref.watch(inspectionsRepositoryProvider).list(const ListQuery(statuses: openStatuses), pageSize: 100);
   return page.items.where((i) => i.lat != null && i.lng != null).toList();
 }, retry: (_, _) => null);
@@ -33,9 +35,12 @@ final mapInspectionsProvider = FutureProvider.autoDispose<List<InspectionSummary
 /// and web). Pins coloured by status, `?site=` selects one, "my location"
 /// uses geolocator.
 class MapScreen extends ConsumerStatefulWidget {
-  const MapScreen({this.siteId, super.key});
+  const MapScreen({this.siteId, this.inspectionId, super.key});
 
   final String? siteId;
+
+  /// Which pin's inspection the sheet shows when several share [siteId].
+  final String? inspectionId;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -56,7 +61,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   void didUpdateWidget(MapScreen old) {
     super.didUpdateWidget(old);
     // The map tab keeps its page: "Show on map" for another site lands here.
-    if (old.siteId != widget.siteId) _centred = false;
+    if (old.siteId != widget.siteId || old.inspectionId != widget.inspectionId) _centred = false;
   }
 
   @override
@@ -67,7 +72,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _select(InspectionSummary i) {
-    GoRouter.of(context).replace<void>(Routes.mapSite(i.siteId));
+    GoRouter.of(context).replace<void>(Routes.mapSite(i.siteId, inspectionId: i.id));
     _map.move(LatLng(i.lat!, i.lng!), 14);
   }
 
@@ -119,7 +124,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final l = context.l10n;
     final pins = ref.watch(mapInspectionsProvider);
     final items = pins.value ?? const <InspectionSummary>[];
-    final selected = items.where((i) => i.siteId == widget.siteId).firstOrNull;
+    final atSite = items.where((i) => i.siteId == widget.siteId);
+    final selected = atSite.where((i) => i.id == widget.inspectionId).firstOrNull ?? atSite.firstOrNull;
+    // "Show on map" for an inspection without a pin (finished, or no location).
+    final notOnMap = widget.siteId != null && pins.hasValue && !pins.isLoading && selected == null;
     if (selected != null && !_centred) {
       _centred = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -229,6 +237,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SearchField(controller: _search, hintText: l.searchSites, elevation: 2, onSubmitted: (q) => _onSearch(q, items)),
+                      if (notOnMap) ...[
+                        const SizedBox(height: 8),
+                        Material(
+                          color: scheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(AppRadii.medium),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Semantics(liveRegion: true, child: Text(l.notOnMap)),
+                          ),
+                        ),
+                      ],
                       // Without this an offline map is just empty.
                       if (pins.hasError && items.isEmpty) ...[
                         const SizedBox(height: 8),

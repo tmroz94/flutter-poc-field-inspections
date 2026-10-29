@@ -62,6 +62,7 @@ class InspectionActions {
 
   /// Shares the inspection (or [paths] inside it, e.g. selected photos), one link per line.
   Future<void> share(InspectionSummary s, {List<String>? paths}) async {
+    if (paths != null && paths.isEmpty) return;
     final l = context.l10n;
     final links = [
       for (final p in paths ?? [Routes.inspection(s.id)]) link(p),

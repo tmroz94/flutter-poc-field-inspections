@@ -12,6 +12,7 @@ import '../../core/platform/notification_service.dart';
 import '../../core/platform/platform_services.dart';
 import '../../core/router/deep_links.dart';
 import '../../core/router/routes.dart';
+import '../../core/time/calendar.dart';
 import '../../core/widgets/inspection_widgets.dart';
 import '../../data/models/notification.dart';
 import '../../data/providers.dart';
@@ -168,8 +169,12 @@ class _NotificationTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final l = context.l10n;
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final sameDay = n.at.year == now.year && n.at.month == now.month && n.at.day == now.day;
-    final time = sameDay ? DateFormat.Hm(locale).format(n.at) : DateFormat.E(locale).format(n.at);
+    // Today: the time; this week: the weekday; older: the date (a weekday alone would be ambiguous).
+    final time = switch (calendarDaysBetween(n.at, now)) {
+      <= 0 => DateFormat.Hm(locale).format(n.at),
+      < 7 => DateFormat.E(locale).format(n.at),
+      _ => DateFormat.MMMd(locale).format(n.at),
+    };
     return Dismissible(
       key: ValueKey('notification-${n.id}'),
       direction: DismissDirection.endToStart,

@@ -1,6 +1,7 @@
 import 'package:field_inspections/core/platform/notification_service.dart';
 import 'package:field_inspections/core/router/routes.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
+import 'package:field_inspections/core/theme/theme_settings.dart';
 import 'package:field_inspections/data/api/api_exception.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/models/inspection.dart';
@@ -188,6 +189,15 @@ void main() {
     test('reminder text follows the app language', () async {
       await kv.setString('theme_settings', '{"locale":"pl"}');
       await start();
+      expect(notifications.scheduledTitles.first, contains(' o '));
+    });
+
+    test('switching the app language reschedules the reminders in it', () async {
+      final c = await start();
+      expect(notifications.scheduledTitles.first, isNot(contains(' o ')));
+      c.read(themeSettingsProvider.notifier).update((s) => s.copyWith(locale: () => const Locale('pl')));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(notifications.scheduledTitles, isNotEmpty);
       expect(notifications.scheduledTitles.first, contains(' o '));
     });
   });

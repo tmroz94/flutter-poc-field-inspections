@@ -155,13 +155,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: ':id',
-                    // From 840 the detail is a pane beside the list: swap it in without a page transition.
-                    pageBuilder: (context, state) {
-                      final child = InspectionDetailScreen(id: state.pathParameters['id']!, tab: _tab(state));
-                      return WindowSize.fromWidth(MediaQuery.sizeOf(context).width).isTwoPane
-                          ? NoTransitionPage<void>(key: state.pageKey, child: child)
-                          : MaterialPage<void>(key: state.pageKey, child: child);
-                    },
+                    pageBuilder: (context, state) => _DetailPage(
+                      key: state.pageKey,
+                      child: InspectionDetailScreen(id: state.pathParameters['id']!, tab: _tab(state)),
+                    ),
                     routes: [
                       GoRoute(
                         path: 'edit',
@@ -194,7 +191,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.map,
-                builder: (_, state) => MapScreen(siteId: state.uri.queryParameters['site']),
+                builder: (_, state) =>
+                    MapScreen(siteId: state.uri.queryParameters['site'], inspectionId: state.uri.queryParameters['inspection']),
               ),
             ],
           ),
@@ -250,3 +248,35 @@ final routerProvider = Provider<GoRouter>((ref) {
   });
   return router;
 });
+
+/// The inspection detail: a page with the platform's transition on narrow
+/// windows; from 840 a pane beside the list, swapped in without one. A single
+/// page type for both, so rotating or resizing across 840 keeps the detail's
+/// state (scroll, photo selection) instead of replacing its route.
+class _DetailPage extends MaterialPage<void> {
+  const _DetailPage({required super.child, super.key});
+
+  @override
+  Route<void> createRoute(BuildContext context) => _DetailRoute(this);
+}
+
+class _DetailRoute extends PageRoute<void> with MaterialRouteTransitionMixin<void> {
+  _DetailRoute(_DetailPage page) : super(settings: page);
+
+  _DetailPage get _page => settings as _DetailPage;
+
+  @override
+  Widget buildContent(BuildContext context) => _page.child;
+
+  @override
+  Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) =>
+      WindowSize.fromWidth(MediaQuery.sizeOf(context).width).isTwoPane
+      ? child
+      : super.buildTransitions(context, animation, secondaryAnimation, child);
+
+  @override
+  bool get maintainState => _page.maintainState;
+
+  @override
+  String get debugLabel => '${super.debugLabel}(${_page.name})';
+}

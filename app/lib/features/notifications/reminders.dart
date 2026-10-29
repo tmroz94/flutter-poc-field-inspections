@@ -39,7 +39,9 @@ class RemindersController extends Notifier<bool> {
       ..listen(authControllerProvider.select((s) => s.status), (_, next) {
         if (next == AuthStatus.signedIn) unawaited(reschedule());
       })
-      ..listen(inspectionsRevisionProvider, (_, _) => unawaited(reschedule()));
+      ..listen(inspectionsRevisionProvider, (_, _) => unawaited(reschedule()))
+      // Their text is in the app language.
+      ..listen(themeSettingsProvider.select((s) => s.locale), (_, _) => unawaited(reschedule()));
     return ref.watch(keyValueStoreProvider).getString(_key) == 'true';
   }
 

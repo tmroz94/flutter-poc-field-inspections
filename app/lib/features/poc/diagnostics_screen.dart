@@ -222,7 +222,8 @@ class DiagnosticsScreen extends ConsumerWidget {
                 FilledButton.tonalIcon(
                   onPressed: () async {
                     await ref.read(notificationServiceProvider).requestPermission();
-                    ref.invalidate(permissionStatesProvider);
+                    // The web prompt doesn't block the page: the user may have left meanwhile.
+                    if (context.mounted) ref.invalidate(permissionStatesProvider);
                   },
                   icon: const Icon(Symbols.notifications_active),
                   label: const Text('Ask for notifications'),

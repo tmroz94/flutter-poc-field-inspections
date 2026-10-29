@@ -31,9 +31,9 @@ String coordinatesText(BuildContext context, double lat, double lng) {
 String megabytesText(BuildContext context, int bytes) =>
     '${NumberFormat('0.0', Localizations.localeOf(context).toLanguageTag()).format(bytes / 1e6)} MB';
 
-/// "Today 09:30", "Yesterday 14:00", "Wed 11:00" (within a week), else "14 Oct",
-/// in the current language.
-String localizedWhen(BuildContext context, DateTime at, DateTime now) {
+/// "Today 09:30", "Yesterday 14:00", "Wed 11:00" (within a week), else "14 Oct"
+/// ("14 Oct 10:00" with [withTime]), in the current language.
+String localizedWhen(BuildContext context, DateTime at, DateTime now, {bool withTime = false}) {
   final l = context.l10n;
   final locale = Localizations.localeOf(context).toLanguageTag();
   final diff = calendarDaysBetween(now, at);
@@ -43,6 +43,6 @@ String localizedWhen(BuildContext context, DateTime at, DateTime now) {
     -1 => l.yesterdayAt(time),
     1 => l.tomorrowAt(time),
     > 1 && < 7 => '${DateFormat.E(locale).format(at)} $time',
-    _ => DateFormat.MMMd(locale).format(at),
+    _ => withTime ? '${DateFormat.MMMd(locale).format(at)} $time' : DateFormat.MMMd(locale).format(at),
   };
 }

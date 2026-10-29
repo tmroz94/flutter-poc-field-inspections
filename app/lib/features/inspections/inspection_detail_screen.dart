@@ -150,7 +150,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
     final l = context.l10n;
     final timeFmt = DateFormat.Hm(Localizations.localeOf(context).toLanguageTag());
     final now = ref.watch(clockProvider)();
-    final when = '${localizedWhen(context, s.scheduledAt, now)}–${timeFmt.format(d.endsAt)}';
+    final when = '${localizedWhen(context, s.scheduledAt, now, withTime: true)}–${timeFmt.format(d.endsAt)}';
     final wideTablet = context.windowSize.usesRail;
     final actions = InspectionActions(ref, context);
 
@@ -172,7 +172,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
       IconButton(tooltip: context.l10n.copyLink, onPressed: _copyLink, icon: const Icon(Symbols.link)),
       IconButton(
         tooltip: context.l10n.shareReport,
-        onPressed: () => actions.share(s, paths: [detailLocation(context, s.id, widget.tab)]),
+        onPressed: () => actions.share(s, paths: [Routes.inspection(s.id, tab: widget.tab == DetailTab.overview ? null : widget.tab.name)]),
         icon: const Icon(Symbols.share),
       ),
       MenuAnchor(
@@ -184,7 +184,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> with SingleTickerProvi
           ),
           MenuItemButton(
             leadingIcon: const Icon(Symbols.map),
-            onPressed: () => context.go(Routes.mapSite(s.siteId)),
+            onPressed: () => context.go(Routes.mapSite(s.siteId, inspectionId: s.id)),
             child: Text(context.l10n.showOnMap),
           ),
         ],
@@ -478,6 +478,14 @@ class _PhotosState extends State<_Photos> {
     _selected.clear();
     _selectMode = false;
   });
+
+  @override
+  void didUpdateWidget(_Photos old) {
+    super.didUpdateWidget(old);
+    // The detail refreshed (e.g. after a sync): photos that are gone leave the selection.
+    final ids = {for (final p in widget.detail.photos) p.id};
+    _selected.retainWhere(ids.contains);
+  }
 
   @override
   Widget build(BuildContext context) {

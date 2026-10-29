@@ -11,12 +11,9 @@ import '../../l10n/l10n.dart';
 /// Shared frame for sign-in, sign-up and reset (P01 on phones, D01 from 840):
 /// a single column on phones, a card with a brand panel on wide screens.
 class AuthLayout extends StatelessWidget {
-  const AuthLayout({required this.title, required this.child, this.subtitle, super.key});
+  const AuthLayout({required this.title, required this.child, super.key});
 
   final String title;
-
-  /// Defaults to the app name.
-  final String? subtitle;
   final Widget child;
 
   @override
@@ -32,7 +29,7 @@ class AuthLayout extends StatelessWidget {
         Semantics(header: true, child: Text(title, style: wide ? theme.textTheme.headlineSmall : theme.textTheme.headlineMedium)),
         if (!wide) ...[
           const SizedBox(height: 4),
-          Text(subtitle ?? context.l10n.appName, style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          Text(context.l10n.appName, style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ],
         const SizedBox(height: 32),
         child,

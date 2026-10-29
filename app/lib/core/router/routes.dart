@@ -39,7 +39,8 @@ abstract final class Routes {
 
   static String result(String featureId) => '$results/$featureId';
 
-  static String mapSite(String siteId) => _withQuery(map, {'site': siteId});
+  /// [inspectionId] picks that inspection when several open ones share the site.
+  static String mapSite(String siteId, {String? inspectionId}) => _withQuery(map, {'site': siteId, 'inspection': inspectionId});
 
   static String _withQuery(String path, Map<String, String?> query) {
     final q = {

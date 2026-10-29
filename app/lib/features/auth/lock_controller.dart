@@ -19,7 +19,8 @@ class LockState {
 }
 
 /// Locks the app after [timeout] in the background, and on a cold start with
-/// a restored session, when biometric unlock is on (iOS and Android only).
+/// a restored session, when biometric unlock is on (where the device has it:
+/// iOS, Android, macOS, Windows; see `Capabilities.biometricLock`).
 class LockController extends Notifier<LockState> {
   static const _key = 'biometric_lock';
   static const timeout = Duration(minutes: 5);

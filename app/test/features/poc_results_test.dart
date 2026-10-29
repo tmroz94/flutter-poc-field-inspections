@@ -35,6 +35,27 @@ void main() {
       expect(linux.device, contains('WSL 2'));
     });
 
+    test('N/A scenarios are left out of what a platform is tested out of', () {
+      final s = _container().read(resultsProvider);
+      final na = s.count(PocPlatform.linux, ResultStatus.na);
+      expect(na, greaterThan(0));
+      expect(s.applicable(PocPlatform.linux), s.results.length - na);
+    });
+
+    test('a saved copy of the findings is replaced by the ones in this build', () {
+      final store = MemoryStore();
+      final c = _container(store);
+      c.read(resultsProvider.notifier).load(ResultsDataset.findings);
+      // An older build saved this copy, with a result that has changed since.
+      final saved = jsonDecode(store.getString('poc_results')!) as Map<String, Object?>;
+      final row = (saved['results']! as List).cast<Map<String, Object?>>().firstWhere((r) => r['id'] == 'data-table');
+      row['ios'] = {'status': 'notTested'};
+      store.values['poc_results'] = jsonEncode(saved);
+      final again = _container(store).read(resultsProvider);
+      expect(again.dataset, ResultsDataset.findings);
+      expect(again.results.firstWhere((r) => r.id == 'data-table').of(PocPlatform.ios).status, ResultStatus.pass);
+    });
+
     test('every findings id exists in the scenario seed', () {
       final ids = {for (final s in scenarioSeed) s.id};
       expect(findings.keys.where((id) => !ids.contains(id)), isEmpty);

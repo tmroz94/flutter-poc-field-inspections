@@ -11,12 +11,14 @@ import 'package:field_inspections/data/providers.dart';
 import 'package:field_inspections/data/repositories/inspections_repository.dart';
 import 'package:field_inspections/features/inspections/inspection_screens.dart';
 import 'package:field_inspections/features/inspections/inspections_controller.dart';
+import 'package:field_inspections/features/map/map_screen.dart';
 import 'package:field_inspections/l10n/l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mock_data/mock_data.dart';
 
 import '../helpers/test_app.dart';
 
@@ -79,6 +81,21 @@ class _FlakyPages extends FakeInspectionsRepository {
       laterPageCalls++;
       if (pagesDown) throw const ApiException('network');
     }
+    return super.list(query, page: page, pageSize: pageSize);
+  }
+}
+
+/// The fake backend, counting list calls; [listDown] makes them fail.
+class _CountingList extends FakeInspectionsRepository {
+  _CountingList(super.db) : super(latency: Duration.zero);
+
+  int calls = 0;
+  bool listDown = false;
+
+  @override
+  Future<PageResult<InspectionSummary>> list(ListQuery query, {int page = 1, int pageSize = 20}) {
+    calls++;
+    if (listDown) throw const ApiException('server', status: 500);
     return super.list(query, page: page, pageSize: pageSize);
   }
 }
@@ -178,6 +195,72 @@ void main() {
       expect(app.location, '/inspections?q=cold');
       expect(find.text('Cold storage unit 3'), findsWidgets);
       expect(find.text('Substation 12'), findsNothing);
+    });
+
+    testWidgets('clearing the search right after typing leaves no ?q= behind', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections', store: signedInStore());
+      await tester.enterText(find.byType(TextField).first, 'cold');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.byTooltip('Clear search'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 400));
+      expect(app.location, '/inspections');
+    });
+
+    testWidgets('opening a row right after typing stays on the inspection', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections', store: signedInStore());
+      await tester.enterText(find.byType(TextField).first, 'sub');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Substation 12'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 400));
+      expect(app.location, '/inspections/INS-1038');
+    });
+
+    testWidgets('an empty list can still be pulled to refresh', (tester) async {
+      late _CountingList repo;
+      await pumpApp(
+        tester,
+        initialLocation: '/inspections?q=boiler',
+        store: signedInStore(),
+        inspections: (db) => repo = _CountingList(db),
+      );
+      final before = repo.calls;
+      await tester.fling(find.text('No inspections match'), const Offset(0, 400), 1000);
+      await tester.pumpAndSettle();
+      expect(repo.calls, before + 1);
+    });
+
+    testWidgets('a refresh that fails while rows are shown says so', (tester) async {
+      late _CountingList repo;
+      await pumpApp(
+        tester,
+        initialLocation: '/inspections',
+        store: signedInStore(),
+        capabilities: web,
+        inspections: (db) => repo = _CountingList(db),
+      );
+      repo.listDown = true;
+      await tester.tap(find.byTooltip('Refresh list'));
+      await tester.pumpAndSettle();
+      expect(find.text("Couldn't refresh. The list shows what loaded last."), findsOneWidget);
+      expect(find.text('Substation 12'), findsOneWidget, reason: 'the rows stay');
+    });
+
+    test('archiving a row before the next page loads skips nothing', () async {
+      final db = MockDatabase();
+      final c = ProviderContainer(
+        overrides: [inspectionsRepositoryProvider.overrideWithValue(FakeInspectionsRepository(db, latency: Duration.zero))],
+      );
+      addTearDown(c.dispose);
+      const query = ListQuery();
+      c.listen(inspectionListProvider(query), (_, _) {});
+      await Future<void>.delayed(Duration.zero);
+      final list = c.read(inspectionListProvider(query).notifier);
+      await list.archive(c.read(inspectionListProvider(query)).items.first);
+      while (c.read(inspectionListProvider(query)).hasMore) {
+        await list.loadMore();
+      }
+      final all = [for (final i in db.listInspections(pageSize: 100)['items']! as List) (i as Map)['id']];
+      expect(c.read(inspectionListProvider(query)).items.map((i) => i.id), all);
     });
 
     testWidgets('no match shows the empty state; Clear filters resets the URL', (tester) async {
@@ -304,6 +387,13 @@ void main() {
       expect(app.location, '/inspections?sort=dueDesc');
     });
 
+    testWidgets('desktop: sorted by site, the first click on Due sorts soonest first', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections?sort=siteAsc', store: signedInStore(), size: desktopSize);
+      await tester.tap(find.text('Due'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/inspections', reason: 'dueAsc is the default, so it leaves the URL');
+    });
+
     testWidgets('sorting the desktop table keeps the open detail', (tester) async {
       final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042?tab=checklist', store: signedInStore(), size: desktopSize);
       expect(find.byType(InspectionDetailScreen), findsOneWidget);
@@ -405,6 +495,29 @@ void main() {
       await tester.pumpAndSettle();
       expect(app.location, '/inspections/INS-1042?tab=history');
       expect(find.text('Synced to server'), findsOneWidget);
+    });
+
+    testWidgets('the header shows the start time even for a date far from today', (tester) async {
+      await pumpApp(tester, initialLocation: '/inspections/INS-1031', store: signedInStore());
+      expect(find.textContaining(RegExp(r'INS-1031 · .+ 10:00–11:30')), findsOneWidget);
+    });
+
+    testWidgets('a shared inspection link leaves out the list filters', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042?status=inProgress', store: signedInStore());
+      await tester.tap(find.byTooltip('Share report'));
+      await tester.pumpAndSettle();
+      expect(app.fakes.share.links.last.toString(), endsWith('/inspections/INS-1042'));
+    });
+
+    testWidgets("a photo link that can't load offers Try again instead of 'not found'", (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/inspections/INS-1042/photos/p1',
+        store: signedInStore(),
+        inspections: (_) => _OfflineRepository(),
+      );
+      expect(find.text('Photo not found'), findsNothing);
+      expect(find.widgetWithText(FilledButton, 'Try again'), findsOneWidget);
     });
 
     testWidgets('unknown id shows a not-found state', (tester) async {
@@ -533,6 +646,43 @@ void main() {
       expect(shared, contains('/inspections/INS-1042/photos/p1'));
       expect(shared, contains('/inspections/INS-1042/photos/p3'));
       expect(shared, isNot(contains('/photos/p2')));
+    });
+  });
+
+  group('map (P18)', () {
+    testWidgets('pins reload when this app changes inspections', (tester) async {
+      late _CountingList repo;
+      final app = await pumpApp(tester, initialLocation: '/map', store: signedInStore(), inspections: (db) => repo = _CountingList(db));
+      expect(app.container.read(mapInspectionsProvider).value, isNotEmpty);
+      final before = repo.calls;
+      app.container.read(inspectionsRevisionProvider.notifier).changed();
+      await tester.pumpAndSettle();
+      expect(repo.calls, greaterThan(before));
+    });
+
+    testWidgets('an inspection without a pin says it is not on the map', (tester) async {
+      await pumpApp(tester, initialLocation: '/map?site=s-solar-farm&inspection=INS-1031', store: signedInStore());
+      expect(find.textContaining("This inspection isn't on the map"), findsOneWidget);
+    });
+
+    testWidgets('with two open inspections at one site, the linked one is shown', (tester) async {
+      late FakeInspectionsRepository repo;
+      final app = await pumpApp(
+        tester,
+        initialLocation: '/home',
+        store: signedInStore(),
+        inspections: (db) => repo = FakeInspectionsRepository(db, latency: Duration.zero),
+      );
+      final created = await repo.save({
+        'siteId': 's-substation-12',
+        'type': 'Fire safety, annual',
+        'scheduledAt': DateTime.now().add(const Duration(days: 1)).toIso8601String(),
+        'durationMin': 60,
+      });
+      await app.go('/map?site=s-substation-12&inspection=${created.id}');
+      await tester.tap(find.text('Open inspection'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/inspections/${created.id}');
     });
   });
 

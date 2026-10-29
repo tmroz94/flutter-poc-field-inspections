@@ -207,6 +207,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get refreshHome => 'Refresh';
+
+  @override
   String get refreshList => 'Refresh list';
 
   @override
@@ -214,6 +217,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clearFilters => 'Clear filters';
+
+  @override
+  String get refreshFailed => 'Couldn\'t refresh. The list shows what loaded last.';
 
   @override
   String get loadErrorTitle => 'Couldn\'t load inspections';
@@ -237,6 +243,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copyLink => 'Copy link';
+
+  @override
+  String get notOnMap => 'This inspection isn\'t on the map: it shows open inspections that have a location.';
 
   @override
   String get showOnMap => 'Show on map';
@@ -526,51 +535,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resultsTitle => 'PoC results';
 
   @override
-  String get sampleData => 'Sample data';
-
-  @override
-  String get filterAll => 'All';
-
-  @override
-  String get filterFailing => 'Failing';
-
-  @override
-  String get filterNotTested => 'Not tested';
-
-  @override
-  String get resultPass => 'Pass';
-
-  @override
-  String get resultPartial => 'Partial';
-
-  @override
-  String get resultFail => 'Fail';
-
-  @override
-  String get resultNotTested => 'Not tested';
-
-  @override
-  String get resultNa => 'N/A';
-
-  @override
-  String testedOf(int tested, int total) {
-    return '$tested of $total tested';
-  }
-
-  @override
-  String get exportResults => 'Export results';
-
-  @override
-  String get importResults => 'Import';
-
-  @override
-  String get device => 'Device and version';
-
-  @override
   String get notes => 'Notes';
-
-  @override
-  String get platform => 'Platform';
 
   @override
   String get dueAny => 'Any';
@@ -1249,9 +1214,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewOffline => 'You\'re offline. The report is saved on this device and sends automatically when you\'re back online.';
 
   @override
-  String submitFailed(String code) {
-    return 'Couldn\'t submit ($code). Try again.';
-  }
+  String get submitFailed => 'Couldn\'t submit. Try again.';
+
+  @override
+  String get submitFailedServer => 'The server couldn\'t save it right now. Try again.';
+
+  @override
+  String get submitFailedNotFound => 'This inspection is no longer on the server, so it can\'t be saved.';
 
   @override
   String serverRejected(String fields) {

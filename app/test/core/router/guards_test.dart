@@ -26,6 +26,10 @@ void main() {
       expect(redirect('/forgot-password', AuthStatus.signedOut), isNull);
     });
     test('unlock is not reachable', () => expect(redirect('/unlock', AuthStatus.signedOut), '/sign-in'));
+    test('signing out from the lock screen keeps where it was going', () {
+      expect(redirect('/unlock?from=%2Finspections%2FINS-1042', AuthStatus.signedOut), '/sign-in?from=%2Finspections%2FINS-1042');
+      expect(redirect('/unlock?from=https%3A%2F%2Fevil.example', AuthStatus.signedOut), '/sign-in');
+    });
     test('splash resolves to the target, which then needs sign-in', () {
       expect(redirect('/splash?from=/map', AuthStatus.signedOut), '/sign-in?from=%2Fmap');
       expect(redirect('/splash', AuthStatus.signedOut), '/sign-in');

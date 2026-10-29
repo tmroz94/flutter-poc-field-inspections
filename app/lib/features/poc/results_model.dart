@@ -100,6 +100,9 @@ class ResultsState {
 
   int count(PocPlatform p, ResultStatus s) => results.where((r) => r.of(p).status == s).length;
   int tested(PocPlatform p) => results.where((r) => r.of(p).status.isTested).length;
+
+  /// Scenarios that apply to [p] (all but N/A): what "tested" is out of.
+  int applicable(PocPlatform p) => results.length - count(p, ResultStatus.na);
 }
 
 /// Evidence gathered while building the PoC (Android emulator API 37,
@@ -431,7 +434,13 @@ class ResultsController extends Notifier<ResultsState> {
     final raw = ref.watch(keyValueStoreProvider).getString(_key);
     if (raw != null) {
       try {
-        return _fromJson(jsonDecode(raw) as Map<String, Object?>);
+        final saved = _fromJson(jsonDecode(raw) as Map<String, Object?>);
+        // Findings and the sample are rebuilt from the code, so a newer build's
+        // findings replace an older saved copy; only edited results are kept.
+        return switch (saved.dataset) {
+          ResultsDataset.findings || ResultsDataset.sample => load(saved.dataset, persist: false),
+          _ => saved,
+        };
       } on Object {
         // Fall through to the default dataset.
       }

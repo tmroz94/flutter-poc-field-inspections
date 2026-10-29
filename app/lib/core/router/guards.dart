@@ -9,7 +9,7 @@ class GuardInput {
 
   final AuthStatus auth;
 
-  /// True only on iOS and Android with biometric lock on and the timeout hit.
+  /// Biometric lock on (iOS, Android, macOS, Windows) and the app locked.
   final bool locked;
 }
 
@@ -43,7 +43,8 @@ String? resolveRedirect(Uri uri, GuardInput input) {
   final isPublic = Routes.public.contains(path);
   if (input.auth == AuthStatus.signedOut) {
     if (isPublic) return null;
-    if (path == Routes.unlock) return Routes.signIn;
+    // "Use password instead" on the lock screen: sign in, then where it was going.
+    if (path == Routes.unlock) return _withFrom(Routes.signIn, DeepLinks.sanitizeFrom(uri.queryParameters['from']));
     return _withFrom(Routes.signIn, here);
   }
 

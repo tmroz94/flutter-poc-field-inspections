@@ -60,6 +60,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
   /// the list filters, and replacing it with the plain list URL would swap
   /// the page (and drop the search field's focus mid-typing).
   void _apply(ListQuery q, {bool replace = false}) {
+    _debounce?.cancel();
     final selected = widget.selectedId;
     final String location;
     if (selected == null) {
@@ -81,6 +82,8 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
 
   /// Keeps the filters in the detail URL so the list pane (and back) shows the same list.
   void _open(InspectionSummary item) {
+    // A search typed just before would otherwise replace the detail with the list.
+    _debounce?.cancel();
     final q = _query.toQuery();
     context.go(Uri(path: '/inspections/${item.id}', queryParameters: q.isEmpty ? null : q).toString());
   }
@@ -121,6 +124,12 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
     final size = context.windowSize;
     final query = _query;
     final state = ref.watch(inspectionListProvider(query));
+    ref.listen(inspectionListProvider(query).select((s) => s.error), (_, error) {
+      // With rows on screen the error state isn't shown; they're the last list that loaded.
+      if (error != null && ref.read(inspectionListProvider(query)).items.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.refreshFailed)));
+      }
+    });
     final caps = ref.watch(capabilitiesProvider);
     final scheme = Theme.of(context).colorScheme;
     Future<void> refresh() => ref.read(inspectionListProvider(query).notifier).refresh();
@@ -165,6 +174,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
       onLoadMore: () => ref.read(inspectionListProvider(query).notifier).loadMore(),
       onRetryMore: () => ref.read(inspectionListProvider(query).notifier).retryMore(),
       onClearFilters: () {
+        _debounce?.cancel();
         _search.clear();
         context.go(Routes.inspections);
       },
@@ -373,15 +383,27 @@ class _ListBody extends ConsumerWidget {
     }
     if (state.isEmpty) {
       final statuses = query.statuses.map((s) => s.localized(l)).join(', ');
-      return MessageState(
-        icon: Symbols.search_off,
-        title: l.noMatchTitle,
-        message: query.q.isNotEmpty
-            ? l.noMatchSearch(query.q)
-            : query.statuses.isEmpty
-            ? l.noMatchAny
-            : l.noMatchStatuses(statuses),
-        action: FilledButton.tonal(onPressed: onClearFilters, child: Text(l.clearFilters)),
+      // Pull to refresh works here too: on a phone it's the only refresh.
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SizedBox(
+              height: box.maxHeight,
+              child: MessageState(
+                icon: Symbols.search_off,
+                title: l.noMatchTitle,
+                message: query.q.isNotEmpty
+                    ? l.noMatchSearch(query.q)
+                    : query.statuses.isEmpty
+                    ? l.noMatchAny
+                    : l.noMatchStatuses(statuses),
+                action: FilledButton.tonal(onPressed: onClearFilters, child: Text(l.clearFilters)),
+              ),
+            ),
+          ),
+        ),
       );
     }
     if (table) {
@@ -476,7 +498,7 @@ class _RowMenu extends StatelessWidget {
       MenuItemButton(leadingIcon: const Icon(Symbols.link), onPressed: onCopyLink, child: Text(context.l10n.copyLink)),
       MenuItemButton(
         leadingIcon: const Icon(Symbols.map),
-        onPressed: () => context.go(Routes.mapSite(item.siteId)),
+        onPressed: () => context.go(Routes.mapSite(item.siteId, inspectionId: item.id)),
         child: Text(context.l10n.showOnMap),
       ),
     ],
@@ -587,7 +609,6 @@ class _InspectionsTable extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final now = ref.watch(clockProvider)();
-    final sortAsc = query.sort != SortOrder.dueDesc;
 
     Widget header(String label, {double? width, int flex = 0, SortOrder? sort, IconData? arrow}) {
       final text = Row(
@@ -630,8 +651,8 @@ class _InspectionsTable extends ConsumerWidget {
               header(
                 context.l10n.due,
                 width: 140,
-                sort: sortAsc ? SortOrder.dueDesc : SortOrder.dueAsc,
-                arrow: dueSorted ? (sortAsc ? Symbols.arrow_upward : Symbols.arrow_downward) : null,
+                sort: query.sort == SortOrder.dueAsc ? SortOrder.dueDesc : SortOrder.dueAsc,
+                arrow: dueSorted ? (query.sort == SortOrder.dueAsc ? Symbols.arrow_upward : Symbols.arrow_downward) : null,
               ),
               header(context.l10n.statusLabel, width: 140),
               const SizedBox(width: 56),
@@ -644,36 +665,41 @@ class _InspectionsTable extends ConsumerWidget {
               for (final item in state.items)
                 Material(
                   color: item.id == selectedId ? theme.colorScheme.secondaryContainer : Colors.transparent,
-                  child: InkWell(
-                    onTap: () => onOpen(item),
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 52),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant)),
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 96,
-                            child: Text(item.id, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-                          ),
-                          Expanded(
-                            child: Text(item.site, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
-                          ),
-                          SizedBox(width: 140, child: Text(localizedWhen(context, item.scheduledAt, now), softWrap: false)),
-                          SizedBox(
-                            width: 140,
-                            child: Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: StatusChip(item.status, outlined: item.id == selectedId),
+                  child: Semantics(
+                    button: true,
+                    selected: item.id == selectedId,
+                    child: InkWell(
+                      onTap: () => onOpen(item),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 52),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant)),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 96,
+                              child: Text(item.id, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
                             ),
-                          ),
-                          SizedBox(
-                            width: 56,
-                            child: _RowMenu(item: item, onArchive: () => onArchive(item), onCopyLink: () => onCopyLink(item)),
-                          ),
-                        ],
+                            Expanded(
+                              child: Text(item.site, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                            ),
+                            // Wraps at large text rather than being cut off.
+                            SizedBox(width: 140, child: Text(localizedWhen(context, item.scheduledAt, now))),
+                            SizedBox(
+                              width: 140,
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: StatusChip(item.status, outlined: item.id == selectedId),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 56,
+                              child: _RowMenu(item: item, onArchive: () => onArchive(item), onCopyLink: () => onCopyLink(item)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

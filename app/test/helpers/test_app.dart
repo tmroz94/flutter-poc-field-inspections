@@ -70,6 +70,7 @@ Future<TestApp> pumpApp(
   Size size = phoneSize,
   Capabilities capabilities = android,
   InspectionsRepository Function(MockDatabase db)? inspections,
+  AuthRepository Function(MockDatabase db)? auth,
   double? textScale,
   LocalStore? localStore,
   bool online = true,
@@ -104,7 +105,9 @@ Future<TestApp> pumpApp(
         backendConfigProvider.overrideWithValue(const BackendConfig(mode: BackendMode.http, baseUrl: mockServerUrl)),
         httpClientAdapterProvider.overrideWithValue(http),
       ] else ...[
-        authRepositoryProvider.overrideWith((ref) => FakeAuthRepository(ref.watch(mockDatabaseProvider), latency: authLatency)),
+        authRepositoryProvider.overrideWith(
+          (ref) => (auth ?? (db) => FakeAuthRepository(db, latency: authLatency))(ref.watch(mockDatabaseProvider)),
+        ),
         inspectionsRepositoryProvider.overrideWith(
           (ref) => (inspections ?? (db) => FakeInspectionsRepository(db, latency: Duration.zero))(ref.watch(mockDatabaseProvider)),
         ),

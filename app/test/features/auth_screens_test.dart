@@ -1,6 +1,8 @@
 import 'package:field_inspections/core/storage/key_value_store.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/models/draft.dart';
+import 'package:field_inspections/features/auth/auth_models.dart';
+import 'package:field_inspections/features/auth/auth_repository.dart';
 import 'package:field_inspections/features/auth/auth_screens.dart';
 import 'package:field_inspections/features/home/home_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,19 @@ import 'package:material_ui/material_ui.dart';
 import '../helpers/test_app.dart';
 
 Finder field(String label) => find.widgetWithText(TextFormField, label);
+
+/// The fake backend, counting sign-in requests.
+class _CountingAuth extends FakeAuthRepository {
+  _CountingAuth(super.db) : super(latency: const Duration(milliseconds: 300));
+
+  int signIns = 0;
+
+  @override
+  Future<Session> signIn(String email, String password) {
+    signIns++;
+    return super.signIn(email, password);
+  }
+}
 
 void main() {
   group('sign in (P01/D01)', () {
@@ -29,6 +44,30 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Enter a valid email, like name@example.com'), findsOneWidget);
       expect(find.text('Use 8 or more characters'), findsWidgets);
+    });
+
+    testWidgets('Enter while a sign-in is running does not send another', (tester) async {
+      late _CountingAuth auth;
+      await pumpApp(tester, auth: (db) => auth = _CountingAuth(db));
+      await tester.enterText(field('Email'), 'anna.nowak@example.com');
+      await tester.enterText(field('Password'), 'wrongpass1');
+      // Clicking the button leaves the keyboard focus in the password field.
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+      await tester.pump();
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(auth.signIns, 1, reason: 'Enter came while the first request was running');
+    });
+
+    testWidgets('Forgot password and back keep where sign-in was going', (tester) async {
+      final app = await pumpApp(tester, initialLocation: '/inspections/INS-1042');
+      expect(app.location, '/sign-in?from=%2Finspections%2FINS-1042');
+      await tester.tap(find.text('Forgot password?'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/forgot-password?from=%2Finspections%2FINS-1042');
+      await tester.tap(find.text('Back to sign in'));
+      await tester.pumpAndSettle();
+      expect(app.location, '/sign-in?from=%2Finspections%2FINS-1042');
     });
 
     testWidgets('wrong password shows a form error and stays', (tester) async {

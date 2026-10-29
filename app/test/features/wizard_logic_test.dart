@@ -214,6 +214,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       final d = c.read(wizardControllerProvider('INS-1042')).draft;
       expect((d.siteName, d.duration, d.answers.length), ('Warehouse A – loading dock', '90', 12));
+      expect(d.lastStep, 5, reason: 'every step has its data: the step bar can open any of them');
     });
 
     test('online submit sends and removes the draft', () async {

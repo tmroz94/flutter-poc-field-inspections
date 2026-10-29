@@ -16,8 +16,9 @@ void main() {
     expect(find.textContaining(', Anna'), findsOneWidget);
     expect(find.text('Warehouse A – loading dock'), findsOneWidget);
     expect(find.text('Riverside office, floor 4'), findsOneWidget);
-    expect(find.text('Substation 12'), findsOneWidget);
-    expect(find.text('Overdue by 1 day'), findsOneWidget);
+    expect(find.text('Parking garage, level −2'), findsOneWidget, reason: 'in 4 days');
+    // "Due this week" starts today (decision 119): yesterday's overdue INS-1038 is in the list, not here.
+    expect(find.text('Substation 12'), findsNothing);
     expect(find.byTooltip('Notifications, 3 unread'), findsOneWidget);
   });
 
@@ -128,6 +129,16 @@ void main() {
       expect(store.entries, isEmpty);
       expect(store.blobs.keys, ['ph-other'], reason: "the report's photo goes, others stay");
     });
+  });
+
+  testWidgets('web and desktop get a Refresh button; phones pull to refresh', (tester) async {
+    await pumpApp(tester, store: signedInStore(), capabilities: web);
+    expect(find.byTooltip('Refresh'), findsOneWidget);
+  });
+
+  testWidgets('phones have no Refresh button on Home', (tester) async {
+    await pumpApp(tester, store: signedInStore());
+    expect(find.byTooltip('Refresh'), findsNothing);
   });
 
   testWidgets('desktop uses a card grid instead of a horizontal list (D02)', (tester) async {

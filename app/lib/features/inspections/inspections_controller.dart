@@ -81,6 +81,10 @@ class InspectionListController extends Notifier<ListState> {
   int _generation = 0;
   bool _refreshing = false;
 
+  /// Rows archived from this list since its pages loaded (less those undone):
+  /// on the server every later row moved up by as many places.
+  int _shifted = 0;
+
   // Read once: archive undo can outlive this list (the user changed the filter).
   late InspectionsRepository _repo;
   late InspectionsRevision _revision;
@@ -101,6 +105,7 @@ class InspectionListController extends Notifier<ListState> {
     try {
       final page = await _repo.list(query, pageSize: pageSize);
       if (!ref.mounted || gen != _generation) return;
+      _shifted = 0;
       state = ListState(items: page.items, total: page.total, page: 1, hasMore: page.hasMore, loading: false);
     } on Object catch (e) {
       if (!ref.mounted || gen != _generation) return;
@@ -115,13 +120,22 @@ class InspectionListController extends Notifier<ListState> {
   /// [retryMore], so an offline list doesn't keep firing requests.
   Future<void> loadMore() async {
     if (_refreshing || state.loading || state.loadingMore || !state.hasMore || state.moreError != null) return;
+    // More rows moved up than a page holds: start over rather than miss any.
+    if (_shifted >= pageSize) return refresh();
     final gen = _generation;
+    final shifted = _shifted;
     state = state.copyWith(loadingMore: true);
     try {
       final page = await _repo.list(query, page: state.page + 1, pageSize: pageSize);
+      // After an archive the server's next page starts [shifted] rows too
+      // late: those rows are now the last ones of the page already shown.
+      final movedUp = shifted > 0 ? (await _repo.list(query, page: state.page, pageSize: pageSize)).items : const <InspectionSummary>[];
       if (!ref.mounted || gen != _generation) return;
+      _shifted -= shifted;
+      final seen = {for (final i in state.items) i.id};
+      final added = [...movedUp.skip(movedUp.length - shifted.clamp(0, movedUp.length)), ...page.items].where((i) => seen.add(i.id));
       state = state.copyWith(
-        items: [...state.items, ...page.items],
+        items: [...state.items, ...added],
         page: page.page,
         hasMore: page.hasMore,
         total: page.total,
@@ -143,11 +157,15 @@ class InspectionListController extends Notifier<ListState> {
     final index = state.items.indexWhere((i) => i.id == item.id);
     if (index < 0) return;
     _remove(item);
+    _shifted++;
     try {
       await _repo.setArchived(item.id, archived: true);
       _revision.changed(lists: false);
     } on ApiException {
-      if (ref.mounted) _insert(item, index);
+      if (ref.mounted) {
+        _shifted--;
+        _insert(item, index);
+      }
       rethrow;
     }
   }
@@ -156,12 +174,18 @@ class InspectionListController extends Notifier<ListState> {
   /// so it only touches its own rows while still mounted; otherwise the
   /// other lists reload. Throws [ApiException] if the server refuses.
   Future<void> undoArchive(InspectionSummary item, int index) async {
-    if (ref.mounted) _insert(item, index);
+    if (ref.mounted) {
+      _insert(item, index);
+      _shifted--;
+    }
     try {
       await _repo.setArchived(item.id, archived: false);
       _revision.changed(lists: !ref.mounted);
     } on ApiException {
-      if (ref.mounted) _remove(item);
+      if (ref.mounted) {
+        _remove(item);
+        _shifted++;
+      }
       rethrow;
     }
   }
@@ -277,7 +301,8 @@ final notificationsProvider = FutureProvider.autoDispose<List<AppNotification>>(
 /// Open statuses shown on Home.
 const openStatuses = {InspectionStatus.scheduled, InspectionStatus.inProgress, InspectionStatus.draft, InspectionStatus.overdue};
 
-/// Home (P02/D02): today's inspections and what's due in the next 7 days.
+/// Home (P02/D02): today's inspections and what's due in the next 7 days
+/// (from tomorrow; overdue ones are in the list, decision 119).
 final homeProvider = FutureProvider.autoDispose<({List<InspectionSummary> today, List<InspectionSummary> week, int openCount})>((
   ref,
 ) async {
@@ -285,8 +310,12 @@ final homeProvider = FutureProvider.autoDispose<({List<InspectionSummary> today,
   final today = await repo.list(const ListQuery(statuses: openStatuses, due: DueWindow.today), pageSize: 10);
   final open = await repo.list(const ListQuery(statuses: openStatuses), pageSize: 50);
   final now = ref.read(clockProvider)();
+  final start = DateTime(now.year, now.month, now.day);
   final weekEnd = DateTime(now.year, now.month, now.day + 7);
   final todayIds = today.items.map((i) => i.id).toSet();
-  final week = open.items.where((i) => i.scheduledAt.isBefore(weekEnd) && !todayIds.contains(i.id)).take(5).toList();
+  final week = open.items
+      .where((i) => !i.scheduledAt.isBefore(start) && i.scheduledAt.isBefore(weekEnd) && !todayIds.contains(i.id))
+      .take(5)
+      .toList();
   return (today: today.items, week: week, openCount: open.total);
 }, retry: _noRetry);

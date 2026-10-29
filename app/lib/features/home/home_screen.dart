@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/layout/window_size.dart';
+import '../../core/platform/capabilities.dart';
 import '../../core/router/routes.dart';
 import '../../core/time/calendar.dart';
 import '../../core/widgets/inspection_widgets.dart';
@@ -51,6 +52,9 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(_greeting(context, now, user?.firstName ?? '')),
         actions: [
+          // Mouse and trackpad users can't pull to refresh.
+          if (!ref.watch(capabilitiesProvider).pullToRefreshOnly)
+            IconButton(tooltip: context.l10n.refreshHome, onPressed: refresh, icon: const Icon(Symbols.refresh)),
           const NotificationBell(),
           IconButton(
             tooltip: context.l10n.accountAndSettings,

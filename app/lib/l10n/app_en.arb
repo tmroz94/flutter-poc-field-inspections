@@ -140,9 +140,11 @@
       }
     }
   },
+  "refreshHome": "Refresh",
   "refreshList": "Refresh list",
   "noMatchTitle": "No inspections match",
   "clearFilters": "Clear filters",
+  "refreshFailed": "Couldn't refresh. The list shows what loaded last.",
   "loadErrorTitle": "Couldn't load inspections",
   "loadErrorOffline": "You're offline and nothing is saved on this device yet. Connect and try again.",
   "loadErrorServer": "The server had a problem. Try again in a moment.",
@@ -157,6 +159,7 @@
   },
   "archive": "Archive",
   "copyLink": "Copy link",
+  "notOnMap": "This inspection isn't on the map: it shows open inspections that have a location.",
   "showOnMap": "Show on map",
   "selectInspection": "Select an inspection",
   "selectInspectionHint": "Pick one from the list to see its details here.",
@@ -308,31 +311,7 @@
   "useDemoAccount": "Use demo account",
   "createAnAccount": "Create an account",
   "resultsTitle": "PoC results",
-  "sampleData": "Sample data",
-  "filterAll": "All",
-  "filterFailing": "Failing",
-  "filterNotTested": "Not tested",
-  "resultPass": "Pass",
-  "resultPartial": "Partial",
-  "resultFail": "Fail",
-  "resultNotTested": "Not tested",
-  "resultNa": "N/A",
-  "testedOf": "{tested} of {total} tested",
-  "@testedOf": {
-    "placeholders": {
-      "tested": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "exportResults": "Export results",
-  "importResults": "Import",
-  "device": "Device and version",
   "notes": "Notes",
-  "platform": "Platform",
   "dueAny": "Any",
   "dueToday": "Today",
   "dueWeek": "Week",
@@ -877,14 +856,9 @@
   },
   "reviewFollowUp": "follow-up visit needed",
   "reviewOffline": "You're offline. The report is saved on this device and sends automatically when you're back online.",
-  "submitFailed": "Couldn't submit ({code}). Try again.",
-  "@submitFailed": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
+  "submitFailed": "Couldn't submit. Try again.",
+  "submitFailedServer": "The server couldn't save it right now. Try again.",
+  "submitFailedNotFound": "This inspection is no longer on the server, so it can't be saved.",
   "serverRejected": "The server rejected: {fields}",
   "@serverRejected": {
     "placeholders": {

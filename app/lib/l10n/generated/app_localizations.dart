@@ -410,6 +410,12 @@ abstract class AppLocalizations {
   /// **'Filter and sort, {count} active'**
   String filterAndSortActive(int count);
 
+  /// No description provided for @refreshHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refreshHome;
+
   /// No description provided for @refreshList.
   ///
   /// In en, this message translates to:
@@ -427,6 +433,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear filters'**
   String get clearFilters;
+
+  /// No description provided for @refreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t refresh. The list shows what loaded last.'**
+  String get refreshFailed;
 
   /// No description provided for @loadErrorTitle.
   ///
@@ -469,6 +481,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copy link'**
   String get copyLink;
+
+  /// No description provided for @notOnMap.
+  ///
+  /// In en, this message translates to:
+  /// **'This inspection isn\'t on the map: it shows open inspections that have a location.'**
+  String get notOnMap;
 
   /// No description provided for @showOnMap.
   ///
@@ -1004,95 +1022,11 @@ abstract class AppLocalizations {
   /// **'PoC results'**
   String get resultsTitle;
 
-  /// No description provided for @sampleData.
-  ///
-  /// In en, this message translates to:
-  /// **'Sample data'**
-  String get sampleData;
-
-  /// No description provided for @filterAll.
-  ///
-  /// In en, this message translates to:
-  /// **'All'**
-  String get filterAll;
-
-  /// No description provided for @filterFailing.
-  ///
-  /// In en, this message translates to:
-  /// **'Failing'**
-  String get filterFailing;
-
-  /// No description provided for @filterNotTested.
-  ///
-  /// In en, this message translates to:
-  /// **'Not tested'**
-  String get filterNotTested;
-
-  /// No description provided for @resultPass.
-  ///
-  /// In en, this message translates to:
-  /// **'Pass'**
-  String get resultPass;
-
-  /// No description provided for @resultPartial.
-  ///
-  /// In en, this message translates to:
-  /// **'Partial'**
-  String get resultPartial;
-
-  /// No description provided for @resultFail.
-  ///
-  /// In en, this message translates to:
-  /// **'Fail'**
-  String get resultFail;
-
-  /// No description provided for @resultNotTested.
-  ///
-  /// In en, this message translates to:
-  /// **'Not tested'**
-  String get resultNotTested;
-
-  /// No description provided for @resultNa.
-  ///
-  /// In en, this message translates to:
-  /// **'N/A'**
-  String get resultNa;
-
-  /// No description provided for @testedOf.
-  ///
-  /// In en, this message translates to:
-  /// **'{tested} of {total} tested'**
-  String testedOf(int tested, int total);
-
-  /// No description provided for @exportResults.
-  ///
-  /// In en, this message translates to:
-  /// **'Export results'**
-  String get exportResults;
-
-  /// No description provided for @importResults.
-  ///
-  /// In en, this message translates to:
-  /// **'Import'**
-  String get importResults;
-
-  /// No description provided for @device.
-  ///
-  /// In en, this message translates to:
-  /// **'Device and version'**
-  String get device;
-
   /// No description provided for @notes.
   ///
   /// In en, this message translates to:
   /// **'Notes'**
   String get notes;
-
-  /// No description provided for @platform.
-  ///
-  /// In en, this message translates to:
-  /// **'Platform'**
-  String get platform;
 
   /// No description provided for @dueAny.
   ///
@@ -2255,8 +2189,20 @@ abstract class AppLocalizations {
   /// No description provided for @submitFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t submit ({code}). Try again.'**
-  String submitFailed(String code);
+  /// **'Couldn\'t submit. Try again.'**
+  String get submitFailed;
+
+  /// No description provided for @submitFailedServer.
+  ///
+  /// In en, this message translates to:
+  /// **'The server couldn\'t save it right now. Try again.'**
+  String get submitFailedServer;
+
+  /// No description provided for @submitFailedNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This inspection is no longer on the server, so it can\'t be saved.'**
+  String get submitFailedNotFound;
 
   /// No description provided for @serverRejected.
   ///

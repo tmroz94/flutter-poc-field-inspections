@@ -37,8 +37,13 @@ class HttpAuthRepository implements AuthRepository {
   Future<bool> isEmailAvailable(String email) async =>
       _map(await _api.get('/auth/email-available', query: {'email': email.trim()}))['available'] == true;
 
+  /// Short timeout: the app waits on its splash for this answer, and a
+  /// network that never answers counts as offline (the cached session stays).
   @override
-  Future<AppUser> me(String token) async => AppUser.fromJson(_map(await _api.get('/me', bearer: token)));
+  Future<AppUser> me(String token) async =>
+      AppUser.fromJson(_map(await _api.get('/me', bearer: token).timeout(meTimeout, onTimeout: () => throw const ApiException('network'))));
+
+  static const meTimeout = Duration(seconds: 5);
 }
 
 /// Offline fake over the shared [MockDatabase], used when the mock server is

@@ -83,7 +83,10 @@ class _AdaptiveWidgetsScreenState extends ConsumerState<AdaptiveWidgetsScreen> {
               minimumDate: _first,
               maximumDate: _last,
               initialDateTime: _date,
-              onDateTimeChanged: (d) => setState(() => _date = d),
+              // The popup is on the root navigator and can outlive this screen.
+              onDateTimeChanged: (d) {
+                if (mounted) setState(() => _date = d);
+              },
             ),
           ),
         ),
@@ -92,7 +95,7 @@ class _AdaptiveWidgetsScreenState extends ConsumerState<AdaptiveWidgetsScreen> {
     }
     final initial = _date.isBefore(_first) ? _first : (_date.isAfter(_last) ? _last : _date);
     final picked = await showDatePicker(context: context, initialDate: initial, firstDate: _first, lastDate: _last);
-    if (picked != null) setState(() => _date = picked);
+    if (picked != null && mounted) setState(() => _date = picked);
   }
 
   @override

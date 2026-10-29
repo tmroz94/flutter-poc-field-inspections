@@ -138,6 +138,8 @@ class InspectionDraft {
           ),
         for (final f in d.files) DraftAttachment(id: f.id, name: f.name, sizeBytes: f.sizeBytes, isPhoto: false, stored: true),
       ],
+      // Every step already has its data: the step bar can open any of them.
+      lastStep: 5,
     );
   }
 

@@ -106,7 +106,7 @@ void main() {
       final app = await pumpApp(tester, initialLocation: '/map', store: signedInStore());
       await tester.tap(find.bySemanticsLabel('Substation 12, Overdue'));
       await tester.pumpAndSettle();
-      expect(app.location, '/map?site=s-substation-12');
+      expect(app.location, '/map?site=s-substation-12&inspection=INS-1038');
       await tester.tap(find.text('Open inspection'));
       await tester.pumpAndSettle();
       expect(app.location, '/inspections/INS-1038');
@@ -127,7 +127,7 @@ void main() {
       await tester.enterText(find.byType(TextField).first, 'parking');
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
-      expect(app.location, '/map?site=s-parking-garage');
+      expect(app.location, '/map?site=s-parking-garage&inspection=INS-1045');
     });
   });
 

@@ -87,6 +87,9 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
   /// Guard redirect scheduled; avoids one replace per rebuild.
   bool _redirecting = false;
 
+  /// The step the guard last checked: it runs again only when the step changes.
+  WizardStep? _checkedStep;
+
   /// Close was chosen: the page is going away, so the step guard must not
   /// send it back to an earlier step.
   bool _leaving = false;
@@ -228,14 +231,21 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
     }
 
     // Step guard: a step can't be opened while an earlier step is invalid.
-    // Not before the checklist has loaded (step 3 depends on it), and not
-    // while the wizard is closing.
-    final blockedAt = checklist.isLoading || _leaving ? null : _validator().firstInvalidBefore(_step, state.draft);
+    // Checked when a step opens (a link, back/forward, the step bar), not on
+    // every edit: removing a failed item's only photo on step 4 mustn't throw
+    // the user back to step 3 mid-edit (Submit still checks every step). Not
+    // before the checklist has loaded (step 3 depends on it), and not while
+    // the wizard is closing.
+    final checkNow = !checklist.isLoading && !_leaving && _checkedStep != _step;
+    final blockedAt = checkNow ? _validator().firstInvalidBefore(_step, state.draft) : null;
+    if (checkNow) _checkedStep = _step;
     if (blockedAt != null && !_redirecting) {
       _redirecting = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _leaving || !(ModalRoute.of(context)?.isCurrent ?? false)) {
           _redirecting = false;
+          // Not redirected (e.g. a sheet is on top): check again on the next build.
+          _checkedStep = null;
           return;
         }
         final notice = context.l10n.completeStepFirst(stepTitle(context, blockedAt));

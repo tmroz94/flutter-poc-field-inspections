@@ -91,12 +91,28 @@ class _PasswordFieldState extends State<PasswordField> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_onKey);
+    widget.focusNode.addListener(_onFocus);
+  }
+
+  @override
+  void didUpdateWidget(PasswordField old) {
+    super.didUpdateWidget(old);
+    if (old.focusNode != widget.focusNode) {
+      old.focusNode.removeListener(_onFocus);
+      widget.focusNode.addListener(_onFocus);
+    }
   }
 
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKey);
+    widget.focusNode.removeListener(_onFocus);
     super.dispose();
+  }
+
+  /// The Caps Lock hint shows only while this field has focus.
+  void _onFocus() {
+    if (mounted) setState(() {});
   }
 
   bool _onKey(KeyEvent event) {
@@ -135,6 +151,13 @@ class _PasswordFieldState extends State<PasswordField> {
   }
 }
 
+/// [path] with this screen's `from`, so where sign-in was going survives
+/// moving between sign-in, sign-up and password reset.
+String _keepFrom(BuildContext context, String path) {
+  final from = GoRouterState.of(context).uri.queryParameters['from'];
+  return from == null ? path : Uri(path: path, queryParameters: {'from': from}).toString();
+}
+
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -164,6 +187,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _submit({String? email, String? password}) async {
+    if (_busy) return;
     final t = ValidationText.of(context);
     final l = context.l10n;
     setState(() {
@@ -180,8 +204,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     setState(() => _busy = true);
     try {
       await ref.read(authControllerProvider.notifier).signIn(email ?? _email.text, password ?? _password.text, remember: _remember);
-      // Lets the platform password manager offer to save the credentials.
-      TextInput.finishAutofillContext();
+      // Lets the platform password manager offer to save the credentials
+      // (not after the demo account: the typed ones weren't used).
+      TextInput.finishAutofillContext(shouldSave: email == null);
       if (mounted) continueToTarget(context);
     } on Object catch (e) {
       if (!mounted) return;
@@ -201,7 +226,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Widget build(BuildContext context) {
     final t = ValidationText.of(context);
     final l = context.l10n;
-    final from = GoRouterState.of(context).uri.queryParameters['from'];
     return AuthLayout(
       title: l.signIn,
       child: AutofillGroup(
@@ -241,7 +265,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   _CheckRow(label: l.keepSignedIn, value: _remember, onChanged: (v) => setState(() => _remember = v)),
-                  TextButton(onPressed: () => context.go(Routes.forgotPassword), child: Text(l.forgotPassword)),
+                  TextButton(onPressed: () => context.go(_keepFrom(context, Routes.forgotPassword)), child: Text(l.forgotPassword)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -255,11 +279,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 onPressed: _busy ? null : () => _submit(email: demoEmail, password: demoPassword),
               ),
               const SizedBox(height: 8),
-              TextButton(
-                onPressed: () =>
-                    context.go(from == null ? Routes.signUp : Uri(path: Routes.signUp, queryParameters: {'from': from}).toString()),
-                child: Text(l.createAnAccount),
-              ),
+              TextButton(onPressed: () => context.go(_keepFrom(context, Routes.signUp)), child: Text(l.createAnAccount)),
               const _BackendNote(),
             ],
           ),
@@ -338,7 +358,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   AutovalidateMode _mode = AutovalidateMode.disabled;
 
   @override
+  void initState() {
+    super.initState();
+    _focus[1].addListener(_onEmailFocus);
+  }
+
+  void _onEmailFocus() {
+    if (!_focus[1].hasFocus) unawaited(_checkEmail());
+  }
+
+  @override
   void dispose() {
+    _focus[1].removeListener(_onEmailFocus);
     for (final c in [_name, _email, _password, _confirm]) {
       c.dispose();
     }
@@ -368,6 +399,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     final t = ValidationText.of(context);
     final l = context.l10n;
     setState(() {
@@ -428,20 +460,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 decoration: InputDecoration(labelText: l.fullName, prefixIcon: const Icon(Symbols.person)),
               ),
               const SizedBox(height: 16),
-              Focus(
-                onFocusChange: (has) => has ? null : unawaited(_checkEmail()),
-                child: TextFormField(
-                  controller: _email,
-                  focusNode: _focus[1],
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.email],
-                  autocorrect: false,
-                  autovalidateMode: AutovalidateMode.onUnfocus,
-                  validator: _emailV(t),
-                  onChanged: (_) => _emailTaken == null ? null : setState(() => _emailTaken = null),
-                  decoration: InputDecoration(labelText: l.email, prefixIcon: const Icon(Symbols.mail), errorText: _emailTaken),
-                ),
+              TextFormField(
+                controller: _email,
+                focusNode: _focus[1],
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                autocorrect: false,
+                autovalidateMode: AutovalidateMode.onUnfocus,
+                validator: _emailV(t),
+                onChanged: (_) => _emailTaken == null ? null : setState(() => _emailTaken = null),
+                decoration: InputDecoration(labelText: l.email, prefixIcon: const Icon(Symbols.mail), errorText: _emailTaken),
               ),
               const SizedBox(height: 16),
               PasswordField(
@@ -451,7 +480,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 helper: l.passwordHelperSignUp,
                 autofillHints: const [AutofillHints.newPassword],
                 textInputAction: TextInputAction.next,
-                onChanged: (v) => setState(() => _strength = Validators.passwordStrength(v)),
+                onChanged: (v) => setState(() {
+                  final strength = Validators.passwordStrength(v);
+                  _strength = _passwordV(t)(v) == null ? strength : strength.clamp(0, 1);
+                }),
               ),
               if (_password.text.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -495,13 +527,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               if (_termsError)
                 Padding(
                   padding: const EdgeInsetsDirectional.only(start: 16),
-                  child: Text(t.mustAccept, style: TextStyle(color: scheme.error)),
+                  // Announced: with every field valid, focus has nowhere to go.
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(t.mustAccept, style: TextStyle(color: scheme.error)),
+                  ),
                 ),
               const SizedBox(height: 16),
               if (_error != null) ...[FormErrorBanner(_error!), const SizedBox(height: 16)],
               BusyButton(label: l.createAccountTitle, busy: _busy, onPressed: _submit),
               const SizedBox(height: 8),
-              TextButton(onPressed: () => context.go(Routes.signIn), child: Text(l.haveAccount)),
+              TextButton(onPressed: () => context.go(_keepFrom(context, Routes.signIn)), child: Text(l.haveAccount)),
             ],
           ),
         ),
@@ -535,6 +571,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   StringValidator _v(ValidationText t) => Validators.all([Validators.required(t), Validators.email(t)]);
 
   Future<void> _submit() async {
+    if (_busy) return;
     final t = ValidationText.of(context);
     final l = context.l10n;
     if (!_formKey.currentState!.validate()) {
@@ -572,7 +609,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   child: Text(l.resetSent(_email.text.trim()), style: theme.textTheme.bodyLarge),
                 ),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: () => context.go(Routes.signIn), child: Text(l.backToSignIn)),
+                FilledButton(onPressed: () => context.go(_keepFrom(context, Routes.signIn)), child: Text(l.backToSignIn)),
               ],
             )
           : Form(
@@ -597,7 +634,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   if (_error != null) ...[FormErrorBanner(_error!), const SizedBox(height: 16)],
                   BusyButton(label: l.sendResetLink, busy: _busy, onPressed: _submit),
                   const SizedBox(height: 8),
-                  TextButton(onPressed: () => context.go(Routes.signIn), child: Text(l.backToSignIn)),
+                  TextButton(onPressed: () => context.go(_keepFrom(context, Routes.signIn)), child: Text(l.backToSignIn)),
                 ],
               ),
             ),
@@ -651,7 +688,8 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
     final timedOut = ref.watch(lockControllerProvider.select((s) => s.timedOut));
     // Name what this device uses: Face ID / Touch ID on Apple devices.
     final kind = ref.watch(biometricKindProvider).value ?? BiometricKind.other;
-    final apple = ref.watch(capabilitiesProvider).platform == TargetPlatform.iOS;
+    final platform = ref.watch(capabilitiesProvider).platform;
+    final apple = platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
     final prompt = switch (kind) {
       BiometricKind.face => apple ? l.unlockPromptFaceId : l.unlockPromptFace,
       BiometricKind.fingerprint => apple ? l.unlockPromptTouchId : l.unlockPromptFingerprint,
