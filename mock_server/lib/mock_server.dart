@@ -13,12 +13,14 @@ import 'package:shelf_router/shelf_router.dart';
 
 /// Builds the request handler. [database] is a factory so `POST /api/admin/reset`
 /// can restore the fixtures between test runs. [allowedOrigins]: web origins
-/// besides this machine's (`localhost`, `127.0.0.1`, `[::1]`, any port) that
-/// may call the API from a browser.
+/// besides this machine's (`localhost`, `127.0.0.1`, `[::1]`, `*.localhost`,
+/// any port) that may call the API from a browser. [allowedHosts]: when set,
+/// requests whose `Host` isn't one of them are refused (see [localHosts]).
 Handler buildHandler({
   MockDatabase Function()? database,
   Duration defaultDelay = const Duration(milliseconds: 300),
   Set<String> allowedOrigins = const {},
+  Set<String>? allowedHosts,
 }) {
   final create = database ?? MockDatabase.new;
   var db = create();
@@ -93,9 +95,12 @@ Handler buildHandler({
       );
     })
     ..post('/inspections', (Request r) async {
-      requireAuth(r);
+      final user = db.authenticate(bearer(r));
       final submit = r.url.queryParameters['submit'] == 'true';
-      return json(db.createInspection(await readBody(r), submit: submit, requestKey: r.headers['idempotency-key']), status: 201);
+      return json(
+        db.createInspection(await readBody(r), submit: submit, requestKey: r.headers['idempotency-key'], inspector: user),
+        status: 201,
+      );
     })
     ..get('/inspections/<id>', (Request r, String id) {
       requireAuth(r);
@@ -146,18 +151,38 @@ Handler buildHandler({
       return json({'ok': true});
     });
 
-  final root = Router()
+  // Unmatched paths under /api fall through to the root router's handler.
+  final root = Router(notFoundHandler: _notFound)
     ..mount('/api/', api.call)
     ..get('/', (Request r) => Response.ok('Field Inspections mock API. See /api/health.'));
 
   // CORS outermost, so every response carries its headers, errors included
   // (a browser reports a response without them as a network failure).
   return const Pipeline()
+      .addMiddleware(_hosts(allowedHosts))
       .addMiddleware(_cors(allowedOrigins))
       .addMiddleware(_errors())
       .addMiddleware(_faults(defaultDelay))
       .addHandler(root.call);
 }
+
+Response _notFound(Request r) => _jsonError(404, {'error': 'notFound'});
+
+/// Names this machine is reached by: loopback, `*.localhost`, and the Android
+/// emulator's alias for the host (10.0.2.2).
+const localHosts = {'localhost', '127.0.0.1', '::1', '10.0.2.2'};
+
+/// Refuses a request whose `Host` isn't [allowed] (or a `*.localhost` name):
+/// a page that rebinds its own domain to 127.0.0.1 still sends its domain as
+/// `Host`, and same-origin GETs carry no `Origin` for [_cors] to check. Null
+/// allows any host (tests, or `--host 0.0.0.0` for phones on the network).
+Middleware _hosts(Set<String>? allowed) =>
+    (inner) => (request) {
+      if (allowed == null) return inner(request);
+      final host = request.requestedUri.host;
+      if (allowed.contains(host) || host.endsWith('.localhost')) return inner(request);
+      return _jsonError(403, {'error': 'hostNotAllowed'});
+    };
 
 /// Longest latency `?delay` / `X-Mock-Delay` may ask for.
 const maxDelay = Duration(seconds: 30);

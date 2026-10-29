@@ -365,4 +365,21 @@ void main() {
     expect(db.createInspection(draft('😀' * 500))['id'], isNotNull, reason: '500 characters, 1000 UTF-16 units');
     expect(() => db.createInspection(draft('😀' * 501)), throwsA(isA<MockError>()));
   });
+
+  test('day windows end at the next calendar midnight, also across a clock change', () {
+    // 25 Oct 2026: Europe/Warsaw goes from CEST to CET, so that day has 25 hours.
+    // (Only a machine in such a zone can tell a Duration of days from the next
+    // midnight; `tool/check.sh` runs the date tests in Europe/Warsaw.)
+    final db = MockDatabase(clock: () => DateTime(2026, 10, 25, 10));
+    final late = db.createInspection({
+      'siteId': 's-riverside-office',
+      'type': 'Fire safety, annual',
+      'scheduledAt': DateTime(2026, 10, 25, 23, 30).toIso8601String(),
+      'durationMin': 30,
+    });
+    final today = [for (final i in db.listInspections(due: 'today', pageSize: 100)['items']! as List) (i as Map)['id']];
+    expect(today, contains(late['id']));
+    final custom = db.listInspections(due: 'custom', from: DateTime(2026, 10, 25), to: DateTime(2026, 10, 25), pageSize: 100);
+    expect([for (final i in custom['items']! as List) (i as Map)['id']], contains(late['id']));
+  });
 }

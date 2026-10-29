@@ -21,12 +21,16 @@ Future<void> main(List<String> args) async {
     ..addFlag('quiet', negatable: false, help: 'No request log');
   final opts = parser.parse(args);
 
+  final host = opts['host'] as String;
   var handler = buildHandler(
     defaultDelay: Duration(milliseconds: int.parse(opts['delay'] as String)),
     allowedOrigins: (opts['allow-origin'] as List<String>).toSet(),
+    // Bound to every interface, phones reach it by the machine's network
+    // address, so any Host goes; otherwise only this machine's names.
+    allowedHosts: host == '0.0.0.0' || host == '::' ? null : {...localHosts, host},
   );
   if (!(opts['quiet'] as bool)) handler = const Pipeline().addMiddleware(logRequests()).addHandler(handler);
 
-  final server = await io.serve(handler, opts['host'] as String, int.parse(opts['port'] as String));
+  final server = await io.serve(handler, host, int.parse(opts['port'] as String));
   stdout.writeln('Mock API listening on http://${server.address.host}:${server.port}/api');
 }

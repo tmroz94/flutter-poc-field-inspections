@@ -143,10 +143,13 @@ class MockDatabase {
     final now = _clock();
     final today = DateTime(now.year, now.month, now.day);
     final query = q?.trim().toLowerCase() ?? '';
+    // Next local midnights by calendar day: adding a Duration of days would be
+    // an hour off across a daylight-saving change (decision 104).
+    DateTime dayAfter(DateTime d, [int days = 1]) => DateTime(d.year, d.month, d.day + days);
     bool inDue(DateTime at) => switch (due) {
-      'today' => !at.isBefore(today) && at.isBefore(today.add(const Duration(days: 1))),
-      'week' => !at.isBefore(today) && at.isBefore(today.add(const Duration(days: 7))),
-      'custom' => (from == null || !at.isBefore(from)) && (to == null || at.isBefore(to.add(const Duration(days: 1)))),
+      'today' => !at.isBefore(today) && at.isBefore(dayAfter(today)),
+      'week' => !at.isBefore(today) && at.isBefore(dayAfter(today, 7)),
+      'custom' => (from == null || !at.isBefore(from)) && (to == null || at.isBefore(dayAfter(to))),
       _ => true,
     };
     final items = _inspections.where((i) {
@@ -261,7 +264,13 @@ class MockDatabase {
   ///
   /// [requestKey]: the client's idempotency key. A create with a key seen
   /// before returns the inspection that key created and changes nothing.
-  Map<String, Object?> createInspection(Map<String, Object?> body, {bool submit = false, String? requestKey}) {
+  /// [inspector]: the signed-in user making it (Anna when not given).
+  Map<String, Object?> createInspection(
+    Map<String, Object?> body, {
+    bool submit = false,
+    String? requestKey,
+    Map<String, Object?>? inspector,
+  }) {
     if (_createdByKey[requestKey] case final existing?) return getInspection(existing);
     final id = 'INS-$_nextId';
     final record = _prepare(body, id: id, submit: submit);
@@ -271,7 +280,12 @@ class MockDatabase {
       ...record,
       'status': submit ? 'submitted' : 'draft',
       'templateId': fireSafetyTemplate['id'],
-      'inspector': inspectorAnna,
+      'inspector': inspector == null
+          ? inspectorAnna
+          : {
+              for (final k in ['id', 'name', 'email', 'initials']) k: inspector[k],
+              'role': inspector['role'] ?? 'Inspector',
+            },
       'siteManager': siteManagerPiotr,
       'archived': false,
       'updatedAt': _clock().toIso8601String(),

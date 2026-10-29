@@ -156,6 +156,45 @@ void main() {
     final list = await decode(await call('GET', '/api/inspections?q=INS-1043', token: fresh));
     expect(list['total'], 1);
   });
+  test('an unknown path or method is a JSON 404 like every other error', () async {
+    for (final (method, path) in [('GET', '/api/no-such-thing'), ('PATCH', '/api/inspections/INS-1042'), ('GET', '/nope')]) {
+      final r = await call(method, path);
+      expect(r.statusCode, 404, reason: '$method $path');
+      expect(await decode(r), {'error': 'notFound'}, reason: '$method $path');
+    }
+  });
+
+  test('with allowedHosts, a request for another host name is refused (DNS rebinding)', () async {
+    handler = buildHandler(defaultDelay: Duration.zero, allowedHosts: {...localHosts, '127.0.0.1'});
+    Future<int> health(String base) async => (await handler(Request('GET', Uri.parse('$base/api/health')))).statusCode;
+    expect(await health('http://localhost:8080'), 200);
+    expect(await health('http://127.0.0.1:8080'), 200);
+    expect(await health('http://[::1]:8080'), 200);
+    expect(await health('http://10.0.2.2:8080'), 200, reason: 'the Android emulator');
+    expect(await health('http://app.localhost:8080'), 200);
+    expect(await health('http://attacker.example:8080'), 403);
+  });
+
+  test('a new inspection records the signed-in user as its inspector', () async {
+    final signUp = await call('POST', '/api/auth/sign-up', body: {'name': 'Ola Test', 'email': 'ola@example.com', 'password': 'secret123'});
+    final token = (await decode(signUp))['token'] as String;
+    final created = await call(
+      'POST',
+      '/api/inspections',
+      token: token,
+      body: {
+        'siteId': 's-riverside-office',
+        'type': 'Fire safety, annual',
+        'scheduledAt': DateTime.now().add(const Duration(days: 1)).toIso8601String(),
+        'durationMin': 60,
+      },
+    );
+    expect(created.statusCode, 201);
+    final inspector = (await decode(created))['inspector'] as Map<String, dynamic>;
+    expect(inspector['name'], 'Ola Test');
+    expect(inspector['role'], 'Inspector');
+    expect(inspector.containsKey('password'), isFalse);
+  });
 }
 
 /// A backend with a bug, to check what the HTTP layer does with it.

@@ -145,10 +145,13 @@ class HttpInspectionsRepository implements InspectionsRepository {
 
 /// Offline fake over [MockDatabase] with simulated latency.
 class FakeInspectionsRepository implements InspectionsRepository {
-  FakeInspectionsRepository(this._db, {this.latency = const Duration(milliseconds: 400)});
+  FakeInspectionsRepository(this._db, {this.latency = const Duration(milliseconds: 400), this.inspector});
 
   final MockDatabase _db;
   final Duration latency;
+
+  /// The signed-in user, recorded as a new inspection's inspector.
+  final Map<String, Object?>? Function()? inspector;
 
   Future<T> _run<T>(T Function() body) async {
     if (latency > Duration.zero) await Future<void>.delayed(latency);
@@ -205,7 +208,9 @@ class FakeInspectionsRepository implements InspectionsRepository {
   @override
   Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) => _run(
     () => InspectionDetail.fromJson(
-      id == null ? _db.createInspection(body, submit: submit, requestKey: requestKey) : _db.updateInspection(id, body, submit: submit),
+      id == null
+          ? _db.createInspection(body, submit: submit, requestKey: requestKey, inspector: inspector?.call())
+          : _db.updateInspection(id, body, submit: submit),
     ),
   );
 }

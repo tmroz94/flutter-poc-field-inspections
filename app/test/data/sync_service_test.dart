@@ -305,4 +305,14 @@ void main() {
     expect(saved.notes, 'Gate 3');
     expect(saved.date, DateTime(2026, 10, 25));
   });
+
+  test('offline fake: a new inspection records the signed-in user as its inspector', () async {
+    final fake = FakeInspectionsRepository(
+      db,
+      latency: Duration.zero,
+      inspector: () => {'id': 'u-ola', 'name': 'Ola Test', 'email': 'ola@example.com', 'initials': 'OT'},
+    );
+    final saved = await fake.save(_body('s-riverside-office'), submit: true);
+    expect(saved.inspector.name, 'Ola Test');
+  });
 }

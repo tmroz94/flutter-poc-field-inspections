@@ -36,6 +36,9 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 final inspectionsRepositoryProvider = Provider<InspectionsRepository>((ref) {
   return switch (ref.watch(backendConfigProvider).mode) {
     BackendMode.http => HttpInspectionsRepository(ref.watch(apiClientProvider)),
-    BackendMode.fake => FakeInspectionsRepository(ref.watch(mockDatabaseProvider)),
+    BackendMode.fake => FakeInspectionsRepository(
+      ref.watch(mockDatabaseProvider),
+      inspector: () => ref.read(authControllerProvider).user?.toJson(),
+    ),
   };
 });
