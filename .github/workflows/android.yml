@@ -107,9 +107,16 @@ jobs:
           disable-animations: false
           # From the snapshot, without writing the test run's state back to it.
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
+          # The action runs each line on its own (sh -c). First: the whole
+          # logcat to a file, in the background, for the artifact. Then wait
+          # until the package manager answers (in run 40938499241 the app
+          # installed, but its activity then wasn't found). On a failure, save
+          # what the emulator knows (tool/ci_android_diagnostics.sh).
           script: |
-            dart tool/android_device_tests.dart --device emulator-5554
-            dart tool/android_device_tests.dart --device emulator-5554 --patrol
+            mkdir -p app/build/ci-diagnostics && (adb -s emulator-5554 logcat -v threadtime > app/build/ci-diagnostics/logcat.txt 2>&1 &)
+            timeout 300 sh -c 'until adb -s emulator-5554 shell pm path android 2>/dev/null | grep -q package:; do sleep 5; done' && echo "Package manager ready."
+            dart tool/android_device_tests.dart --device emulator-5554 || (sh tool/ci_android_diagnostics.sh; exit 1)
+            dart tool/android_device_tests.dart --device emulator-5554 --patrol || (sh tool/ci_android_diagnostics.sh; exit 1)
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -117,4 +124,5 @@ jobs:
           path: |
             app/build/app/reports/androidTests
             app/build/app/outputs/androidTest-results
+            app/build/ci-diagnostics
           retention-days: 7
