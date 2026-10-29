@@ -19,7 +19,7 @@ jobs:
   emulator:
     name: Emulator (API 37)
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
       - name: Enable KVM
@@ -57,6 +57,40 @@ jobs:
           (cd mock_server && dart pub get)
           dart pub global activate patrol_cli 4.8.0
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+      # One Gradle build before the emulator starts, so the 3 GB Gradle daemon
+      # and the emulator don't fight over the runner; the test builds reuse it.
+      - name: Build the app once
+        run: cd app && flutter build apk --debug --target integration_test/app_test.dart
+      # A cold boot on the runner left Android's system services failing
+      # ("Broken pipe" from input and package), so installs failed before any
+      # test ran. The emulator gets the runner's 4 cores and fixed RAM, boots
+      # once to save a snapshot (cached between runs), and the tests start from
+      # that warm state. Change the key when the emulator settings change.
+      - name: AVD cache
+        id: avd-cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-37.0-playstore-x86_64-pixel_7-4cores-4g-v1
+      - name: Create the AVD and its snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: '37.0'
+          target: google_apis_playstore
+          arch: x86_64
+          profile: pixel_7
+          cores: 4
+          ram-size: 4096M
+          heap-size: 576M
+          disk-size: 8G
+          force-avd-creation: false
+          emulator-boot-timeout: 900
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
+          script: echo "AVD snapshot saved."
       - name: Device tests
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
@@ -64,8 +98,15 @@ jobs:
           target: google_apis_playstore
           arch: x86_64
           profile: pixel_7
+          cores: 4
+          ram-size: 4096M
+          heap-size: 576M
+          disk-size: 8G
+          force-avd-creation: false
+          emulator-boot-timeout: 900
           disable-animations: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
+          # From the snapshot, without writing the test run's state back to it.
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
           script: |
             dart tool/android_device_tests.dart --device emulator-5554
             dart tool/android_device_tests.dart --device emulator-5554 --patrol
