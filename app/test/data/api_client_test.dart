@@ -88,6 +88,26 @@ void main() {
     expect(unauthorized, 1);
   });
 
+  test('a late 401 for an older token leaves the newer session alone', () async {
+    var current = 'old';
+    final a = _Adapter(401, {'error': 'unauthorized'});
+    final dio = Dio(BaseOptions(baseUrl: 'http://api.test'))..httpClientAdapter = a;
+    final api = ApiClient(baseUrl: 'http://api.test', token: () => current, onUnauthorized: () => unauthorized++, dio: dio);
+    final late = api.get('/inspections');
+    // The user signs in again before the old request's answer arrives.
+    current = 'new';
+    await expectLater(late, throwsA(isA<ApiException>().having((e) => e.code, 'code', 'unauthorized')));
+    expect(unauthorized, 0);
+    await expectLater(api.get('/inspections'), throwsA(isA<ApiException>()));
+    expect(unauthorized, 1);
+  });
+
+  test('a 401 for a token checked with bearer does not end the session', () async {
+    final api = client(_Adapter(401, {'error': 'unauthorized'}), token: 'session');
+    await expectLater(api.get('/me', bearer: 'stored'), throwsA(isA<ApiException>()));
+    expect(unauthorized, 0);
+  });
+
   test('404 and 5xx', () async {
     expect((await fail(_Adapter(404, {'error': 'notFound'}))).code, 'notFound');
     expect((await fail(_Adapter(503, {'error': 'injected'}))).code, 'server');

@@ -975,6 +975,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get wizardDraftSaved => 'Szkic zapisany na tym urządzeniu';
 
   @override
+  String get wizardNothingToSave => 'Nie ma jeszcze nic do zapisania';
+
+  @override
   String get wizardProgress => 'Postęp kreatora';
 
   @override

@@ -104,6 +104,8 @@ class RemindersController extends Notifier<bool> {
     try {
       await notifications.cancelAll();
       for (final i in items) {
+        // Turned off meanwhile: stop (and clear what this run already set, below).
+        if (!ref.mounted || !state) break;
         final at = i.scheduledAt.subtract(leadTime);
         if (at.isBefore(now)) continue;
         final ok = await notifications.schedule(
@@ -116,6 +118,10 @@ class RemindersController extends Notifier<bool> {
           channelDescription: l.reminderChannelDescription,
         );
         if (ok) count++;
+      }
+      if (!ref.mounted || !state) {
+        await notifications.cancelAll();
+        return 0;
       }
     } on Object catch (e) {
       debugPrint('Reminders: scheduling failed: $e');

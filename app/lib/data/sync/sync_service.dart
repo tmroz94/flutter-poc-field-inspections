@@ -8,6 +8,7 @@ import '../../features/auth/auth_controller.dart';
 import '../../features/auth/auth_models.dart';
 import '../../features/inspections/inspections_controller.dart';
 import '../api/api_exception.dart';
+import '../local/local_data.dart';
 import '../local/local_store.dart';
 import '../providers.dart';
 
@@ -60,11 +61,17 @@ class SyncState {
 
 /// Sends queued submits in order. Stops at the first network error (still
 /// offline) or a rejected session (401: the entry waits for the next sign-in);
-/// any other failure marks that entry failed and moves on. Each run also
-/// fetches the wizard's reference data, so it's on the device for offline use.
+/// any other failure marks that entry failed and moves on. Only the signed-in
+/// user's own queue is sent, and a run stops if the session changes. Each run
+/// also refreshes the wizard's reference data, so it's on the device for
+/// offline use.
 class SyncService extends Notifier<SyncState> {
   /// The run in progress; callers during a run share it, so one entry is never sent twice.
   Future<void>? _running;
+
+  /// [run] was called during a run: go once more when it ends, so an entry
+  /// queued or retried meanwhile doesn't wait for the next trigger.
+  bool _again = false;
 
   @override
   SyncState build() {
@@ -78,10 +85,27 @@ class SyncService extends Notifier<SyncState> {
     return const SyncState();
   }
 
-  Future<void> run() => _running ??= _run().whenComplete(() => _running = null);
+  Future<void> run() {
+    if (_running case final running?) {
+      _again = true;
+      return running;
+    }
+    return _running = _runs().whenComplete(() => _running = null);
+  }
+
+  Future<void> _runs() async {
+    do {
+      _again = false;
+      await _run();
+    } while (_again && ref.mounted);
+  }
 
   Future<void> _run() async {
-    if (ref.read(authControllerProvider).status != AuthStatus.signedIn) return;
+    final auth = ref.read(authControllerProvider);
+    final userId = auth.user?.id;
+    if (auth.status != AuthStatus.signedIn || userId == null) return;
+    // Another account's queue (switching owners failed): never send it under this one.
+    if (!ref.read(localDataProvider).isFor(userId)) return;
     final store = ref.read(localStoreProvider);
     state = SyncState(syncing: true, lastSyncAt: state.lastSyncAt);
     final reference = _fetchReferenceData();
@@ -92,6 +116,12 @@ class SyncService extends Notifier<SyncState> {
     try {
       final pending = (await store.outbox()).where((e) => e.lastError == null).toList();
       for (final entry in pending) {
+        // Signed out, or someone else signed in, since the run started: the
+        // rest of this user's queue waits for their next sign-in.
+        if (ref.read(authControllerProvider).user?.id != userId) {
+          signedOut = true;
+          break;
+        }
         try {
           await ref
               .read(inspectionsRepositoryProvider)
@@ -131,11 +161,12 @@ class SyncService extends Notifier<SyncState> {
 
   /// The checklist template and inspection types keep their last copy on the
   /// device (see `_cachedReference`), so a report can be written offline even
-  /// when the wizard was never opened online. A failure is left to the wizard,
-  /// which says so when it needs the data.
+  /// when the wizard was never opened online. Refreshed, not just read: once
+  /// loaded they stay alive for the session (decision 100). A failure is left
+  /// to the wizard, which says so when it needs the data.
   Future<void> _fetchReferenceData() async {
     try {
-      await (ref.read(checklistProvider(fireSafetyTemplateId).future), ref.read(inspectionTypesProvider.future)).wait;
+      await (ref.refresh(checklistProvider(fireSafetyTemplateId).future), ref.refresh(inspectionTypesProvider.future)).wait;
     } on Object catch (e) {
       debugPrint('Reference data not fetched: $e');
     }

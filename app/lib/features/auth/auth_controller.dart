@@ -41,12 +41,14 @@ class AuthController extends Notifier<AuthState> {
       await _activate(Session(token: saved.token, user: user));
     } on ApiException catch (e) {
       if (!ref.mounted) return;
-      // Offline-first: a network failure keeps the cached session.
-      if (e.code == 'network') {
-        await _activate(saved);
-      } else {
+      // Only a rejected token ends the session. Offline-first: no network, a
+      // server error or any other failure keeps the cached one.
+      if (e.code == 'unauthorized') {
         await ref.read(keyValueStoreProvider).remove(_key);
         state = const AuthState.signedOut();
+      } else {
+        debugPrint('Session check failed: ${e.code}');
+        await _activate(saved);
       }
     } on Object catch (e) {
       // An answer that isn't the API's (e.g. a captive portal's HTML page):

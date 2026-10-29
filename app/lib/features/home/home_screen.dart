@@ -381,7 +381,9 @@ class _LocalWork extends ConsumerWidget {
       messenger.showSnackBar(SnackBar(content: Text(busy)));
       return;
     }
-    await store.saveDraft(key, e.draft!.copyWith(lastStep: 5));
+    // The entry's key goes back with it: if the server did store the first
+    // attempt (an answer it couldn't read), resubmitting doesn't make a copy.
+    await store.saveDraft(key, e.draft!.copyWith(lastStep: 5, requestKey: e.requestKey));
     await store.removeFromOutbox(e.id);
     if (!context.mounted) return;
     context.go(

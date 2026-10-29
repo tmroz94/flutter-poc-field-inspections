@@ -1694,6 +1694,12 @@ abstract class AppLocalizations {
   /// **'Draft saved on this device'**
   String get wizardDraftSaved;
 
+  /// No description provided for @wizardNothingToSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to save yet'**
+  String get wizardNothingToSave;
+
   /// No description provided for @wizardProgress.
   ///
   /// In en, this message translates to:

@@ -230,7 +230,10 @@ class MockDatabase {
   /// Server-side validation mirrors the app's wizard validators, so a client
   /// that skips them still gets field errors back (HTTP 422). [record] is the
   /// inspection as it would be stored, plus `confirmed` from the request.
-  Map<String, String> validateInspection(Map<String, Object?> record, {required bool submitting, bool isNew = false}) {
+  /// A past date isn't refused: a report written offline for today may only
+  /// arrive after midnight (decision 118); the wizard keeps new ones from
+  /// being scheduled in the past.
+  Map<String, String> validateInspection(Map<String, Object?> record, {required bool submitting}) {
     final f = <String, String>{};
     final site = record['site'];
     if (site is! String || site.trim().length < 3) f['site'] = 'required';
@@ -239,12 +242,7 @@ class MockDatabase {
       final String s => DateTime.tryParse(s),
       _ => null,
     };
-    final now = _clock();
-    if (at == null) {
-      f['scheduledAt'] = 'required';
-    } else if (isNew && at.isBefore(DateTime(now.year, now.month, now.day))) {
-      f['scheduledAt'] = 'past';
-    }
+    if (at == null) f['scheduledAt'] = 'required';
     final duration = record['durationMin'];
     if (duration is! int || duration < 15 || duration > 480) f['durationMin'] = 'range';
     if (record['notes'] case final String notes when notes.length > 500) f['notes'] = 'tooLong';
@@ -342,7 +340,7 @@ class MockDatabase {
       record['photos'] = _storePhotos(photos, (existing?['photos'] as List?) ?? const []);
     }
 
-    final rules = validateInspection({...?existing, ...record, 'confirmed': b['confirmed']}, submitting: submit, isNew: existing == null);
+    final rules = validateInspection({...?existing, ...record, 'confirmed': b['confirmed']}, submitting: submit);
     final all = {...rules, ...errors};
     if (all.isNotEmpty) throw MockError(422, 'validation', fields: all);
     return record;

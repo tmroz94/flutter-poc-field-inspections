@@ -127,6 +127,8 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
 
   /// Each step adds a history entry, so browser back returns to the previous step.
   void _goTo(int step) {
+    // The draft can't change while it's being sent.
+    if (ref.read(wizardControllerProvider(_key)).submitting) return;
     if (_notice != null) setState(() => _notice = null);
     ref.read(wizardControllerProvider(_key).notifier).reachStep(step);
     context.go(_location(step));
@@ -174,9 +176,9 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
 
   Future<void> _saveDraft() async {
     final messenger = ScaffoldMessenger.of(context);
-    final saved = context.l10n.wizardDraftSaved;
-    await ref.read(wizardControllerProvider(_key).notifier).saveNow();
-    messenger.showSnackBar(SnackBar(content: Text(saved)));
+    final l = context.l10n;
+    final saved = await ref.read(wizardControllerProvider(_key).notifier).saveNow();
+    messenger.showSnackBar(SnackBar(content: Text(saved ? l.wizardDraftSaved : l.wizardNothingToSave)));
   }
 
   Future<void> _submit() async {
@@ -273,7 +275,7 @@ class _WizardScreenState extends ConsumerState<WizardScreen> {
               ],
             ),
           ),
-        TextButton(onPressed: _saveDraft, child: Text(context.l10n.saveDraft)),
+        TextButton(onPressed: state.submitting ? null : _saveDraft, child: Text(context.l10n.saveDraft)),
       ],
     );
 

@@ -915,6 +915,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wizardDraftSaved => 'Draft saved on this device';
 
   @override
+  String get wizardNothingToSave => 'Nothing to save yet';
+
+  @override
   String get wizardProgress => 'Wizard progress';
 
   @override

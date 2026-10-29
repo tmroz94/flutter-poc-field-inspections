@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:field_inspections/core/platform/platform_services.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
 import 'package:field_inspections/core/validation/validators.dart';
 import 'package:field_inspections/data/api/api_exception.dart';
@@ -15,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mock_data/mock_data.dart';
 
+import '../helpers/fakes.dart';
 import '../helpers/test_app.dart';
 
 final _items = [for (var i = 1; i <= 18; i++) ChecklistItem(id: 'c${i.toString().padLeft(2, '0')}', title: 'Item $i')];
@@ -40,14 +45,27 @@ class _SwitchableRepository extends FakeInspectionsRepository {
   /// The server stores the save, then the answer is lost on the way back.
   bool loseResponse = false;
 
+  /// The server stores the save, then a gateway answers 502.
+  bool gatewayError = false;
+
+  /// Holds saves until completed.
+  Completer<void>? hold;
+
+  final keys = <String?>[];
+
   @override
   Future<InspectionDetail> save(Map<String, Object?> body, {String? id, bool submit = false, String? requestKey}) async {
+    keys.add(requestKey);
+    await hold?.future;
     if (!online) throw const ApiException('network');
     final saved = await super.save(body, id: id, submit: submit, requestKey: requestKey);
     if (loseResponse) throw const ApiException('network');
+    if (gatewayError) throw const ApiException('server', status: 502);
     return saved;
   }
 }
+
+final _allPass = {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id'] as String: Answer.pass};
 
 void main() {
   final v = WizardValidator(ValidationText.en, today: _today, checklist: _items);
@@ -116,6 +134,13 @@ void main() {
     });
   });
 
+  test('a typed site keeps nothing of the site picked before it', () {
+    final picked = _complete().copyWith(siteAddress: 'Riverside 4', siteLat: () => 52.2, siteLng: () => 21.0);
+    final typed = picked.withNewSite('Riverside office, floor 5');
+    expect((typed.siteId, typed.siteAddress, typed.siteLat, typed.siteLng), (null, '', null, null));
+    expect(typed.siteName, 'Riverside office, floor 5');
+  });
+
   test('draft JSON round-trips', () {
     final d = _complete().copyWith(
       failures: {'c02': const FailDetail(severity: 4, followUp: false, note: 'n')},
@@ -134,10 +159,14 @@ void main() {
     late MockDatabase db;
     late _SwitchableRepository repo;
 
+    late MemoryStore kv;
+    late FakeMedia media;
+
     ProviderContainer container() {
       final c = ProviderContainer(
         overrides: [
-          keyValueStoreProvider.overrideWithValue(MemoryStore(signedInStore())),
+          keyValueStoreProvider.overrideWithValue(kv),
+          mediaServiceProvider.overrideWithValue(media),
           mockDatabaseProvider.overrideWithValue(db),
           authRepositoryProvider.overrideWith((ref) => FakeAuthRepository(db, latency: Duration.zero)),
           inspectionsRepositoryProvider.overrideWithValue(repo),
@@ -156,6 +185,8 @@ void main() {
       // Same frozen day as the drafts: the backend rejects dates before its own today.
       db = MockDatabase(clock: () => _today);
       repo = _SwitchableRepository(db);
+      kv = MemoryStore(signedInStore());
+      media = FakeMedia();
     });
 
     Future<WizardController> open(ProviderContainer c, String key) async {
@@ -245,6 +276,92 @@ void main() {
       expect(store.entries, isEmpty);
       expect(db.listInspections(q: 'INS-1046')['total'], 1);
       expect(db.listInspections(q: 'INS-1047')['total'], 0, reason: 'the outbox resend returned INS-1046');
+    });
+
+    test('a second submit after a gateway error sends the same key: one inspection', () async {
+      final c = container();
+      final w = await open(c, 'new');
+      w.update((_) => _complete().copyWith(answers: _allPass));
+      repo
+        ..online = true
+        ..gatewayError = true;
+      expect(await w.submit(), isNull);
+      expect(c.read(wizardControllerProvider('new')).submitError?.code, 'server');
+      expect(store.drafts['new']?.requestKey, isNotNull, reason: 'kept with the draft for a retry after leaving');
+
+      repo.gatewayError = false;
+      final result = await w.submit();
+      expect(result?.id, 'INS-1046', reason: 'the server returned the inspection the first attempt made');
+      expect(repo.keys.toSet(), hasLength(1));
+      expect(db.listInspections(q: 'INS-1047')['total'], 0);
+    });
+
+    test('nothing in the draft changes while it is being sent', () async {
+      repo
+        ..online = true
+        ..hold = Completer<void>();
+      final c = container();
+      final w = await open(c, 'new');
+      w.update((_) => _complete().copyWith(answers: _allPass, notes: 'Sent'));
+      final submit = w.submit();
+      await Future<void>.delayed(Duration.zero);
+      expect(c.read(wizardControllerProvider('new')).submitting, isTrue);
+      w.update((d) => d.copyWith(notes: 'Typed while sending'));
+      expect(c.read(wizardControllerProvider('new')).draft.notes, 'Sent', reason: 'the screen shows what is being sent');
+      expect(await w.saveNow(), isFalse);
+      await w.discard();
+      expect(store.drafts['new']?.notes, 'Sent', reason: 'discard waits: a rejected submit still needs the draft');
+      repo.hold!.complete();
+      expect((await submit)?.outcome, SubmitOutcome.sent);
+      c.dispose();
+      expect(store.drafts, isEmpty, reason: 'no late save brings the sent draft back');
+      expect(db.getInspection('INS-1046')['notes'], 'Sent');
+    });
+
+    test('a saved new draft that is emptied again is deleted, not restored next time', () async {
+      final c = container();
+      final w = await open(c, 'new');
+      w.update((d) => d.copyWith(siteName: 'New depot'));
+      expect(await w.saveNow(), isTrue);
+      w.update((d) => d.copyWith(siteName: ''));
+      await Future<void>.delayed(Duration.zero);
+      expect(store.drafts, isEmpty);
+      expect(c.read(wizardControllerProvider('new')).savedAt, isNull);
+      c.dispose();
+      expect(store.drafts, isEmpty, reason: 'nothing stale is flushed on close');
+    });
+
+    test('Save draft says when there is nothing to keep yet; a date alone counts', () async {
+      final c = container();
+      final w = await open(c, 'new');
+      expect(await w.saveNow(), isFalse);
+      w.update((d) => d.copyWith(date: () => DateTime(2026, 10, 30)));
+      expect(await w.saveNow(), isTrue);
+      expect(store.drafts['new']?.date, DateTime(2026, 10, 30));
+    });
+
+    test('typing just before the wizard closes is saved by the close', () async {
+      final c = container();
+      final w = await open(c, 'new');
+      w.update((d) => d.copyWith(siteName: 'Last-second depot'));
+      c.dispose();
+      expect(store.drafts['new']?.siteName, 'Last-second depot');
+    });
+
+    test('a camera photo recovered after a restart goes to the wizard it was taken for', () async {
+      media.lost = PickedFile(name: 'IMG_9.png', bytes: tinyPng, mime: 'image/png');
+      await kv.setString('wizard.cameraFor', jsonEncode({'key': 'INS-1042', 'forItem': 'c02'}));
+      final c = container();
+      await open(c, 'new');
+      await Future<void>.delayed(Duration.zero);
+      expect(c.read(wizardControllerProvider('new')).draft.attachments, isEmpty);
+      expect(media.lost, isNotNull, reason: 'left for the edit of INS-1042');
+
+      await open(c, 'INS-1042');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final added = c.read(wizardControllerProvider('INS-1042')).draft.attachments.where((a) => !a.stored).single;
+      expect(added.forItem, 'c02');
+      expect(kv.getString('wizard.cameraFor'), isNull);
     });
 
     test('a server rejection marks the outbox entry and keeps going', () async {

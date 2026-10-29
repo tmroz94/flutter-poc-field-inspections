@@ -156,9 +156,14 @@ void main() {
       expect(created['id'], 'INS-1046');
       expect(created['status'], 'draft');
       expect(
-        () => db.createInspection({...validDraft(), 'durationMin': 5, 'scheduledAt': DateTime(2026, 10, 1).toIso8601String()}),
+        () => db.createInspection({...validDraft(), 'durationMin': 5, 'scheduledAt': 'soon'}),
         throwsA(isA<MockError>().having((e) => e.fields.keys, 'fields', containsAll(['durationMin', 'scheduledAt']))),
       );
+    });
+
+    test('a create dated before today is accepted (written offline, sent after midnight)', () {
+      final created = db.createInspection({...validDraft(), 'scheduledAt': DateTime(2026, 10, 1, 14).toIso8601String()});
+      expect(created['scheduledAt'], startsWith('2026-10-01'));
     });
 
     test('submitting requires every checklist answer and confirmation', () {

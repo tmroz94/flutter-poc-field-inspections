@@ -75,6 +75,7 @@ class InspectionDraft {
     this.confirmed = false,
     this.lastStep = 1,
     this.updatedAt,
+    this.requestKey,
   });
 
   factory InspectionDraft.fromJson(Map<String, Object?> j) => InspectionDraft(
@@ -102,6 +103,7 @@ class InspectionDraft {
     confirmed: j['confirmed'] == true,
     lastStep: (j['lastStep'] as num?)?.toInt() ?? 1,
     updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? ''),
+    requestKey: j['requestKey'] as String?,
   );
 
   /// Prefill for `/inspections/:id/edit`.
@@ -170,13 +172,33 @@ class InspectionDraft {
   final int lastStep;
   final DateTime? updatedAt;
 
+  /// `Idempotency-Key` of a new inspection, made on its first submit and kept
+  /// until one succeeds, so a retry after a lost answer can't create it twice.
+  final String? requestKey;
+
   bool get hasSite => siteId != null || siteName.trim().length >= 3;
-  bool get isEmpty => !hasSite && type == null && answers.isEmpty && attachments.isEmpty && notes.isEmpty && duration.isEmpty;
+  bool get isEmpty =>
+      !hasSite &&
+      type == null &&
+      date == null &&
+      startMinutes == null &&
+      priority == Priority.normal &&
+      myLat == null &&
+      answers.isEmpty &&
+      failures.isEmpty &&
+      attachments.isEmpty &&
+      notes.isEmpty &&
+      duration.isEmpty;
 
   DateTime? get scheduledAt {
     final d = date, m = startMinutes;
     return d == null || m == null ? null : DateTime(d.year, d.month, d.day, m ~/ 60, m % 60);
   }
+
+  /// A site typed rather than picked: nothing of a previously picked site
+  /// (id, address, coordinates) stays behind.
+  InspectionDraft withNewSite(String name) =>
+      copyWith(siteId: () => null, siteName: name, siteAddress: '', siteLat: () => null, siteLng: () => null);
 
   List<DraftAttachment> get photos => attachments.where((a) => a.isPhoto).toList();
   List<DraftAttachment> get files => attachments.where((a) => !a.isPhoto).toList();
@@ -200,6 +222,7 @@ class InspectionDraft {
     bool? confirmed,
     int? lastStep,
     DateTime? updatedAt,
+    String? requestKey,
   }) => InspectionDraft(
     inspectionId: inspectionId,
     siteId: siteId != null ? siteId() : this.siteId,
@@ -222,6 +245,7 @@ class InspectionDraft {
     confirmed: confirmed ?? this.confirmed,
     lastStep: lastStep ?? this.lastStep,
     updatedAt: updatedAt ?? this.updatedAt,
+    requestKey: requestKey ?? this.requestKey,
   );
 
   Map<String, Object?> toJson() => {
@@ -246,6 +270,7 @@ class InspectionDraft {
     'confirmed': confirmed,
     'lastStep': lastStep,
     'updatedAt': updatedAt?.toIso8601String(),
+    'requestKey': requestKey,
   };
 
   /// Body for `POST /inspections` / `PUT /inspections/:id`.

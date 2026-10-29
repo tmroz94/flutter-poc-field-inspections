@@ -27,41 +27,33 @@ class ApiClient {
 
   /// [bearer] overrides the session token (used to validate a stored token on start-up).
   Future<Object?> get(String path, {Map<String, Object?>? query, String? bearer}) => _send(
-    () => _dio.get<Object?>(
-      path,
-      queryParameters: query,
-      options: _auth(bearer: bearer),
-    ),
+    (options) => _dio.get<Object?>(path, queryParameters: query, options: options),
+    bearer: bearer,
   );
 
   Future<Object?> post(String path, {Object? body, Map<String, Object?>? query, Map<String, String>? headers}) => _send(
-    () => _dio.post<Object?>(
-      path,
-      data: body,
-      queryParameters: query,
-      options: _auth(headers: headers),
-    ),
+    (options) => _dio.post<Object?>(path, data: body, queryParameters: query, options: options),
+    headers: headers,
   );
 
   Future<Object?> put(String path, {Object? body, Map<String, Object?>? query}) =>
-      _send(() => _dio.put<Object?>(path, data: body, queryParameters: query, options: _auth()));
+      _send((options) => _dio.put<Object?>(path, data: body, queryParameters: query, options: options));
 
-  Future<Object?> delete(String path) => _send(() => _dio.delete<Object?>(path, options: _auth()));
+  Future<Object?> delete(String path) => _send((options) => _dio.delete<Object?>(path, options: options));
 
-  Options _auth({String? bearer, Map<String, String>? headers}) {
-    final t = bearer ?? token();
-    return Options(headers: {...?headers, if (t != null) 'Authorization': 'Bearer $t'});
-  }
-
-  Future<Object?> _send(Future<Response<Object?>> Function() call) async {
+  Future<Object?> _send(Future<Response<Object?>> Function(Options options) call, {String? bearer, Map<String, String>? headers}) async {
+    final sent = bearer ?? token();
     try {
-      return (await call()).data;
+      return (await call(Options(headers: {...?headers, if (sent != null) 'Authorization': 'Bearer $sent'}))).data;
     } on DioException catch (e) {
-      throw _map(e);
+      // Only a 401 for the token in use now ends the session: a late answer
+      // to an older one (the user signed in again meanwhile) or a token
+      // checked with [bearer] leaves it alone.
+      throw _map(e, endsSession: bearer == null && sent == token());
     }
   }
 
-  ApiException _map(DioException e) {
+  ApiException _map(DioException e, {required bool endsSession}) {
     final response = e.response;
     if (response == null) return const ApiException('network');
     final status = response.statusCode;
@@ -74,7 +66,7 @@ class ApiClient {
       final String s => s,
       _ => null,
     };
-    if (status == 401 && code != 'invalidCredentials') onUnauthorized?.call();
+    if (status == 401 && code != 'invalidCredentials' && endsSession) onUnauthorized?.call();
     return ApiException(
       switch ((status, code)) {
         (_, 'invalidCredentials') => 'invalidCredentials',

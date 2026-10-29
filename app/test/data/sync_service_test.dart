@@ -20,6 +20,8 @@ import '../helpers/test_app.dart';
 
 final _today = DateTime(2026, 10, 24, 10);
 
+final _allPass = {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id'] as String: Answer.pass};
+
 /// A complete new inspection for the day after [_today].
 Map<String, Object?> _body(String siteId) => InspectionDraft(
   siteId: siteId,
@@ -28,7 +30,7 @@ Map<String, Object?> _body(String siteId) => InspectionDraft(
   date: DateTime(2026, 10, 25),
   startMinutes: 9 * 60,
   duration: '60',
-  answers: {for (final i in fireSafetyTemplate['items']! as List) (i as Map)['id'] as String: Answer.pass},
+  answers: _allPass,
   confirmed: true,
 ).toApiBody();
 
@@ -46,9 +48,13 @@ class _Repo extends FakeInspectionsRepository {
   /// The server stores the save, then the answer is lost on the way back.
   bool loseResponse = false;
 
+  int checklistLoads = 0;
+
   @override
-  Future<List<ChecklistItem>> checklist(String templateId) =>
-      offline ? Future.error(const ApiException('network')) : super.checklist(templateId);
+  Future<List<ChecklistItem>> checklist(String templateId) {
+    checklistLoads++;
+    return offline ? Future.error(const ApiException('network')) : super.checklist(templateId);
+  }
 
   @override
   Future<List<String>> inspectionTypes() => offline ? Future.error(const ApiException('network')) : super.inspectionTypes();
@@ -116,6 +122,69 @@ void main() {
     expect(repo.saves, 1);
     expect(store.entries, isEmpty);
     expect(c.read(syncServiceProvider).syncing, isFalse);
+  });
+
+  test('an entry retried while a run is going is sent by that run', () async {
+    final c = await signedIn();
+    final rejected = await store.enqueue(kind: 'create', site: 'Harbour', body: _body('s-warehouse-a'));
+    await store.markFailed(rejected, 'server');
+    await store.enqueue(kind: 'create', site: 'Riverside', body: _body('s-riverside-office'));
+    repo.hold = Completer<void>();
+    final sync = c.read(syncServiceProvider.notifier);
+    final running = sync.run();
+    // Home → Retry while the run sends the other entry.
+    await store.retryEntry(rejected);
+    final retried = sync.run();
+    repo.hold!.complete();
+    await Future.wait([running, retried]);
+    expect(store.entries, isEmpty);
+    expect(repo.saves, 2);
+  });
+
+  test('a run stops sending when the session ends meanwhile', () async {
+    final c = await signedIn();
+    await store.enqueue(kind: 'create', site: 'Riverside', body: _body('s-riverside-office'));
+    await store.enqueue(kind: 'create', site: 'Harbour', body: _body('s-warehouse-a'));
+    repo.hold = Completer<void>();
+    final run = c.read(syncServiceProvider.notifier).run();
+    await Future<void>.delayed(Duration.zero);
+    // The first request is on its way when the user leaves (e.g. "Use password instead").
+    await c.read(authControllerProvider.notifier).signOut();
+    repo.hold!.complete();
+    await run;
+    expect(repo.saves, 1, reason: 'the second entry waits for its owner to sign in again');
+    expect(store.entries, hasLength(1));
+  });
+
+  test('a queue that belongs to another account is never sent', () async {
+    final c = await signedIn();
+    await store.enqueue(kind: 'create', site: 'Riverside', body: _body('s-riverside-office'));
+    // The owner key still names someone else (switching owners failed).
+    await c.read(keyValueStoreProvider).setString('local_data_owner', 'u-other');
+    await c.read(syncServiceProvider.notifier).run();
+    expect(repo.saves, 0);
+    expect(store.entries, hasLength(1));
+  });
+
+  test('every run refreshes the reference data, even while a wizard keeps it loaded', () async {
+    final c = await signedIn();
+    c.listen(checklistProvider(fireSafetyTemplateId), (_, _) {});
+    await c.read(checklistProvider(fireSafetyTemplateId).future);
+    final before = repo.checklistLoads;
+    await c.read(syncServiceProvider.notifier).run();
+    expect(repo.checklistLoads, before + 1);
+  });
+
+  test('a queued edit updates the inspection instead of creating one', () async {
+    final c = await signedIn();
+    final before = created();
+    final current = InspectionDraft.fromInspection(InspectionDetail.fromJson(db.getInspection('INS-1042')));
+    final body = current.copyWith(notes: 'Edited offline', duration: '60', answers: _allPass, confirmed: true).toApiBody();
+    await store.enqueue(kind: 'update', inspectionId: 'INS-1042', site: 'Warehouse A', body: body);
+    await c.read(syncServiceProvider.notifier).run();
+    expect(store.entries, isEmpty);
+    expect(created(), before);
+    expect(db.getInspection('INS-1042')['notes'], 'Edited offline');
   });
 
   test('a create whose answer was lost is not made twice when sync sends it again', () async {

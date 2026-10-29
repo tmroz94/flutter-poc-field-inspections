@@ -34,8 +34,6 @@ class ListQuery {
   final DateTime? from;
   final DateTime? to;
 
-  bool get isDefault => statuses.isEmpty && q.isEmpty && sort == SortOrder.dueAsc && due == DueWindow.any;
-
   /// Number of non-default filters, shown as the badge on the filter button.
   int get activeFilterCount => (statuses.isEmpty ? 0 : 1) + (sort == SortOrder.dueAsc ? 0 : 1) + (due == DueWindow.any ? 0 : 1);
 

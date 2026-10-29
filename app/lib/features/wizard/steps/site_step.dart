@@ -136,7 +136,7 @@ class _SiteStepState extends ConsumerState<SiteStep> {
         );
       case _AddNew(:final name):
         _controller.text = name;
-        wizard.update((d) => d.copyWith(siteId: () => null, siteName: name, siteAddress: ''));
+        wizard.update((d) => d.withNewSite(name));
     }
   }
 
@@ -166,9 +166,7 @@ class _SiteStepState extends ConsumerState<SiteStep> {
                     if (_choices.isNotEmpty) _select(_choices[_highlighted]);
                   },
                   onChanged: (text) {
-                    ref
-                        .read(wizardControllerProvider(widget.wizardKey).notifier)
-                        .update((d) => d.copyWith(siteId: () => null, siteName: text, siteAddress: ''));
+                    ref.read(wizardControllerProvider(widget.wizardKey).notifier).update((d) => d.withNewSite(text));
                     _search(text);
                   },
                   decoration: InputDecoration(
@@ -186,9 +184,7 @@ class _SiteStepState extends ConsumerState<SiteStep> {
                               onPressed: () {
                                 _controller.clear();
                                 _search('');
-                                ref
-                                    .read(wizardControllerProvider(widget.wizardKey).notifier)
-                                    .update((d) => d.copyWith(siteId: () => null, siteName: '', siteAddress: ''));
+                                ref.read(wizardControllerProvider(widget.wizardKey).notifier).update((d) => d.withNewSite(''));
                               },
                             ),
                     ),
@@ -253,15 +249,16 @@ class _LocationCheckState extends ConsumerState<_LocationCheck> {
     final wizard = ref.read(wizardControllerProvider(widget.wizardKey).notifier);
     final canOpenSettings = ref.read(capabilitiesProvider).openSystemSettings;
     final fix = await ref.read(locationServiceProvider).current();
+    // Kept even when the user already moved on to the next step.
+    if (fix.status == LocationStatus.ok) {
+      wizard.update((d) => d.copyWith(myLocation: () => (lat: fix.lat!, lng: fix.lng!, accuracy: fix.accuracy ?? 0)));
+    }
     if (!mounted) return;
     setState(() {
       _busy = false;
       _canOpenSettings = fix.status == LocationStatus.deniedForever && canOpenSettings;
       _problem = fix.status == LocationStatus.ok ? null : fix.status;
     });
-    if (fix.status == LocationStatus.ok) {
-      wizard.update((d) => d.copyWith(myLocation: () => (lat: fix.lat!, lng: fix.lng!, accuracy: fix.accuracy ?? 0)));
-    }
   }
 
   @override

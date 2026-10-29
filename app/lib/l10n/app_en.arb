@@ -572,6 +572,7 @@
   "valConfirmFindings": "Confirm the findings before submitting",
   "valChecklistNotLoaded": "The checklist hasn't loaded yet",
   "wizardDraftSaved": "Draft saved on this device",
+  "wizardNothingToSave": "Nothing to save yet",
   "wizardProgress": "Wizard progress",
   "wizardSteps": "Wizard steps",
   "wizardHintSite": "Choose a site",

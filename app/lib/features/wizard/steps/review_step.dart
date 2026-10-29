@@ -51,7 +51,7 @@ class ReviewStep extends ConsumerWidget {
             errors.isEmpty ? text : errors.values.join(' · '),
             style: errors.isEmpty ? null : TextStyle(color: theme.colorScheme.error),
           ),
-          trailing: TextButton(onPressed: () => onEditStep(s.number), child: Text(l.edit)),
+          trailing: TextButton(onPressed: state.submitting ? null : () => onEditStep(s.number), child: Text(l.edit)),
         ),
       );
     }
@@ -89,7 +89,9 @@ class ReviewStep extends ConsumerWidget {
           controlAffinity: ListTileControlAffinity.leading,
           contentPadding: EdgeInsets.zero,
           title: Text(l.confirmFindings),
-          onChanged: (c) => ref.read(wizardControllerProvider(wizardKey).notifier).update((x) => x.copyWith(confirmed: c ?? false)),
+          onChanged: state.submitting
+              ? null
+              : (c) => ref.read(wizardControllerProvider(wizardKey).notifier).update((x) => x.copyWith(confirmed: c ?? false)),
         ),
         if (error != null) ...[
           FormErrorBanner(error.fields.isEmpty ? l.submitFailed(error.code) : l.serverRejected(serverFieldErrors(context, error.fields))),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +37,7 @@ Future<CaptureResult> addPickedPhoto(
   final permissions = ref.read(permissionServiceProvider);
   final canOpenSettings = ref.read(capabilitiesProvider).openSystemSettings;
   try {
+    if (camera) await wizard.cameraOpening(forItem: forItem);
     final file = await media.photo(camera: camera);
     if (file == null) return CaptureResult.cancelled;
     final ok = await wizard.addFile(file, forItem: forItem);
@@ -55,6 +58,8 @@ Future<CaptureResult> addPickedPhoto(
     }
     if (context.mounted) messenger.showSnackBar(SnackBar(content: Text(camera ? l.cameraOpenFailed : l.galleryOpenFailed)));
     return CaptureResult.failed;
+  } finally {
+    if (camera) unawaited(wizard.cameraClosed());
   }
 }
 

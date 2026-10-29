@@ -51,7 +51,7 @@ void main() {
 
     Future<MemoryLocalStore> rejected() async {
       final store = MemoryLocalStore();
-      final id = await store.enqueue(kind: 'create', site: draft.siteName, body: draft.toApiBody(), draft: draft);
+      final id = await store.enqueue(kind: 'create', site: draft.siteName, body: draft.toApiBody(), draft: draft, requestKey: 'sub-1');
       await store.markFailed(id, 'server');
       return store;
     }
@@ -94,6 +94,19 @@ void main() {
       expect(app.location, startsWith('/inspections/new?step=5'));
       expect(store.entries, isEmpty);
       expect(store.drafts['new']?.siteName, 'Riverside office, floor 4');
+      expect(store.drafts['new']?.requestKey, 'sub-1', reason: 'a resubmit must not create a second copy');
+    });
+
+    testWidgets('Edit is refused while another new draft is open, and nothing is lost', (tester) async {
+      final store = await rejected();
+      await store.saveDraft('new', const InspectionDraft(siteName: 'Open draft'));
+      await pumpApp(tester, store: signedInStore(), localStore: store, now: now);
+      await openMenu(tester);
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+      expect(find.text('Finish or discard the open draft for this inspection first.'), findsOneWidget);
+      expect(store.drafts['new']?.siteName, 'Open draft');
+      expect(store.entries, hasLength(1));
     });
 
     testWidgets('can be deleted after confirming, with its photos', (tester) async {

@@ -267,6 +267,7 @@
   "valConfirmFindings": "Potwierdź ustalenia przed wysłaniem",
   "valChecklistNotLoaded": "Lista kontrolna jeszcze się nie wczytała",
   "wizardDraftSaved": "Szkic zapisany na tym urządzeniu",
+  "wizardNothingToSave": "Nie ma jeszcze nic do zapisania",
   "wizardProgress": "Postęp kreatora",
   "wizardSteps": "Kroki kreatora",
   "wizardHintSite": "Wybierz obiekt",

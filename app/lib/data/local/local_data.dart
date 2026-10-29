@@ -25,9 +25,18 @@ class LocalData {
       if (owner != null) await clear();
       await kv.setString(_ownerKey, userId);
     } on Object catch (e) {
-      // Never block sign-in on local storage; the next sign-in tries again.
+      // Never block sign-in on local storage: sync holds back instead (see
+      // [isFor]) and the next sign-in tries again.
       debugPrint('Local data: could not switch owner: $e');
     }
+  }
+
+  /// This device's data may be used for [userId]'s session: it's theirs, or
+  /// no one's. False when switching owners failed, so another account's
+  /// queue is never sent under this one.
+  bool isFor(String userId) {
+    final owner = _ref.read(keyValueStoreProvider).getString(_ownerKey);
+    return owner == null || owner == userId;
   }
 
   Future<void> clear() async {
