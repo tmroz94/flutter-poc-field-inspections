@@ -48,7 +48,9 @@ dependencies:
     sdk: flutter
   material_ui: ^1.8.0
   cupertino_ui: ^1.1.4
-  drift: ^2.35.3
+  # Exact: web/drift_worker.js and web/sqlite3.wasm come from this release and
+  # must match it. Update all three together (decision 31).
+  drift: 2.35.3
   drift_flutter: ^0.3.1
   connectivity_plus: ^7.3.2
   image_picker: ^1.2.4

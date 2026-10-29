@@ -13,12 +13,17 @@ On macOS/Linux use `tool/check.sh`. Both use FVM when it is installed and
 `flutter`/`dart` from PATH otherwise. They run every step, even after one
 fails, and exit non-zero with the list of failed steps:
 
-1. `dart format` check (page width 140) on all packages.
-2. `dart analyze --fatal-infos` for `packages/mock_data` and `mock_server`, then
-   `flutter analyze --fatal-infos` for the app.
+1. `dart format` check (page width 140) on all packages and `tool/`.
+2. `dart analyze --fatal-infos` for `packages/mock_data`, `mock_server` and
+   `tool/`, and `flutter analyze --fatal-infos` for the app.
 3. Tests for `packages/mock_data`, `mock_server` and the app (unit, widget,
    router, accessibility and golden tests).
-4. `check.sh` only: the calendar and day-window tests again with
+4. Generated code is current: drift's `build_runner` output (formatted) and
+   `flutter gen-l10n` must match what is committed. When they don't, the step
+   fails and leaves the regenerated files to review and commit.
+   (`app/lib/core/app/code_stats.g.dart` is a snapshot from
+   `dart tool/code_stats.dart`, not checked.)
+5. `check.sh` only: the calendar and day-window tests again with
    `TZ=Europe/Warsaw`, since CI's UTC never has a daylight-saving change
    (Dart on Windows ignores `TZ`, so `check.ps1` can't do this).
 

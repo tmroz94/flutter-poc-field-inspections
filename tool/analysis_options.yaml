@@ -1,0 +1,11 @@
+# The helper scripts (dart: libraries only, so no package lints to include):
+# the packages' formatting and strict type checks. The gate analyzes and
+# format-checks this folder too.
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+formatter:
+  page_width: 140

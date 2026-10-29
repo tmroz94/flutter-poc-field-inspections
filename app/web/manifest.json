@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#FEF7FF",
     "theme_color": "#6750A4",
-    "description": "Flutter PoC - Field Inspections (iOS, Android, Web)",
+    "description": "Flutter PoC - Field Inspections (iOS, Android, web, Windows, macOS, Linux)",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [

@@ -16,6 +16,15 @@ const _native = [
   'app/ios/Runner/Info.plist',
   'app/web/index.html',
   'app/web/manifest.json',
+  'app/macos/Runner/AppDelegate.swift',
+  'app/macos/Runner/MainFlutterWindow.swift',
+  'app/macos/Runner/Info.plist',
+  'app/macos/Runner/DebugProfile.entitlements',
+  'app/macos/Runner/Release.entitlements',
+  'app/windows/runner/main.cpp',
+  'app/windows/CMakeLists.txt',
+  'app/linux/runner/my_application.cc',
+  'app/linux/dev.flutterpoc.field_inspections.desktop',
 ];
 final _capabilityCheck = RegExp(
   r'kIsWeb|\.isWeb\b|\.isMobile\b|\.biometricLock\b|\.haptics\b|\.openSystemSettings\b|\.pullToRefreshOnly\b',

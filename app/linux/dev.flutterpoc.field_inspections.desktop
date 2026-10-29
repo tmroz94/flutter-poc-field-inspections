@@ -3,7 +3,7 @@ Type=Application
 Name=Field Inspections
 Comment=Flutter PoC - field inspections
 # Set Exec to the built binary's absolute path when installing by hand
-# (docs/setup.md, "Desktop deep links"). %u passes the opened link.
+# (docs/platform-setup.md, "Desktop deep links"). %u passes the opened link.
 Exec=field_inspections %u
 Terminal=false
 Categories=Office;

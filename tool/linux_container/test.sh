@@ -20,7 +20,9 @@ trap 'docker rm -f "$name" > /dev/null 2>&1 || true' EXIT
 # A clean copy of the repository's files (tracked, plus new files that aren't
 # ignored, so uncommitted work is tested too): build output and macOS
 # metadata (._*) would break the Linux build.
-(cd "$root" && git ls-files -co --exclude-standard | COPYFILE_DISABLE=1 tar --no-xattrs -czf - -T -) |
+# Files deleted but not yet committed are still listed: skip what isn't there.
+(cd "$root" && git ls-files -co --exclude-standard | while IFS= read -r f; do [ -e "$f" ] && printf '%s\n' "$f"; done |
+  COPYFILE_DISABLE=1 tar --no-xattrs -czf - -T -) |
   docker exec -i "$name" bash -c 'mkdir -p ~/repo && tar -xzf - -C ~/repo'
 
 # Every file runs even after one fails (as in CI); the script fails at the end.

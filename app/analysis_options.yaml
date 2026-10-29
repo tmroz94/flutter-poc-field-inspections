@@ -7,7 +7,6 @@ analyzer:
     strict-raw-types: true
   errors:
     missing_required_param: error
-    missing_return: error
   exclude:
     - "**/*.g.dart"
     - lib/l10n/generated/**
