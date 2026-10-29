@@ -104,8 +104,8 @@ Limits:
   that `integration_test` can't drive (the Patrol tests below cover it).
 - GPS positions come from Android's test location provider. Google Play
   services' fused provider (what the app uses on phones) ignores those, so the
-  GPS test reads Android's LocationManager instead; a real-GPS check on a phone
-  is still needed.
+  GPS test reads Android's LocationManager instead. Real GPS isn't checked (no
+  physical devices, decision 117).
 - Frame timings are from debug builds, which are much slower than release ones.
 
 On the Mac, the same files run on an iOS simulator

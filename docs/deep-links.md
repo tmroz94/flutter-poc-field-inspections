@@ -6,11 +6,15 @@ The same location works from:
 | Source | Example |
 |---|---|
 | Web address bar | `http://localhost:5173/inspections/INS-1042?tab=photos` |
-| Custom scheme (iOS, Android) | `fieldinspections://app/inspections/INS-1042?tab=photos` |
-| Universal / app link | `https://fieldinspections.example/inspections/INS-1042?tab=photos` |
-| Notification payload | `{"route": "/inspections/INS-1042?tab=checklist"}` |
+| Custom scheme (iOS, Android, macOS, Windows, Linux) | `fieldinspections://app/inspections/INS-1042?tab=photos` |
+| Universal / app link (once hosted, see the [hosting checklist](#hosting-checklist-not-needed-for-local-testing)) | `https://fieldinspections.example/inspections/INS-1042?tab=photos` |
+| Notification payload (the route itself) | `/inspections/INS-1042?tab=checklist` |
 
-`DeepLinks.toLocation` normalises all of these; anything foreign is ignored.
+`DeepLinks.toLocation` normalises all of these. A link from another site or
+scheme that reaches the router goes to Home; a notification payload that isn't
+an in-app route is ignored. The parser already accepts the universal-link host,
+but no app has its Associated Domains or verified `https` intent filter yet
+([platform-setup.md](platform-setup.md)).
 
 ## Guards (in order)
 
@@ -19,7 +23,8 @@ The same location works from:
    link) once the session is known, so a cold-start link is not lost and no
    extra history entry is added.
 2. Signed out on a guarded path → `/sign-in?from=<target>`; after sign-in → target.
-3. Signed in and locked (iOS/Android, biometric lock on) → `/unlock?from=<target>`.
+   "Use password instead" on the lock screen keeps its `from` the same way.
+3. Signed in and locked (biometric lock on: iOS, Android, macOS, Windows) → `/unlock?from=<target>`.
 4. Signed in on `/sign-in`, `/sign-up`, `/forgot-password` or `/unlock` → `from` or `/home`.
 5. Wizard `?step=` outside 1–5 → step 1. (M2: an earlier invalid step → first invalid step.)
 6. Unknown path → 404 screen showing the path. Unknown inspection id → "not found" state on the detail screen (M1).

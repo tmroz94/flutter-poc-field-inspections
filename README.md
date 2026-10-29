@@ -96,7 +96,7 @@ choco install fvm
 - **Visual Studio 2022 or 2026** (not VS Code) with the **Desktop development
   with C++** workload, for the Windows app. Visual Studio 2026 18.6 and later
   rejects a compiler flag two plugins still use; `app/windows/CMakeLists.txt`
-  removes it, so nothing to do here.
+  works around it (decision 109), so nothing to do here.
 - **PowerShell 7** (`pwsh`) for `tool/check.ps1`.
 
 ### 3. Linux app on Windows (WSL)
@@ -256,8 +256,10 @@ default NAT networking), so for it run the same command inside WSL, in
 app with `--dart-define=API_URL=http://<pc-ip>:8080/api`; anyone on that
 network can then use the mock API, so only do it on a network you trust.
 Browsers may call it only from this machine's pages (`localhost`,
-`127.0.0.1`); to open the web build from another device, add
-`--allow-origin http://<pc-ip>:<port>`.
+`127.0.0.1`, `[::1]`, `*.localhost`); to open the web build from another
+device, add `--allow-origin http://<pc-ip>:<port>`. Bound to 127.0.0.1 it also
+answers only requests for this machine's names (and the emulator's 10.0.2.2),
+decision 120; with `--host 0.0.0.0` that check is off.
 
 Force a mode with `--dart-define=BACKEND=http|fake|auto` (default `auto`: the
 mock API when it answers, else the fake).
@@ -403,5 +405,5 @@ hand from the Actions tab.
 | M1 | Shell, auth screens, lists, detail, list-detail, photo viewer | done |
 | M2 | Wizard, validators, drafts, outbox | done |
 | M3 | Camera, files, maps, notifications, biometrics, permissions | done |
-| M4 | Appearance, EN/PL, a11y, adaptive widgets, diagnostics, results tracker, goldens, integration tests, wasm build | done (iOS: simulator checks done, a physical iPhone still to do) |
+| M4 | Appearance, EN/PL, a11y, adaptive widgets, diagnostics, results tracker, goldens, integration tests, wasm build | done (iOS on the iPhone and iPad simulators; no physical devices, decision 117) |
 | Desktop | macOS, Windows and Linux apps: desktop capabilities (no camera, Save for exports, Linux can't schedule notifications), deep links, Touch ID / Windows Hello, desktop columns in the Results tracker, CI builds | macOS: flows, probe and deep links pass; Windows: build, flows, probe and deep links pass; Linux (container, and WSL on Windows): build, flows, probe and deep links pass |
