@@ -141,17 +141,56 @@ void main() {
     expect(typed.siteName, 'Riverside office, floor 5');
   });
 
-  test('draft JSON round-trips', () {
-    final d = _complete().copyWith(
+  test('draft JSON round-trips: every field comes back', () {
+    // Every field off its default, so one missing from both toJson and
+    // fromJson (which comparing toJson with toJson can't see) shows up here.
+    final d = InspectionDraft(
+      inspectionId: 'INS-1042',
+      siteId: 's-riverside-office',
+      siteName: 'Riverside office, floor 4',
+      siteAddress: 'ul. Wybrzeże 2',
+      siteLat: 52.1,
+      siteLng: 21.2,
+      myLat: 52.3,
+      myLng: 21.4,
+      myAccuracy: 12,
+      type: 'Fire safety, annual',
+      date: DateTime(2026, 10, 26),
+      startMinutes: 13 * 60,
+      priority: Priority.high,
+      duration: '90',
+      notes: 'Gate 3',
+      answers: {'c01': Answer.pass, 'c02': Answer.fail},
       failures: {'c02': const FailDetail(severity: 4, followUp: false, note: 'n')},
-      attachments: [const DraftAttachment(id: 'p1', name: 'a.jpg', sizeBytes: 9, forItem: 'c02')],
+      attachments: [
+        const DraftAttachment(id: 'p1', name: 'a.jpg', sizeBytes: 9, forItem: 'c02', stored: true),
+        const DraftAttachment(id: 'f1', name: 'plan.pdf', sizeBytes: 5, isPhoto: false),
+      ],
+      confirmed: true,
       lastStep: 4,
+      updatedAt: DateTime(2026, 10, 24, 9, 30),
+      requestKey: 'sub-1',
     );
-    final back = InspectionDraft.fromJson(d.toJson());
-    expect(back.toJson(), d.toJson());
-    expect(back.scheduledAt, DateTime(2026, 10, 26, 13));
+    final b = InspectionDraft.fromJson(jsonDecode(jsonEncode(d.toJson())) as Map<String, Object?>);
+    expect(
+      (b.inspectionId, b.siteId, b.siteName, b.siteAddress, b.siteLat, b.siteLng, b.myLat, b.myLng, b.myAccuracy, b.type),
+      (d.inspectionId, d.siteId, d.siteName, d.siteAddress, d.siteLat, d.siteLng, d.myLat, d.myLng, d.myAccuracy, d.type),
+    );
+    expect(
+      (b.date, b.startMinutes, b.priority, b.duration, b.notes, b.confirmed, b.lastStep, b.updatedAt, b.requestKey),
+      (d.date, d.startMinutes, d.priority, d.duration, d.notes, d.confirmed, d.lastStep, d.updatedAt, d.requestKey),
+    );
+    expect(b.answers, d.answers);
+    final f = b.failures['c02']!;
+    expect((f.severity, f.followUp, f.note), (4, false, 'n'));
+    expect(
+      [for (final a in b.attachments) (a.id, a.name, a.sizeBytes, a.isPhoto, a.forItem, a.stored)],
+      [for (final a in d.attachments) (a.id, a.name, a.sizeBytes, a.isPhoto, a.forItem, a.stored)],
+    );
+    expect(b.scheduledAt, DateTime(2026, 10, 26, 13));
     expect(d.toApiBody()['durationMin'], 90);
     expect(d.toApiBody()['siteId'], 's-riverside-office');
+    expect(d.toApiBody().containsKey('requestKey'), isFalse, reason: 'the key goes as a header, not in the body');
   });
 
   group('WizardController', () {
@@ -367,11 +406,18 @@ void main() {
 
     test('a server rejection marks the outbox entry and keeps going', () async {
       await store.enqueue(kind: 'create', site: 'Bad', body: {'site': 'x'});
+      await store.enqueue(
+        kind: 'create',
+        site: 'Riverside',
+        body: _complete().copyWith(answers: _allPass).toApiBody(),
+      );
       repo.online = true;
       final c = container();
       await Future<void>.delayed(const Duration(milliseconds: 10));
       await c.read(syncServiceProvider.notifier).run();
       expect(store.entries.single.lastError, contains('site'));
+      expect(store.entries.single.site, 'Bad', reason: 'the valid entry after it was sent');
+      expect(db.listInspections(q: 'INS-1046')['total'], 1);
     });
   });
 }

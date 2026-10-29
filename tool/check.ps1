@@ -28,5 +28,6 @@ Step 'mock_server: test' 'mock_server' { Sdk dart test }
 Step 'app: analyze' 'app' { Sdk flutter analyze --fatal-infos }
 Step 'app: test' 'app' { if ($Coverage) { Sdk flutter test --coverage } else { Sdk flutter test } }
 
+# The Europe/Warsaw date run is in check.sh only: Dart on Windows ignores TZ.
 if ($failed.Count) { Write-Host "`nFAILED: $($failed -join ', ')" -ForegroundColor Red; exit 1 }
 Write-Host "`nAll checks passed." -ForegroundColor Green

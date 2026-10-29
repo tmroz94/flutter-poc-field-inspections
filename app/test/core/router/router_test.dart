@@ -209,15 +209,15 @@ void main() {
       final lock = app.container.read(lockControllerProvider.notifier);
       var now = DateTime(2026, 10, 24, 12);
       lock.clock = () => now;
-      lock.onHidden();
+      _toBackground(tester);
       now = now.add(const Duration(minutes: 4));
-      lock.onShown();
+      _toForeground(tester);
       await tester.pumpAndSettle();
       expect(find.byType(MapScreen), findsOneWidget, reason: 'under the timeout');
 
-      lock.onHidden();
+      _toBackground(tester);
       now = now.add(const Duration(minutes: 5));
-      lock.onShown();
+      _toForeground(tester);
       await tester.pumpAndSettle();
       expect(app.location, '/unlock?from=%2Fmap');
     });
@@ -233,9 +233,9 @@ void main() {
       final lock = app.container.read(lockControllerProvider.notifier);
       var now = DateTime(2026, 10, 24, 12);
       lock.clock = () => now;
-      lock.onHidden();
+      _toBackground(tester);
       now = now.add(const Duration(minutes: 6));
-      lock.onShown();
+      _toForeground(tester);
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsNothing, reason: 'no "Leave?" dialog whose Stay could cancel the lock');
@@ -390,3 +390,15 @@ void main() {
     });
   });
 }
+
+/// The app goes to the background (home button, another app), as the OS
+/// reports it, so the lock is driven through its real lifecycle listener.
+void _toBackground(WidgetTester tester) => tester.binding
+  ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+  ..handleAppLifecycleStateChanged(AppLifecycleState.hidden)
+  ..handleAppLifecycleStateChanged(AppLifecycleState.paused);
+
+void _toForeground(WidgetTester tester) => tester.binding
+  ..handleAppLifecycleStateChanged(AppLifecycleState.hidden)
+  ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+  ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);

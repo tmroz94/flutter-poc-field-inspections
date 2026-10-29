@@ -41,16 +41,14 @@ class LockController extends Notifier<LockState> {
       if (next == AuthStatus.signedOut) state = LockState(enabled: state.enabled, locked: false);
     });
     _listener?.dispose();
-    _listener = AppLifecycleListener(onHide: onHidden, onShow: onShown);
+    _listener = AppLifecycleListener(onHide: _onHidden, onShow: _onShown);
     ref.onDispose(() => _listener?.dispose());
     return LockState(enabled: enabled, locked: false);
   }
 
-  @visibleForTesting
-  void onHidden() => _hiddenAt = clock();
+  void _onHidden() => _hiddenAt = clock();
 
-  @visibleForTesting
-  void onShown() {
+  void _onShown() {
     final hiddenAt = _hiddenAt;
     _hiddenAt = null;
     final signedIn = ref.read(authControllerProvider).status == AuthStatus.signedIn;

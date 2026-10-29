@@ -10,6 +10,7 @@ import '../../core/platform/platform_services.dart';
 import '../../core/router/routes.dart';
 import '../../core/storage/key_value_store.dart';
 import '../../core/theme/theme_settings.dart';
+import '../../core/widgets/inspection_widgets.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
 import '../../data/providers.dart';
@@ -101,7 +102,7 @@ class RemindersController extends Notifier<bool> {
     final l = _strings();
     // 24-hour time in both languages (en-GB, pl), without needing intl's locale data here.
     String time(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-    final now = DateTime.now();
+    final now = ref.read(clockProvider)();
     var count = 0;
     try {
       await notifications.cancelAll();

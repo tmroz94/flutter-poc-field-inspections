@@ -2,6 +2,7 @@ import 'package:field_inspections/core/platform/notification_service.dart';
 import 'package:field_inspections/core/router/routes.dart';
 import 'package:field_inspections/core/storage/key_value_store.dart';
 import 'package:field_inspections/core/theme/theme_settings.dart';
+import 'package:field_inspections/core/widgets/inspection_widgets.dart';
 import 'package:field_inspections/data/api/api_exception.dart';
 import 'package:field_inspections/data/local/local_store.dart';
 import 'package:field_inspections/data/models/inspection.dart';
@@ -136,8 +137,12 @@ void main() {
     late FakeNotifications notifications;
     late MemoryStore kv;
 
+    // A fixed morning: every open inspection today is still ahead, so each one
+    // has a reminder (with the real clock, one at 13:00 has none after 12:30).
+    final now = DateTime(2026, 10, 24, 8);
+
     setUp(() {
-      db = MockDatabase();
+      db = MockDatabase(clock: () => now);
       repo = _Repo(db);
       notifications = FakeNotifications();
       kv = MemoryStore({...signedInStore(), 'reminders': 'true'});
@@ -153,6 +158,7 @@ void main() {
           localStoreProvider.overrideWithValue(MemoryLocalStore()),
           notificationServiceProvider.overrideWithValue(notifications),
           connectivityProvider.overrideWith((ref) => const Stream.empty()),
+          clockProvider.overrideWithValue(() => now),
         ],
       );
       addTearDown(c.dispose);
@@ -170,6 +176,7 @@ void main() {
 
       final open = db.listInspections(status: {'scheduled'}, pageSize: 1)['items']! as List;
       final id = (open.first as Map)['id']! as String;
+      expect(notifications.scheduled.map((s) => s.$2), contains(Routes.inspection(id)), reason: 'it had a reminder');
       db.setArchived(id, true);
       c.read(inspectionsRevisionProvider.notifier).changed();
       await Future<void>.delayed(const Duration(milliseconds: 20));
