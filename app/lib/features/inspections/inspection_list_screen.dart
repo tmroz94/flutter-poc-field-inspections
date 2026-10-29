@@ -151,7 +151,8 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
       if (!size.isTwoPane) const NotificationBell(),
     ];
 
-    final filters = _Filters(
+    Widget filters({required bool statuses}) => _Filters(
+      showStatuses: statuses,
       search: _search,
       searchFocus: _searchFocus,
       onSearch: _onSearch,
@@ -183,11 +184,15 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
       table: size == WindowSize.large,
     );
 
-    final listColumn = Column(
-      children: [
-        filters,
-        Expanded(child: body),
-      ],
+    // A landscape phone with the keyboard up leaves ~130 dp here: the status
+    // chips step aside so the search field and some rows still fit.
+    final listColumn = LayoutBuilder(
+      builder: (context, box) => Column(
+        children: [
+          filters(statuses: box.maxHeight >= 240),
+          Expanded(child: body),
+        ],
+      ),
     );
 
     if (!size.isTwoPane) {
@@ -266,6 +271,7 @@ class _InspectionsScreenState extends ConsumerState<InspectionsScreen> {
 
 class _Filters extends StatelessWidget {
   const _Filters({
+    required this.showStatuses,
     required this.search,
     required this.searchFocus,
     required this.onSearch,
@@ -280,6 +286,7 @@ class _Filters extends StatelessWidget {
   final VoidCallback onClearSearch;
   final ListQuery query;
   final ValueChanged<InspectionStatus?> onStatus;
+  final bool showStatuses;
 
   @override
   Widget build(BuildContext context) {
@@ -301,27 +308,29 @@ class _Filters extends StatelessWidget {
             ),
             onChanged: onSearch,
           ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Semantics(
-              container: true,
-              label: context.l10n.statusFilter,
-              child: Row(
-                children: [
-                  FilterChip(label: Text(context.l10n.statusAll), selected: query.statuses.isEmpty, onSelected: (_) => onStatus(null)),
-                  for (final s in InspectionStatus.values) ...[
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      label: Text(s.localized(context.l10n)),
-                      selected: selected == s || (several && query.statuses.contains(s)),
-                      onSelected: (_) => onStatus(s),
-                    ),
+          if (showStatuses) ...[
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Semantics(
+                container: true,
+                label: context.l10n.statusFilter,
+                child: Row(
+                  children: [
+                    FilterChip(label: Text(context.l10n.statusAll), selected: query.statuses.isEmpty, onSelected: (_) => onStatus(null)),
+                    for (final s in InspectionStatus.values) ...[
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        label: Text(s.localized(context.l10n)),
+                        selected: selected == s || (several && query.statuses.contains(s)),
+                        onSelected: (_) => onStatus(s),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

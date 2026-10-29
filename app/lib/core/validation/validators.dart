@@ -81,11 +81,13 @@ abstract final class Validators {
   static StringValidator email(ValidationText t) =>
       (v) => (v == null || v.trim().isEmpty || _emailPattern.hasMatch(v.trim())) ? null : t.email;
 
+  // Lengths count characters as people see them (an emoji is one), like a
+  // text field's counter and the mock API do; String.length counts UTF-16 units.
   static StringValidator minLength(ValidationText t, int n) =>
-      (v) => (v == null || v.isEmpty || v.length >= n) ? null : t.minLength(n);
+      (v) => (v == null || v.isEmpty || v.characters.length >= n) ? null : t.minLength(n);
 
   static StringValidator maxLength(ValidationText t, int n) =>
-      (v) => (v == null || v.length <= n) ? null : t.maxLength(n);
+      (v) => (v == null || v.characters.length <= n) ? null : t.maxLength(n);
 
   static StringValidator intRange(ValidationText t, int min, int max) => (v) {
     if (v == null || v.trim().isEmpty) return null;

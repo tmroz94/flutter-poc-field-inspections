@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/router/routes.dart';
+import '../../core/widgets/adaptive_segments.dart';
 import '../../data/api/api_exception.dart';
 import '../../data/models/inspection.dart';
 import '../../data/models/list_query.dart';
@@ -158,23 +159,24 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: SegmentedButton<DueWindow>(
+              // Chips instead of segments at large text (decision 64).
+              child: AdaptiveSegments<DueWindow>(
                 segments: [
                   for (final d in DueWindow.values)
-                    ButtonSegment(
-                      value: d,
-                      label: Text(switch (d) {
+                    (
+                      d,
+                      switch (d) {
                         DueWindow.any => context.l10n.dueAny,
                         DueWindow.today => context.l10n.dueToday,
                         DueWindow.week => context.l10n.dueWeek,
                         DueWindow.custom => context.l10n.dueCustom,
-                      }),
+                      },
                     ),
                 ],
-                selected: {_draft.due},
-                onSelectionChanged: (s) {
-                  _change(() => _draft = _draft.copyWith(due: s.first));
-                  if (s.first == DueWindow.custom && _draft.from == null) _pickRange();
+                selected: _draft.due,
+                onChanged: (due) {
+                  _change(() => _draft = _draft.copyWith(due: due));
+                  if (due == DueWindow.custom && _draft.from == null) _pickRange();
                 },
               ),
             ),

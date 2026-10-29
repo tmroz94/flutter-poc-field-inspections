@@ -509,31 +509,34 @@ class _VerticalSteps extends StatelessWidget {
     final theme = Theme.of(context);
     return Material(
       color: theme.colorScheme.surfaceContainerLow,
-      child: Container(
+      child: SizedBox(
         width: 300,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: Column(
-          children: [
-            for (final s in WizardStep.values)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Semantics(
-                  label: _stepSemantics(context, s, _stateOf(s, current, draft, validator)),
-                  child: ListTile(
-                    selected: s == current,
-                    selectedTileColor: theme.colorScheme.secondaryContainer,
-                    shape: const StadiumBorder(),
-                    enabled: s.number <= draft.lastStep || s == current,
-                    onTap: () => onTap(s.number),
-                    leading: ExcludeSemantics(
-                      child: _StepDot(step: s, state: _stateOf(s, current, draft, validator)),
+        // A landscape phone counts as wide but has ~330 dp under the app bar.
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Column(
+            children: [
+              for (final s in WizardStep.values)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Semantics(
+                    label: _stepSemantics(context, s, _stateOf(s, current, draft, validator)),
+                    child: ListTile(
+                      selected: s == current,
+                      selectedTileColor: theme.colorScheme.secondaryContainer,
+                      shape: const StadiumBorder(),
+                      enabled: s.number <= draft.lastStep || s == current,
+                      onTap: () => onTap(s.number),
+                      leading: ExcludeSemantics(
+                        child: _StepDot(step: s, state: _stateOf(s, current, draft, validator)),
+                      ),
+                      title: ExcludeSemantics(child: Text(stepTitle(context, s), style: theme.textTheme.titleSmall)),
+                      subtitle: Text(_hint(context, s), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
-                    title: ExcludeSemantics(child: Text(stepTitle(context, s), style: theme.textTheme.titleSmall)),
-                    subtitle: Text(_hint(context, s), maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -568,6 +571,8 @@ class _HorizontalSteps extends StatelessWidget {
                 button: s.number <= draft.lastStep,
                 selected: s == current,
                 label: _stepSemantics(context, s, _stateOf(s, current, draft, validator)),
+                // excludeSemantics drops the InkWell's own action: give it back here.
+                onTap: s.number <= draft.lastStep ? () => onTap(s.number) : null,
                 excludeSemantics: true,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(24),

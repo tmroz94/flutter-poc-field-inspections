@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/adaptive_segments.dart';
 import '../../../core/widgets/inspection_widgets.dart';
 import '../../../data/models/draft.dart';
 import '../../../data/models/inspection.dart';
@@ -143,10 +144,11 @@ class _DetailsStepState extends ConsumerState<DetailsStep> {
         const SizedBox(height: 20),
         Text(l.priority, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 8),
-        SegmentedButton<Priority>(
-          segments: [for (final p in Priority.values) ButtonSegment(value: p, label: Text(priorityText(l, p)))],
-          selected: {d.priority},
-          onSelectionChanged: (s) => _wizard.update((x) => x.copyWith(priority: s.first)),
+        // Chips instead of segments at large text (decision 64).
+        AdaptiveSegments<Priority>(
+          segments: [for (final p in Priority.values) (p, priorityText(l, p))],
+          selected: d.priority,
+          onChanged: (p) => _wizard.update((x) => x.copyWith(priority: p)),
         ),
         const SizedBox(height: 20),
         TextField(

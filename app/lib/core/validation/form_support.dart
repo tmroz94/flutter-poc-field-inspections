@@ -66,14 +66,18 @@ class BusyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = busy ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(label);
+    // The spinner carries the label: the button's own semantics node takes
+    // it as its name ("Signing in…"), so it isn't nameless while busy.
+    final child = busy
+        ? SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, semanticsLabel: context.l10n.inProgressLabel(label)),
+          )
+        : Text(label);
     final style = ButtonStyle(minimumSize: WidgetStateProperty.all(const Size.fromHeight(48)));
     final press = busy ? null : onPressed;
-    return Semantics(
-      label: busy ? context.l10n.inProgressLabel(label) : null,
-      child: outlined
-          ? OutlinedButton(style: style, onPressed: press, child: child)
-          : FilledButton(style: style, onPressed: press, child: child),
-    );
+    return outlined
+        ? OutlinedButton(style: style, onPressed: press, child: child)
+        : FilledButton(style: style, onPressed: press, child: child);
   }
 }

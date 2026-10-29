@@ -6,6 +6,10 @@ publish_to: none
 environment:
   sdk: ^3.8.0
 
+dependencies:
+  # Text limits count characters as people see them, like the app's fields.
+  characters: ^1.4.0
+
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.0

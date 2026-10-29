@@ -85,64 +85,83 @@ class _SubmittedScreenState extends ConsumerState<SubmittedScreen> with SingleTi
     final detail = [if (known) widget.id, if (widget.site.isNotEmpty) widget.site].join(' · ');
     final body = widget.queued ? l.reportQueuedBody : l.reportSubmittedBody;
 
+    // Scrolls when the window is too short (landscape phone, large text), so
+    // the buttons at the bottom stay reachable.
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-          child: Center(
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Column(
-                children: [
-                  const Spacer(),
-                  FadeTransition(
-                    opacity: _fade,
-                    child: ScaleTransition(
-                      scale: _pop,
-                      child: Container(
-                        width: 112,
-                        height: 112,
-                        decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-                        child: Icon(widget.queued ? Symbols.cloud_upload : Symbols.task_alt, size: 56, color: scheme.onPrimaryContainer),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  AnimatedBuilder(
-                    animation: _rise,
-                    builder: (context, child) => Opacity(
-                      opacity: _rise.value,
-                      child: Transform.translate(offset: Offset(0, 16 * (1 - _rise.value)), child: child),
-                    ),
-                    child: Semantics(
-                      liveRegion: true,
+              constraints: BoxConstraints(minHeight: box.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
                       child: Column(
                         children: [
-                          Text(title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
-                          const SizedBox(height: 8),
-                          Text('$detail${detail.isEmpty ? '' : '. '}$body', textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+                          const Spacer(),
+                          FadeTransition(
+                            opacity: _fade,
+                            child: ScaleTransition(
+                              scale: _pop,
+                              child: Container(
+                                width: 112,
+                                height: 112,
+                                decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
+                                child: Icon(
+                                  widget.queued ? Symbols.cloud_upload : Symbols.task_alt,
+                                  size: 56,
+                                  color: scheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          AnimatedBuilder(
+                            animation: _rise,
+                            builder: (context, child) => Opacity(
+                              opacity: _rise.value,
+                              child: Transform.translate(offset: Offset(0, 16 * (1 - _rise.value)), child: child),
+                            ),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: Column(
+                                children: [
+                                  Text(title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '$detail${detail.isEmpty ? '' : '. '}$body',
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (sent) ...[
+                            FilledButton(
+                              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                              onPressed: () => context.go(Routes.inspection(widget.id)),
+                              child: Text(l.viewInspection),
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                              onPressed: _sharePdf,
+                              icon: const Icon(Symbols.picture_as_pdf),
+                              label: Text(l.sharePdfReport),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          TextButton(onPressed: () => context.go(Routes.inspections), child: Text(l.backToInspections)),
                         ],
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  if (sent) ...[
-                    FilledButton(
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                      onPressed: () => context.go(Routes.inspection(widget.id)),
-                      child: Text(l.viewInspection),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                      onPressed: _sharePdf,
-                      icon: const Icon(Symbols.picture_as_pdf),
-                      label: Text(l.sharePdfReport),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  TextButton(onPressed: () => context.go(Routes.inspections), child: Text(l.backToInspections)),
-                ],
+                ),
               ),
             ),
           ),

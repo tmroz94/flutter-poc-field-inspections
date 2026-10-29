@@ -569,4 +569,9 @@ void main() {
   });
 
   test('detail tab enum is unchanged', () => expect(DetailTab.values, hasLength(4)));
+
+  test('PDF text: smart punctuation is mapped and anything outside Latin-1 becomes ?', () {
+    expect(pdfText('Don’t – see “gate” … Łódź'), 'Don\'t - see "gate" ... Lodz');
+    expect(pdfText('Офис 😀'), '???? ?');
+  });
 }

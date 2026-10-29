@@ -261,7 +261,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                 Expanded(
                                   child: Text(l.mapLoadFailed, style: TextStyle(color: scheme.onErrorContainer)),
                                 ),
-                                TextButton(onPressed: () => ref.invalidate(mapInspectionsProvider), child: Text(l.tryAgain)),
+                                TextButton(
+                                  style: TextButton.styleFrom(foregroundColor: scheme.onErrorContainer),
+                                  onPressed: () => ref.invalidate(mapInspectionsProvider),
+                                  child: Text(l.tryAgain),
+                                ),
                               ],
                             ),
                           ),

@@ -95,4 +95,10 @@ void main() {
     expect(en.server('range'), 'Enter a number from 15 to 480');
     expect(pl.server('whatever'), 'Sprawdź to pole');
   });
+
+  test('lengths count characters as people see them, not UTF-16 units', () {
+    expect(Validators.maxLength(en, 3)('😀😀😀'), isNull, reason: 'three emoji are three characters');
+    expect(Validators.maxLength(en, 3)('😀😀😀😀'), isNotNull);
+    expect(Validators.minLength(en, 8)('😀😀😀😀'), isNotNull, reason: '4 characters, though 8 UTF-16 units');
+  });
 }

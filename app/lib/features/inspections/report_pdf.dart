@@ -1,12 +1,17 @@
 import 'dart:typed_data';
 import 'dart:ui' show Locale;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../data/models/inspection.dart';
 import '../../l10n/l10n.dart';
+
+/// Text as the report prints it (for tests).
+@visibleForTesting
+String pdfText(String s) => _ascii(s);
 
 /// The PDF's built-in Helvetica has no Polish letters. Bundling a Unicode
 /// font is the production fix (docs/decisions.md); the PoC transliterates.
@@ -36,8 +41,19 @@ String _ascii(String s) {
     '„': '"',
     '”': '"',
     '“': '"',
+    // Smart punctuation from iOS and macOS keyboards.
+    '’': "'",
+    '‘': "'",
+    '…': '...',
+    '—': '-',
+    '«': '"',
+    '»': '"',
   };
-  return s.split('').map((c) => map[c] ?? c).join();
+  // Anything else outside Latin-1 would print as an empty box.
+  return s.runes.map((r) {
+    final c = String.fromCharCode(r);
+    return map[c] ?? (r > 0xFF ? '?' : c);
+  }).join();
 }
 
 /// Inspection report: summary, people, checklist results and history, in the

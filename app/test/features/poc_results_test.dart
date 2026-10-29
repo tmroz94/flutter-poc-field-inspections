@@ -159,6 +159,16 @@ void main() {
       expect(web.device, '');
       expect(web.status, ResultStatus.notTested);
     });
+
+    test('a long note of emoji is cut by characters, never mid-emoji', () {
+      final c = _container();
+      final long = '😀' * 1200;
+      c
+          .read(resultsProvider.notifier)
+          .importJson('{"format":"field-inspections-poc-results/1","results":[{"id":"maps","web":{"s":"P","notes":"$long"}}]}');
+      final notes = c.read(resultsProvider).results.firstWhere((r) => r.id == 'maps').of(PocPlatform.web).notes;
+      expect(notes, '😀' * 1000);
+    });
   });
 
   group('Results screen', () {

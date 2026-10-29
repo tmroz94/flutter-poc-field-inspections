@@ -325,7 +325,12 @@ class OfflineBanner extends StatelessWidget {
                 ],
               ),
             ),
-            TextButton(onPressed: onRetry, child: Text(context.l10n.retry)),
+            // The banner's text colour: the default (primary) fails contrast on errorContainer.
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: fg),
+              onPressed: onRetry,
+              child: Text(context.l10n.retry),
+            ),
           ],
         ),
       ),

@@ -85,6 +85,8 @@ class AppShell extends StatelessWidget {
       body: Row(
         children: [
           NavigationRail(
+            // A landscape phone with the keyboard up leaves ~180 dp: scroll rather than overflow.
+            scrollable: true,
             extended: extended,
             minExtendedWidth: 240,
             labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,

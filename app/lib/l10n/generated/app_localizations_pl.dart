@@ -610,7 +610,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String outboxQueued(String time) {
-    return 'W kolejce od $time · wyśle się po połączeniu';
+    return 'W kolejce od $time · zostanie wysłany po połączeniu';
   }
 
   @override
@@ -969,7 +969,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String stepStateDone(String step) {
-    return '$step, gotowe';
+    return '$step, ukończono';
   }
 
   @override
@@ -984,7 +984,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String stepStateUpcoming(String step) {
-    return '$step, nierozpoczęty';
+    return '$step, nie rozpoczęto';
   }
 
   @override
@@ -1589,7 +1589,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get mapLoadFailed => 'Nie udało się wczytać inspekcji na mapę.';
 
   @override
-  String get goHome => 'Przejdź do strony głównej';
+  String get goHome => 'Przejdź do ekranu Start';
 
   @override
   String get pageNotFound => 'Nie znaleziono strony';

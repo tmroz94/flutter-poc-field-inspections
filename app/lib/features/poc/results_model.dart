@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show StringCharacters;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mock_data/mock_data.dart';
 
@@ -60,7 +61,9 @@ class PlatformResult {
     return PlatformResult(
       status: ResultStatus.fromCode(text(j['s'])),
       device: text(j['device']),
-      notes: notes.length > maxNotes ? notes.substring(0, maxNotes) : notes,
+      // Counted and cut by characters as the sheet's counter shows them, so an
+      // emoji is never split into half a surrogate pair.
+      notes: notes.characters.length > maxNotes ? notes.characters.take(maxNotes).toString() : notes,
     );
   }
 

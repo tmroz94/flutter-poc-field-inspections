@@ -6,6 +6,7 @@ import '../../../core/platform/capabilities.dart';
 import '../../../core/platform/platform_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/validation/form_support.dart';
+import '../../../core/widgets/adaptive_segments.dart';
 import '../../../data/models/inspection.dart';
 import '../../../l10n/l10n.dart';
 import '../../inspections/inspections_controller.dart';
@@ -166,16 +167,13 @@ class _ChecklistCardState extends State<_ChecklistCard> {
           children: [
             Text(widget.item.title, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 8),
-            SegmentedButton<Answer>(
-              emptySelectionAllowed: true,
+            // Chips instead of segments at large text (decision 64).
+            AdaptiveSegments<Answer>(
               showSelectedIcon: false,
-              segments: [
-                ButtonSegment(value: Answer.pass, label: Text(l.answerPass)),
-                ButtonSegment(value: Answer.fail, label: Text(l.answerFail)),
-                ButtonSegment(value: Answer.na, label: Text(l.answerNa)),
-              ],
-              selected: {?widget.answer},
-              onSelectionChanged: (s) => widget.onAnswer(s.firstOrNull),
+              segments: [(Answer.pass, l.answerPass), (Answer.fail, l.answerFail), (Answer.na, l.answerNa)],
+              selected: widget.answer,
+              onChanged: widget.onAnswer,
+              onCleared: () => widget.onAnswer(null),
             ),
             // Implicit animation: the failure details grow in and out (P11).
             AnimatedSize(

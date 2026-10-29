@@ -19,22 +19,24 @@ class NotFoundScreen extends StatelessWidget {
         leading: IconButton(icon: const Icon(Icons.close), tooltip: l.goHome, onPressed: () => context.go(Routes.home)),
       ),
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(l.pageNotFound, style: theme.textTheme.headlineSmall),
-                const SizedBox(height: 12),
-                Text(l.pageNotFoundBody, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                SelectableText(uri.toString(), style: theme.textTheme.bodyMedium?.copyWith(fontFamily: 'monospace')),
-                const SizedBox(height: 24),
-                FilledButton(onPressed: () => context.go(Routes.home), child: Text(l.goHome)),
-                TextButton(onPressed: () => context.go(Routes.inspections), child: Text(l.openInspections)),
-              ],
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l.pageNotFound, style: theme.textTheme.headlineSmall),
+                  const SizedBox(height: 12),
+                  Text(l.pageNotFoundBody, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  SelectableText(uri.toString(), style: theme.textTheme.bodyMedium?.copyWith(fontFamily: 'monospace')),
+                  const SizedBox(height: 24),
+                  FilledButton(onPressed: () => context.go(Routes.home), child: Text(l.goHome)),
+                  TextButton(onPressed: () => context.go(Routes.inspections), child: Text(l.openInspections)),
+                ],
+              ),
             ),
           ),
         ),

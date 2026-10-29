@@ -352,4 +352,17 @@ void main() {
     expect(names, containsAll(['Riverside office, floor 4', 'Riverside warehouse']));
     expect(db.searchSites('  '), isEmpty);
   });
+
+  test('notes are limited by characters, like the app field counts them', () {
+    final db = MockDatabase();
+    Map<String, Object?> draft(String notes) => {
+      'siteId': 's-riverside-office',
+      'type': 'Fire safety, annual',
+      'scheduledAt': DateTime(2026, 10, 30, 13).toIso8601String(),
+      'durationMin': 90,
+      'notes': notes,
+    };
+    expect(db.createInspection(draft('😀' * 500))['id'], isNotNull, reason: '500 characters, 1000 UTF-16 units');
+    expect(() => db.createInspection(draft('😀' * 501)), throwsA(isA<MockError>()));
+  });
 }

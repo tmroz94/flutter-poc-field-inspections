@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:characters/characters.dart';
+
 import 'fixtures.dart';
 
 /// Thrown for request errors; [fields] maps a field name to an error code
@@ -245,7 +247,8 @@ class MockDatabase {
     if (at == null) f['scheduledAt'] = 'required';
     final duration = record['durationMin'];
     if (duration is! int || duration < 15 || duration > 480) f['durationMin'] = 'range';
-    if (record['notes'] case final String notes when notes.length > 500) f['notes'] = 'tooLong';
+    // Characters as the app's notes field counts them (an emoji is one).
+    if (record['notes'] case final String notes when notes.characters.length > 500) f['notes'] = 'tooLong';
     if (!_priorities.contains(record['priority'] ?? 'normal')) f['priority'] = 'invalid';
     if (submitting) {
       final answers = record['answers'];

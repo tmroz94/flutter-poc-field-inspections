@@ -695,41 +695,50 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
       BiometricKind.fingerprint => apple ? l.unlockPromptTouchId : l.unlockPromptFingerprint,
       BiometricKind.other => l.unlockPrompt,
     };
+    // Scrolls when the window is too short (landscape phone, large text):
+    // "Use password instead" is the way out when biometrics fail.
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(user?.initials ?? '', style: theme.textTheme.titleLarge),
-                ),
-                const SizedBox(height: 16),
-                Text(l.unlockWelcome(user?.firstName ?? ''), style: theme.textTheme.headlineSmall),
-                const SizedBox(height: 8),
-                Text(timedOut ? l.unlockTimedOut : l.unlockOnStart, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
-                const Spacer(),
-                FloatingActionButton.large(
-                  tooltip: l.unlockButton,
-                  onPressed: _busy ? null : _unlock,
-                  child: Icon(kind == BiometricKind.face ? Symbols.face : Symbols.fingerprint),
-                ),
-                const SizedBox(height: 16),
-                Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    _failed ? l.unlockFailed : prompt,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: _failed ? theme.colorScheme.error : null),
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 36,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        child: Text(user?.initials ?? '', style: theme.textTheme.titleLarge),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(l.unlockWelcome(user?.firstName ?? ''), style: theme.textTheme.headlineSmall),
+                      const SizedBox(height: 8),
+                      Text(timedOut ? l.unlockTimedOut : l.unlockOnStart, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+                      const Spacer(),
+                      FloatingActionButton.large(
+                        tooltip: l.unlockButton,
+                        onPressed: _busy ? null : _unlock,
+                        child: Icon(kind == BiometricKind.face ? Symbols.face : Symbols.fingerprint),
+                      ),
+                      const SizedBox(height: 16),
+                      Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          _failed ? l.unlockFailed : prompt,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: _failed ? theme.colorScheme.error : null),
+                        ),
+                      ),
+                      const Spacer(),
+                      // The same user signs in again, so the device's drafts and outbox stay.
+                      TextButton(onPressed: () => ref.read(authControllerProvider.notifier).signOut(), child: Text(l.usePasswordInstead)),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                // The same user signs in again, so the device's drafts and outbox stay.
-                TextButton(onPressed: () => ref.read(authControllerProvider.notifier).signOut(), child: Text(l.usePasswordInstead)),
-              ],
+              ),
             ),
           ),
         ),
