@@ -66,6 +66,10 @@ jobs:
       # test ran. The emulator gets the runner's 4 cores and fixed RAM, boots
       # once to save a snapshot (cached between runs), and the tests start from
       # that warm state. Change the key when the emulator settings change.
+      # GPU: swangle (ANGLE on SwiftShader). With swiftshader_indirect the
+      # Android 37 image's surfaceflinger aborted ~35 s after every boot
+      # ("Assertion failed: !rcEnc->featureInfo()->hasReadColorBufferDma" in
+      # the goldfish mapper), restarting the whole system and its packages.
       - name: AVD cache
         id: avd-cache
         uses: actions/cache@v6
@@ -73,7 +77,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-37.0-playstore-x86_64-pixel_7-4cores-4g-v1
+          key: avd-37.0-playstore-x86_64-pixel_7-4cores-4g-swangle-v1
       - name: Create the AVD and its snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -89,7 +93,7 @@ jobs:
           force-avd-creation: false
           emulator-boot-timeout: 900
           disable-animations: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
+          emulator-options: -no-window -gpu swangle -noaudio -no-boot-anim -camera-back virtualscene
           script: echo "AVD snapshot saved."
       - name: Device tests
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -106,7 +110,7 @@ jobs:
           emulator-boot-timeout: 900
           disable-animations: false
           # From the snapshot, without writing the test run's state back to it.
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
+          emulator-options: -no-snapshot-save -no-window -gpu swangle -noaudio -no-boot-anim -camera-back virtualscene
           # The action runs each line on its own (sh -c). First: the whole
           # logcat to a file, in the background, for the artifact. Then wait
           # until the package manager answers (in run 40938499241 the app
