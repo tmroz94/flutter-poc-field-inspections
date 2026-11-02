@@ -1,8 +1,10 @@
-# Android device tests on an emulator (same image as the local one: API 37,
-# Google Play, x86_64): the integration_test flows including the host-driven
-# airplane-mode and GPS steps, then the Patrol native UI tests and the
-# notification-after-kill check. Slow (≈45–60 min), so it runs only when
-# started by hand (Actions › Android device tests › Run workflow).
+# Android device tests on an emulator (API 36, Google APIs, x86_64): the
+# integration_test flows including the host-driven airplane-mode and GPS steps,
+# then the Patrol native UI tests and the notification-after-kill check. Slow
+# (≈45–60 min), so it runs only when started by hand (Actions › Android device
+# tests › Run workflow). Not the local image (API 37, Google Play): on the
+# runner its system crashed minutes after every boot, with either GPU mode
+# (runs 40947086623 and 41486170144, decision 87).
 name: Android device tests
 
 on:
@@ -17,9 +19,9 @@ permissions:
 
 jobs:
   emulator:
-    name: Emulator (API 37)
+    name: Emulator (API 36)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v7
       - name: Enable KVM
@@ -77,13 +79,13 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-37.0-playstore-x86_64-pixel_7-4cores-4g-swangle-v1
+          key: avd-36-google_apis-x86_64-pixel_7-4cores-4g-swangle-v1
       - name: Create the AVD and its snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: '37.0'
-          target: google_apis_playstore
+          api-level: '36'
+          target: google_apis
           arch: x86_64
           profile: pixel_7
           cores: 4
@@ -96,10 +98,12 @@ jobs:
           emulator-options: -no-window -gpu swangle -noaudio -no-boot-anim -camera-back virtualscene
           script: echo "AVD snapshot saved."
       - name: Device tests
+        # A backstop: each pass below has its own limit.
+        timeout-minutes: 80
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: '37.0'
-          target: google_apis_playstore
+          api-level: '36'
+          target: google_apis
           arch: x86_64
           profile: pixel_7
           cores: 4
@@ -114,15 +118,20 @@ jobs:
           # The action runs each line on its own (sh -c). First: the whole
           # logcat to a file, in the background, for the artifact. Then wait
           # until the package manager answers (in run 40938499241 the app
-          # installed, but its activity then wasn't found). On a failure, save
-          # what the emulator knows (tool/ci_android_diagnostics.sh).
+          # installed, but its activity then wasn't found). Each pass has 35
+          # minutes (SIGTERM lets the runner restore the device; SIGKILL 2
+          # minutes later): in run 41486170144 the failure path hung for 76
+          # minutes after the emulator died. On a failure, save what the
+          # emulator knows (tool/ci_android_diagnostics.sh).
           script: |
             mkdir -p app/build/ci-diagnostics && (adb -s emulator-5554 logcat -v threadtime > app/build/ci-diagnostics/logcat.txt 2>&1 &)
             timeout 300 sh -c 'until adb -s emulator-5554 shell pm path android 2>/dev/null | grep -q package:; do sleep 5; done' && echo "Package manager ready."
-            dart tool/android_device_tests.dart --device emulator-5554 || (sh tool/ci_android_diagnostics.sh; exit 1)
-            dart tool/android_device_tests.dart --device emulator-5554 --patrol || (sh tool/ci_android_diagnostics.sh; exit 1)
+            timeout -k 2m 35m dart tool/android_device_tests.dart --device emulator-5554 || (sh tool/ci_android_diagnostics.sh; exit 1)
+            timeout -k 2m 35m dart tool/android_device_tests.dart --device emulator-5554 --patrol || (sh tool/ci_android_diagnostics.sh; exit 1)
+      # Also when the job was cancelled or timed out, which is when the
+      # evidence matters most.
       - uses: actions/upload-artifact@v7
-        if: failure()
+        if: failure() || cancelled()
         with:
           name: android-test-reports
           path: |
