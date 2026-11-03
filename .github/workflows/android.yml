@@ -67,7 +67,9 @@ jobs:
       # One full Gradle build before the emulator starts, so the slowest build
       # doesn't compete with the emulator; the test builds reuse its outputs.
       - name: Build the app once
-        run: cd app && flutter build apk --debug --target integration_test/app_test.dart
+        run: |
+          (cd app && flutter build apk --debug --target integration_test/app_test.dart)
+          mkdir -p app/build/ci-diagnostics
       # A cold boot on the runner left Android's system services failing
       # ("Broken pipe" from input and package), so installs failed before any
       # test ran. The emulator gets the runner's 4 cores and fixed RAM, boots
@@ -77,6 +79,10 @@ jobs:
       # Android 37 image's surfaceflinger aborted ~35 s after every boot
       # ("Assertion failed: !rcEnc->featureInfo()->hasReadColorBufferDma" in
       # the goldfish mapper), restarting the whole system and its packages.
+      # No guest Vulkan (-feature -Vulkan; the emulator then renders OpenGL ES
+      # with SwiftShader): on API 36 the emulator exited after the first app
+      # run, in both runs just as Flutter, which prefers Vulkan, drew its
+      # first frame (run 41639299298, with memory to spare).
       - name: AVD cache
         id: avd-cache
         uses: actions/cache@v6
@@ -84,7 +90,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-36-google_apis-x86_64-pixel_7-4cores-4g-swangle-v1
+          key: avd-36-google_apis-x86_64-pixel_7-4cores-4g-swangle-novulkan-v1
       - name: Create the AVD and its snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -100,7 +106,7 @@ jobs:
           force-avd-creation: false
           emulator-boot-timeout: 900
           disable-animations: false
-          emulator-options: -no-window -gpu swangle -noaudio -no-boot-anim -camera-back virtualscene
+          emulator-options: -no-window -gpu swangle -feature -Vulkan -noaudio -no-boot-anim -camera-back virtualscene
           script: echo "AVD snapshot saved."
       - name: Device tests
         # A backstop: each pass below has its own limit.
@@ -119,7 +125,10 @@ jobs:
           emulator-boot-timeout: 900
           disable-animations: false
           # From the snapshot, without writing the test run's state back to it.
-          emulator-options: -no-snapshot-save -no-window -gpu swangle -noaudio -no-boot-anim -camera-back virtualscene
+          # The emulator also writes the guest's log (info and up) to a file
+          # itself: adb's logcat stream stopped a minute before the emulator
+          # died in runs 41513210914 and 41639299298.
+          emulator-options: -no-snapshot-save -no-window -gpu swangle -feature -Vulkan -noaudio -no-boot-anim -camera-back virtualscene -logcat *:i -logcat-output ${{ github.workspace }}/app/build/ci-diagnostics/emulator-logcat.txt
           # The action runs each line on its own (sh -c). First: the whole
           # logcat and the runner's free memory every 10 s to files, in the
           # background, for the artifact. Then wait
