@@ -15,4 +15,9 @@ timeout 30 adb -s "$device" shell dumpsys package dev.flutterpoc.field_inspectio
 timeout 30 adb -s "$device" shell getprop > "$out/getprop.txt" 2>&1
 # The emulator's own crash reports, when the emulator process died.
 cp -r /tmp/android-runner "$out/emulator-crashes" 2>/dev/null
+# The runner's side: its memory now, the largest processes, and whether the
+# kernel's OOM killer ended one (the emulator vanished in run 41513210914).
+free -m > "$out/host-free.txt" 2>&1
+ps -eo pid,rss,etime,args --sort=-rss | head -15 | cut -c1-200 > "$out/host-processes.txt" 2>&1
+timeout 30 sudo dmesg -T 2>&1 | grep -i -E "oom|killed process" > "$out/host-oom.txt"
 echo "Diagnostics saved in $out"

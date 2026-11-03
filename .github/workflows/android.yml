@@ -43,13 +43,18 @@ jobs:
           cache: true
       # app/android/gradle.properties gives the Gradle daemon 8 GB for local
       # builds; the runner shares its RAM with the emulator, so give Gradle less.
+      # No lasting daemons: the prebuild's Gradle and Kotlin daemons (three java
+      # processes) stayed alive through the tests, and in run 41513210914 the
+      # emulator vanished during a test build, with no crash on either side.
+      # Each build now ends its own JVMs and compiles Kotlin in-process.
       # The user-home properties file takes precedence over the project's.
       - name: Gradle memory for the runner
         run: |
           mkdir -p ~/.gradle
           {
             echo 'org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError'
-            echo 'kotlin.daemon.jvmargs=-Xmx1g'
+            echo 'org.gradle.daemon=false'
+            echo 'kotlin.compiler.execution.strategy=in-process'
           } >> ~/.gradle/gradle.properties
       # patrol_cli 4.7.0+ works with patrol 4.9.0+ (Patrol compatibility table);
       # 4.8.0 is the version used locally. Update it together with `patrol`.
@@ -59,8 +64,8 @@ jobs:
           (cd mock_server && dart pub get)
           dart pub global activate patrol_cli 4.8.0
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
-      # One Gradle build before the emulator starts, so the 3 GB Gradle daemon
-      # and the emulator don't fight over the runner; the test builds reuse it.
+      # One full Gradle build before the emulator starts, so the slowest build
+      # doesn't compete with the emulator; the test builds reuse its outputs.
       - name: Build the app once
         run: cd app && flutter build apk --debug --target integration_test/app_test.dart
       # A cold boot on the runner left Android's system services failing
@@ -116,7 +121,8 @@ jobs:
           # From the snapshot, without writing the test run's state back to it.
           emulator-options: -no-snapshot-save -no-window -gpu swangle -noaudio -no-boot-anim -camera-back virtualscene
           # The action runs each line on its own (sh -c). First: the whole
-          # logcat to a file, in the background, for the artifact. Then wait
+          # logcat and the runner's free memory every 10 s to files, in the
+          # background, for the artifact. Then wait
           # until the package manager answers (in run 40938499241 the app
           # installed, but its activity then wasn't found). Each pass has 35
           # minutes (SIGTERM lets the runner restore the device; SIGKILL 2
@@ -125,6 +131,7 @@ jobs:
           # emulator knows (tool/ci_android_diagnostics.sh).
           script: |
             mkdir -p app/build/ci-diagnostics && (adb -s emulator-5554 logcat -v threadtime > app/build/ci-diagnostics/logcat.txt 2>&1 &)
+            (while :; do date -u +%T; free -m | sed -n 2,3p; sleep 10; done > app/build/ci-diagnostics/host-memory.txt 2>&1 &)
             timeout 300 sh -c 'until adb -s emulator-5554 shell pm path android 2>/dev/null | grep -q package:; do sleep 5; done' && echo "Package manager ready."
             timeout -k 2m 35m dart tool/android_device_tests.dart --device emulator-5554 || (sh tool/ci_android_diagnostics.sh; exit 1)
             timeout -k 2m 35m dart tool/android_device_tests.dart --device emulator-5554 --patrol || (sh tool/ci_android_diagnostics.sh; exit 1)
