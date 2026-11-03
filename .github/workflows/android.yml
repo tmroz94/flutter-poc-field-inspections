@@ -1,10 +1,12 @@
-# Android device tests on an emulator (API 36, Google APIs, x86_64): the
+# Android device tests on an emulator (API 34, Google APIs, x86_64): the
 # integration_test flows including the host-driven airplane-mode and GPS steps,
 # then the Patrol native UI tests and the notification-after-kill check. Slow
 # (≈45–60 min), so it runs only when started by hand (Actions › Android device
 # tests › Run workflow). Not the local image (API 37, Google Play): on the
 # runner its system crashed minutes after every boot, with either GPU mode
-# (runs 40947086623 and 41486170144, decision 87).
+# (runs 40947086623 and 41486170144). Not API 36 either: its emulator exited
+# as soon as the first test app stopped (runs 41513210914, 41639299298 and
+# 41677063325, decision 87).
 name: Android device tests
 
 on:
@@ -19,7 +21,7 @@ permissions:
 
 jobs:
   emulator:
-    name: Emulator (API 36)
+    name: Emulator (API 34)
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -75,14 +77,12 @@ jobs:
       # test ran. The emulator gets the runner's 4 cores and fixed RAM, boots
       # once to save a snapshot (cached between runs), and the tests start from
       # that warm state. Change the key when the emulator settings change.
-      # GPU: swangle (ANGLE on SwiftShader). With swiftshader_indirect the
-      # Android 37 image's surfaceflinger aborted ~35 s after every boot
-      # ("Assertion failed: !rcEnc->featureInfo()->hasReadColorBufferDma" in
-      # the goldfish mapper), restarting the whole system and its packages.
-      # No guest Vulkan (-feature -Vulkan; the emulator then renders OpenGL ES
-      # with SwiftShader): on API 36 the emulator exited after the first app
-      # run, in both runs just as Flutter, which prefers Vulkan, drew its
-      # first frame (run 41639299298, with memory to spare).
+      # GPU: swiftshader_indirect, the usual mode on CI runners. (On the API 37
+      # image it made surfaceflinger abort after every boot; on API 36 the
+      # emulator exited when the first app stopped, with swangle too.)
+      # No guest Vulkan (-feature -Vulkan), so Flutter renders with OpenGL ES.
+      # Both steps take the same options: the -logcat flags change the boot
+      # settings, and with different ones the saved snapshot isn't loaded.
       - name: AVD cache
         id: avd-cache
         uses: actions/cache@v6
@@ -90,12 +90,12 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-36-google_apis-x86_64-pixel_7-4cores-4g-swangle-novulkan-v1
+          key: avd-34-google_apis-x86_64-pixel_7-4cores-4g-swiftshader-novulkan-v1
       - name: Create the AVD and its snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: '36'
+          api-level: '34'
           target: google_apis
           arch: x86_64
           profile: pixel_7
@@ -106,14 +106,14 @@ jobs:
           force-avd-creation: false
           emulator-boot-timeout: 900
           disable-animations: false
-          emulator-options: -no-window -gpu swangle -feature -Vulkan -noaudio -no-boot-anim -camera-back virtualscene
+          emulator-options: -no-window -gpu swiftshader_indirect -feature -Vulkan -noaudio -no-boot-anim -camera-back virtualscene -logcat *:i -logcat-output ${{ github.workspace }}/app/build/ci-diagnostics/emulator-logcat.txt
           script: echo "AVD snapshot saved."
       - name: Device tests
         # A backstop: each pass below has its own limit.
         timeout-minutes: 80
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: '36'
+          api-level: '34'
           target: google_apis
           arch: x86_64
           profile: pixel_7
@@ -127,8 +127,8 @@ jobs:
           # From the snapshot, without writing the test run's state back to it.
           # The emulator also writes the guest's log (info and up) to a file
           # itself: adb's logcat stream stopped a minute before the emulator
-          # died in runs 41513210914 and 41639299298.
-          emulator-options: -no-snapshot-save -no-window -gpu swangle -feature -Vulkan -noaudio -no-boot-anim -camera-back virtualscene -logcat *:i -logcat-output ${{ github.workspace }}/app/build/ci-diagnostics/emulator-logcat.txt
+          # died in runs 41513210914, 41639299298 and 41677063325.
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -feature -Vulkan -noaudio -no-boot-anim -camera-back virtualscene -logcat *:i -logcat-output ${{ github.workspace }}/app/build/ci-diagnostics/emulator-logcat.txt
           # The action runs each line on its own (sh -c). First: the whole
           # logcat and the runner's free memory every 10 s to files, in the
           # background, for the artifact. Then wait
