@@ -301,7 +301,13 @@ void main() {
     expect(find.ancestor(of: find.byWidget(focused!.widget), matching: find.widgetWithText(TextFormField, 'Password')), findsWidgets);
     await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'inspect123');
     await tester.testTextInput.receiveAction(TextInputAction.done);
-    await settle(tester, const Duration(seconds: 1));
+    // Sign-in calls the mock API; on the CI emulator it takes longer than a second.
+    await waitFor(
+      tester,
+      () => find.byType(InspectionsScreen).evaluate().isNotEmpty,
+      timeout: const Duration(seconds: 15),
+      reason: 'the list after Done signs in',
+    );
     expect(find.byType(InspectionsScreen), findsOneWidget, reason: 'Done on the password field signs in and returns to the target');
 
     // Filter sheet: checkboxes, segmented due window, radio sort.

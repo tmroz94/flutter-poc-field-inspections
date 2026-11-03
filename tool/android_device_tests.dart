@@ -534,7 +534,19 @@ Future<void> main(List<String> args) async {
     }
   }
 
-  final test = await _sdkStart(['flutter', 'test', target, '-d', device, '--dart-define=HOST_HELPER=true'], workingDirectory: 'app');
+  // The expanded reporter prints each line as the test prints it. On GitHub
+  // Actions flutter test picks its github reporter, which holds a test's output
+  // until the test ends, so the HOST> requests came after it had timed out.
+  final test = await _sdkStart([
+    'flutter',
+    'test',
+    target,
+    '-d',
+    device,
+    '--reporter',
+    'expanded',
+    '--dart-define=HOST_HELPER=true',
+  ], workingDirectory: 'app');
   _cleanups['flutter test'] = () async => _killTree(test);
   var failed = false;
   // Host commands run one at a time, in the order the tests print them.
