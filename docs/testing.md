@@ -173,6 +173,10 @@ when the device already has a screen lock: the helper never clears a lock it
 didn't set.
 
 Notes:
+- These run locally only (the API 37 Play emulator), not in `android.yml`: on
+  the CI image (API 34 Google APIs) Patrol didn't find the location dialog's
+  buttons, the basic camera app took no photo, and the run then hung until its
+  time limit (run 41688260787, decision 87).
 - The Allow-location test runs last: clearing app data before the next test
   resets the granted permission, and Android then kills the app's processes,
   which crashed the following test.
@@ -253,7 +257,7 @@ x64 binary.
 | Workflow | When | What |
 |---|---|---|
 | `ci.yml` | pushes to main and every pull request | quality gate (`tool/check.sh --coverage`; goldens skip on Linux), both web builds as artifacts, the integration flows in headless Chrome (`flutter drive`), the Playwright prompt tests |
-| `android.yml` | by hand only | emulator with API 34 (Google APIs; the local API 37 Play image and the API 36 emulator crashed on the runner, decision 87): `tool/android_device_tests.dart` (including airplane mode and GPS), then `--patrol` (native UI, notification after kill); each pass is cut off after 35 minutes, and on a failure, cancel or timeout the logcat and the device's state are uploaded |
+| `android.yml` | by hand only | emulator with API 34 (Google APIs; the local API 37 Play image and the API 36 emulator crashed on the runner, decision 87): `tool/android_device_tests.dart` (including airplane mode and GPS; first full pass 3 November 2026 on `957bc29`, 14 tests); not `--patrol`, which runs locally only (see Native UI tests with Patrol); the pass is cut off after 35 minutes, and on a failure, cancel or timeout the logcat and the device's state are uploaded |
 | `ios.yml` | by hand only | iPhone simulator on a macOS runner: builds for iOS and runs the integration flows (first run 28 October 2026 on `aeb63aa`: the 7 flows and the probe pass on an iPhone 17 with iOS 26.5, about 27 minutes) |
 | `desktop.yml` | Linux: pushes to main and every pull request; Windows and macOS: by hand | builds each desktop app (Linux bundle and Windows release as artifacts) and runs `app_test`, `ui_flows_test` and the platform probe on it, one file per run (Linux under `xvfb-run` with a session bus) |
 | `goldens.yml` | by hand only | golden image tests on a Windows runner (the OS the reference images are made on); diff images as an artifact on failure |
@@ -269,7 +273,7 @@ from the account's allowance (Windows minutes count 2×, macOS 10×).
   `reactivecircus/android-emulator-runner`) are pinned to a commit SHA with the
   release in a comment; to update one, look up the new tag's commit
   (`gh api repos/<owner>/<repo>/commits/<tag> --jq .sha`) and change both.
-- `android.yml` pins patrol_cli (4.8.0) and gives Gradle a 3 GB heap through
+- `android.yml` gives Gradle a 3 GB heap through
   `~/.gradle/gradle.properties`, since the runner shares its memory with the
   emulator (the project's `gradle.properties` asks for 8 GB, for local builds).
 - `ios.yml` logs which `PERMISSION_*` macros permission_handler compiled in

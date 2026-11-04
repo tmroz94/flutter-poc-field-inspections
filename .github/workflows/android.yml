@@ -1,8 +1,11 @@
 # Android device tests on an emulator (API 34, Google APIs, x86_64): the
-# integration_test flows including the host-driven airplane-mode and GPS steps,
-# then the Patrol native UI tests and the notification-after-kill check. Slow
-# (≈45–60 min), so it runs only when started by hand (Actions › Android device
-# tests › Run workflow). Not the local image (API 37, Google Play): on the
+# integration_test flows including the host-driven airplane-mode and GPS steps.
+# Slow (≈30 min), so it runs only when started by hand (Actions › Android
+# device tests › Run workflow). The Patrol native UI tests and the
+# notification-after-kill check (--patrol) run locally only: they drive the
+# system screens, and this image's permission dialog and camera app aren't
+# the ones they were written on (run 41688260787, decision 87). Not the local
+# image (API 37, Google Play): on the
 # runner its system crashed minutes after every boot, with either GPU mode
 # (runs 40947086623 and 41486170144). Not API 36 either: its emulator exited
 # as soon as the first test app stopped (runs 41513210914, 41639299298 and
@@ -23,7 +26,7 @@ jobs:
   emulator:
     name: Emulator (API 34)
     runs-on: ubuntu-latest
-    timeout-minutes: 100
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7
       - name: Enable KVM
@@ -58,14 +61,10 @@ jobs:
             echo 'org.gradle.daemon=false'
             echo 'kotlin.compiler.execution.strategy=in-process'
           } >> ~/.gradle/gradle.properties
-      # patrol_cli 4.7.0+ works with patrol 4.9.0+ (Patrol compatibility table);
-      # 4.8.0 is the version used locally. Update it together with `patrol`.
-      - name: Get packages and Patrol CLI
+      - name: Get packages
         run: |
           (cd app && flutter pub get)
           (cd mock_server && dart pub get)
-          dart pub global activate patrol_cli 4.8.0
-          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
       # One full Gradle build before the emulator starts, so the slowest build
       # doesn't compete with the emulator; the test builds reuse its outputs.
       - name: Build the app once
@@ -109,8 +108,8 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -feature -Vulkan -noaudio -no-boot-anim -camera-back virtualscene -logcat *:i -logcat-output ${{ github.workspace }}/app/build/ci-diagnostics/emulator-logcat.txt
           script: echo "AVD snapshot saved."
       - name: Device tests
-        # A backstop: each pass below has its own limit.
-        timeout-minutes: 80
+        # A backstop: the test pass below has its own limit.
+        timeout-minutes: 50
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: '34'
@@ -133,7 +132,7 @@ jobs:
           # logcat and the runner's free memory every 10 s to files, in the
           # background, for the artifact. Then wait
           # until the package manager answers (in run 40938499241 the app
-          # installed, but its activity then wasn't found). Each pass has 35
+          # installed, but its activity then wasn't found). The pass has 35
           # minutes (SIGTERM lets the runner restore the device; SIGKILL 2
           # minutes later): in run 41486170144 the failure path hung for 76
           # minutes after the emulator died. On a failure, save what the
@@ -143,7 +142,6 @@ jobs:
             (while :; do date -u +%T; free -m | sed -n 2,3p; sleep 10; done > app/build/ci-diagnostics/host-memory.txt 2>&1 &)
             timeout 300 sh -c 'until adb -s emulator-5554 shell pm path android 2>/dev/null | grep -q package:; do sleep 5; done' && echo "Package manager ready."
             timeout -k 2m 35m dart tool/android_device_tests.dart --device emulator-5554 || (sh tool/ci_android_diagnostics.sh; exit 1)
-            timeout -k 2m 35m dart tool/android_device_tests.dart --device emulator-5554 --patrol || (sh tool/ci_android_diagnostics.sh; exit 1)
       # Also when the job was cancelled or timed out, which is when the
       # evidence matters most.
       - uses: actions/upload-artifact@v7
